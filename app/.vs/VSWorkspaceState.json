@@ -1,0 +1,11 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\src",
+    "\\src\\components",
+    "\\src\\components\\LoginForm",
+    "\\src\\components\\RegisteForm"
+  ],
+  "SelectedNode": "\\src\\components\\RegisteForm\\index.tsx",
+  "PreviewInSolutionExplorer": false
+}

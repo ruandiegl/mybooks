@@ -1,0 +1,30 @@
+{
+  "name": "mybooks",
+  "version": "1.0.0",
+  "description": "API for MyBooks",
+  "main": "src/index.js",
+  "author": "Ruan Diego",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "start": "nodemon src/index.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.17.1",
+    "bcrypt": "^6.0.0",
+    "eslint": "^9.34.0",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
+    "nodemon": "^3.1.14",
+    "pg": "^8.16.3",
+    "prisma": "^6.17.1",
+    "uuidv4": "^6.2.13",
+    "yarn": "^1.22.22"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.34.0",
+    "@types/multer": "^2.0.0",
+    "globals": "^16.3.0"
+  }
+}

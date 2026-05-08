@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id    String  @id @default(uuid())
+  name  String
+  email String? @unique
+  passHash String?
+  phone String?
+  books Book[]
+}
+
+model Book {
+  id        String      @id @default(uuid())
+  title     String
+  isbn      String?     @unique
+
+  user_id   String?
+  user      User?       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  images    BookImage[]
+
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@map("Book")
+}
+
+
+model BookImage {
+  id        String   @id @default(uuid())
+  url       String
+  isCover   Boolean  @default(false)
+
+  book_id   String
+  book      Book     @relation(fields: [book_id], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("BookImage")
+}
