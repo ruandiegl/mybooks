@@ -1,17 +1,31 @@
-import express from "express"
-import path from "node:path"
+import { createServer } from 'node:http';
+import { createApp } from './app.js';
+import { env } from './config/env.js';
+import { registerChatSocket } from './modules/chat/chat.socket.js';
+import { prisma } from './shared/database/prisma.js';
 
-const app = express();
-const port = process.env.PORT || 3001;
+const app = createApp();
+const server = createServer(app);
 
-import routes from "./routes.js"
+registerChatSocket(server);
 
-app.use('/uploads', express.static(path.resolve('uploads')))
-
-app.use(express.json());
-
-app.use(routes);
-
-app.listen(port, () => {
-  console.log(`Server is running on port http://localhost:${port}`);
+server.listen(env.PORT, () => {
+  console.info(JSON.stringify({
+    level: 'info',
+    message: 'MyBooks API iniciada.',
+    port: env.PORT,
+    authMode: env.AUTH_MODE,
+    storageMode: env.STORAGE_MODE
+  }));
 });
+
+async function shutdown(signal) {
+  console.info(JSON.stringify({ level: 'info', message: 'Encerrando API.', signal }));
+  server.close(async () => {
+    await prisma.$disconnect();
+    process.exit(0);
+  });
+}
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));

@@ -3,8 +3,16 @@ import globals from "globals";
 import { defineConfig } from "eslint/config";
 
 export default defineConfig([
-  { files: ["**/*.{js,mjs,cjs}"], plugins: { js }, extends: ["js/recommended"], languageOptions: { globals: globals.node } },
-  { files: ["**/*.js"], languageOptions: { sourceType: "commonjs" } },
+  {
+    files: ["**/*.{js,mjs}"],
+    plugins: { js },
+    extends: ["js/recommended"],
+    languageOptions: {
+      globals: globals.node,
+      sourceType: "module",
+      ecmaVersion: "latest"
+    }
+  },
   { rules: {
     "jsdoc/check-tag-names": "off",
     "jsdoc/require-jsdoc": "off" ,
@@ -13,7 +21,8 @@ export default defineConfig([
     "no-console": "off",
     "no-unused-vars": "off",
     "no-undef": "off",
-    "quotes": ["error", "single"]
+    "quotes": ["error", "single"],
+    "semi": ["error", "always"]
 
   } },
 ]);

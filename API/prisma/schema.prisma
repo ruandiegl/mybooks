@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -9,40 +8,153 @@ datasource db {
 }
 
 model User {
-  id    String  @id @default(uuid())
-  name  String
-  email String? @unique
-  passHash String?
-  phone String?
-  books Book[]
+  id                  String               @id @default(uuid())
+  clerkUserId         String               @unique
+  name                String
+  email               String?              @unique
+  legacyPassHash      String?              @map("passHash")
+  phone               String?
+  avatarUrl           String?
+  bio                 String?
+  city                String?
+  books               Book[]
+  interactions        Interaction[]        @relation("InteractionActor")
+  matchesAsUserA      Match[]              @relation("MatchUserA")
+  matchesAsUserB      Match[]              @relation("MatchUserB")
+  conversationMembers ConversationMember[]
+  messages            Message[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 }
 
 model Book {
-  id        String      @id @default(uuid())
-  title     String
-  isbn      String?     @unique
+  id               String           @id @default(uuid())
+  title            String
+  subtitle         String?
+  authors          String[]         @default([])
+  publisher        String?
+  synopsis         String?
+  year             Int?
+  pageCount        Int?
+  subjects         String[]         @default([])
+  isbn             String?
+  isbnStatus       IsbnStatus       @default(NONE)
+  isbnProvider     String?
+  isbnValidatedAt  DateTime?
+  coverExternalUrl String?
+  availability     BookAvailability @default(AVAILABLE)
+  ownerId          String?          @map("user_id")
+  owner            User?            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  images           BookImage[]
+  interactions     Interaction[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
-  user_id   String?
-  user      User?       @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  images    BookImage[]
-
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-
+  @@index([ownerId, createdAt])
+  @@index([availability, createdAt])
+  @@index([isbn])
   @@map("Book")
 }
 
-
 model BookImage {
-  id        String   @id @default(uuid())
-  url       String
-  isCover   Boolean  @default(false)
-
-  book_id   String
-  book      Book     @relation(fields: [book_id], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
+  id         String   @id @default(uuid())
+  url        String
+  storageKey String?  @unique
+  mimeType   String?
+  size       Int?
+  isCover    Boolean  @default(false)
+  bookId     String   @map("book_id")
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
 
   @@map("BookImage")
+}
+
+model Interaction {
+  id             String            @id @default(uuid())
+  actorId        String
+  actor          User              @relation("InteractionActor", fields: [actorId], references: [id], onDelete: Cascade)
+  targetBookId   String
+  targetBook     Book              @relation(fields: [targetBookId], references: [id], onDelete: Cascade)
+  action         InteractionAction
+  clientActionId String            @unique
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@unique([actorId, targetBookId])
+  @@index([targetBookId, action])
+}
+
+model Match {
+  id           String        @id @default(uuid())
+  userAId      String
+  userA        User          @relation("MatchUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userBId      String
+  userB        User          @relation("MatchUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  status       MatchStatus   @default(ACTIVE)
+  conversation Conversation?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([userAId, userBId])
+  @@index([userAId, status])
+  @@index([userBId, status])
+}
+
+model Conversation {
+  id        String               @id @default(uuid())
+  matchId   String               @unique
+  match     Match                @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  members   ConversationMember[]
+  messages  Message[]
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+}
+
+model ConversationMember {
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastReadAt     DateTime?
+  joinedAt       DateTime     @default(now())
+
+  @@id([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id              String       @id @default(uuid())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId        String
+  sender          User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  clientMessageId String
+  body            String
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@unique([senderId, clientMessageId])
+  @@index([conversationId, createdAt])
+}
+
+enum IsbnStatus {
+  NONE
+  VALID
+}
+
+enum BookAvailability {
+  AVAILABLE
+  RESERVED
+  EXCHANGED
+}
+
+enum InteractionAction {
+  LIKE
+  PASS
+}
+
+enum MatchStatus {
+  ACTIVE
+  ARCHIVED
 }

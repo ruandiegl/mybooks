@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: mybooks
+      POSTGRES_USER: mybooks
+      POSTGRES_PASSWORD: mybooks
+    ports:
+      - "${POSTGRES_HOST_PORT:-5433}:5432"
+    volumes:
+      - mybooks-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mybooks -d mybooks"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./API
+    command: ["sh", "-c", "npx prisma migrate deploy && npm start"]
+    env_file:
+      - ./API/.env
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://mybooks:mybooks@postgres:5432/mybooks?schema=public
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  mybooks-postgres:

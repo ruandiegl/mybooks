@@ -1,39 +1,37 @@
-import { NavigationContainer, DarkTheme }
-  from "@react-navigation/native";
+import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { ActivityIndicator, View } from 'react-native';
+import { useSession } from '../providers/SessionProvider';
+import { theme } from '../styles/theme';
+import { AppRoutes } from './app.routes';
+import AuthRoutes from './authRoutes';
 
-import { AppRoutes } from "./app.routes";
-import Header from "../components/Header";
-import AuthRoutes from "./authRoutes";
-import { useState } from "react";
-import { View } from "react-native";
-import { styles } from "../styles/GlobalStyles";
-import { useUser } from "../hooks/UseContext";
-import { colors } from "../styles/colors";
-
-const MyTheme = {
-  ...DarkTheme,
+const navigationTheme = {
+  ...DefaultTheme,
   colors: {
-    ...DarkTheme.colors,
-    background: colors.dark[100],
-  },
+    ...DefaultTheme.colors,
+    primary: theme.colors.primary,
+    background: theme.colors.background,
+    card: theme.colors.surface,
+    text: theme.colors.foreground,
+    border: theme.colors.outline,
+    notification: theme.colors.primary
+  }
 };
 
 export function Routes() {
-  const { user, signOut } = useUser();
+  const { isLoaded, isSignedIn } = useSession();
 
-  console.log("User no Routes:", user)
+  if (!isLoaded) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.background }}>
+        <ActivityIndicator color={theme.colors.primary} />
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-
-
-      {user && <Header onLogOut={signOut}/>}
-
-
-    <NavigationContainer theme={MyTheme}>
-        {user ? <AppRoutes /> : <AuthRoutes />}
-      </NavigationContainer>
-  </View>
-    
-  )
+    <NavigationContainer theme={navigationTheme}>
+      {isSignedIn ? <AppRoutes /> : <AuthRoutes />}
+    </NavigationContainer>
+  );
 }
