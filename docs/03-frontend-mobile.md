@@ -24,6 +24,8 @@ Os parâmetros são tipados em `src/types/navigation.ts`. Navegação nova deve 
 
 Toda tela de dados deve tratar carregamento, erro, vazio, sucesso e atualização. Campos precisam de rótulo visível; ações só por ícone precisam de `accessibilityLabel`; botões devem ter alvo confortável; formulários devem considerar teclado e safe area.
 
+O fluxo `Auth` é nativo e mantém login, cadastro, confirmação de e-mail, MFA e recuperação de senha dentro do app. Use `useSignIn`/`useSignUp` do `@clerk/expo`, mostre os estados `fetching` e erros de campo, e chame `finalize()` somente após a etapa do Clerk estar completa. O cadastro deve manter o mount `nativeID="clerk-captcha"` para as verificações de segurança. O botão Google usa `useSignInWithGoogle` em builds nativos e `useSSO` somente como fallback OAuth na web.
+
 ## ISBN e imagens
 
 A busca ISBN preenche título, autores, editora, sinopse, ano, páginas, temas e capa quando disponíveis, sem bloquear edição. O ISBN só é enviado como verificado quando a consulta teve sucesso. Para imagem própria, o app solicita `presign`, envia o binário por `PUT` ao R2 e chama `complete`.

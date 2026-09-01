@@ -23,6 +23,7 @@ services:
       - ./API/.env
     environment:
       NODE_ENV: development
+      AUTH_MODE: clerk
       DATABASE_URL: postgresql://mybooks:mybooks@postgres:5432/mybooks?schema=public
     ports:
       - "3001:3001"

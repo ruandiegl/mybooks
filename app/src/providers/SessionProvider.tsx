@@ -1,5 +1,4 @@
 import { ClerkProvider, useAuth, useClerk } from '@clerk/expo';
-import { useHostedAuth } from '@clerk/expo/hosted-auth';
 import { tokenCache } from '@clerk/expo/token-cache';
 import { useQueryClient } from '@tanstack/react-query';
 import * as SecureStore from 'expo-secure-store';
@@ -7,15 +6,13 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { appEnv } from '../config/env';
 import { configureApiSession } from '../services/api';
 
-type AuthAction = 'sign-in' | 'sign-up';
-
 type SessionContextValue = {
   isLoaded: boolean;
   isSignedIn: boolean;
   mode: 'clerk' | 'development';
   devUserId?: string;
   getToken: () => Promise<string | null>;
-  startAuth: (mode: AuthAction) => Promise<void>;
+  startAuth?: (mode: 'sign-in' | 'sign-up') => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -26,11 +23,6 @@ function ClerkSessionBridge({ children }: React.PropsWithChildren) {
   const queryClient = useQueryClient();
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const clerk = useClerk();
-  const { startHostedAuth } = useHostedAuth();
-
-  const startAuth = useCallback(async (mode: AuthAction) => {
-    await startHostedAuth({ mode });
-  }, [startHostedAuth]);
 
   const signOut = useCallback(async () => {
     queryClient.clear();
@@ -46,9 +38,8 @@ function ClerkSessionBridge({ children }: React.PropsWithChildren) {
     isSignedIn: Boolean(isSignedIn),
     mode: 'clerk',
     getToken,
-    startAuth,
     signOut
-  }), [getToken, isLoaded, isSignedIn, signOut, startAuth]);
+  }), [getToken, isLoaded, isSignedIn, signOut]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

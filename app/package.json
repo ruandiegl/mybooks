@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@clerk/expo": "^4.6.1",
+    "@clerk/expo-google-signin": "^1.0.2",
     "@expo-google-fonts/be-vietnam-pro": "^0.4.1",
     "@expo/vector-icons": "^15.1.1",
     "@react-navigation/bottom-tabs": "^7.4.7",
@@ -28,7 +29,7 @@
     "expo-status-bar": "~3.0.9",
     "expo-web-browser": "~15.0.11",
     "react": "19.1.0",
-    "react-dom": "^19.1.0",
+    "react-dom": "19.1.0",
     "react-native": "^0.81.5",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",

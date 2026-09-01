@@ -32,7 +32,8 @@
     "plugins": [
       "expo-secure-store",
       "expo-web-browser",
-      "@clerk/expo"
+      "@clerk/expo",
+      "@clerk/expo-google-signin"
     ]
   }
 }
