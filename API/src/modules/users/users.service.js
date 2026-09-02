@@ -36,7 +36,8 @@ function publicProfile(user) {
     bio: user.bio,
     city: user.city,
     createdAt: user.createdAt,
-    updatedAt: user.updatedAt
+    updatedAt: user.updatedAt,
+    ...(user.stats ? { stats: user.stats } : {})
   };
 }
 
@@ -80,7 +81,7 @@ export const usersService = {
   },
 
   async getMe(userId) {
-    return publicProfile(await usersRepository.findById(userId));
+    return publicProfile(await usersRepository.findByIdWithStats(userId));
   },
 
   async updateMe(userId, input) {
@@ -92,6 +93,7 @@ export const usersService = {
         code: 'USER_NOT_FOUND'
       });
     }
-    return publicProfile(await usersRepository.update(userId, data));
+    await usersRepository.update(userId, data);
+    return publicProfile(await usersRepository.findByIdWithStats(userId));
   }
 };

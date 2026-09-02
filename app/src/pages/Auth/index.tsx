@@ -17,10 +17,77 @@ type AuthStep = 'landing' | 'form' | 'verify-email' | 'mfa' | 'reset-email' | 'r
 type MfaStrategy = 'email_code' | 'phone_code' | 'totp' | 'backup_code';
 
 type ClerkErrorShape = {
+  code?: string;
   message?: string;
   longMessage?: string;
   errors?: ClerkErrorShape[];
 };
+
+const MIN_PASSWORD_LENGTH = 8;
+const PASSWORD_REQUIREMENTS_HELP = 'Mínimo de 8 caracteres, com pelo menos uma maiúscula, uma minúscula, um número e um caractere especial.';
+
+const CLERK_ERROR_MESSAGES: Record<string, string> = {
+  form_password_length_too_short: 'A senha precisa ter pelo menos 8 caracteres.',
+  form_password_length_too_long: 'A senha é muito longa. Escolha uma senha menor.',
+  form_password_no_uppercase: 'A senha precisa ter pelo menos uma letra maiúscula.',
+  form_password_no_lowercase: 'A senha precisa ter pelo menos uma letra minúscula.',
+  form_password_no_number: 'A senha precisa ter pelo menos um número.',
+  form_password_no_special_char: 'A senha precisa ter pelo menos um caractere especial.',
+  form_password_not_strong_enough: PASSWORD_REQUIREMENTS_HELP,
+  form_password_pwned: 'Essa senha foi encontrada em vazamentos conhecidos. Escolha outra senha.',
+  form_password_compromised: 'Essa senha foi comprometida. Escolha uma senha diferente.',
+  form_password_incorrect: 'A senha está incorreta.',
+  form_identifier_not_found: 'Não encontramos uma conta com esse e-mail.',
+  form_identifier_exists: 'Já existe uma conta com esse e-mail.',
+  form_email_address_invalid: 'Digite um e-mail válido.',
+  form_param_format_invalid: 'Confira o formato do dado informado.',
+  form_param_value_invalid: 'O dado informado não é válido.',
+  form_param_value_not_allowed: 'Esse valor não é permitido.',
+  form_param_value_required: 'Preencha este campo.',
+  form_code_incorrect: 'O código informado está incorreto.',
+  form_code_expired: 'Esse código expirou. Solicite um novo código.',
+  verification_failed: 'Não foi possível confirmar o código. Tente novamente.',
+  captcha_invalid: 'A verificação de segurança falhou. Tente novamente.',
+  not_allowed_access: 'Este e-mail não tem permissão para acessar a aplicação.',
+  too_many_requests: 'Muitas tentativas. Aguarde um pouco e tente novamente.',
+  user_locked: 'Sua conta está temporariamente bloqueada. Aguarde e tente novamente.',
+  session_exists: 'Você já está conectado.',
+  oauth_access_denied: 'O acesso pelo Google foi cancelado.',
+  external_account_not_found: 'Não foi possível encontrar essa conta Google.',
+};
+
+function isPortugueseMessage(message: string) {
+  return /\b(não|senha|conta|e-mail|código|digite|confira|tente|criar|acesso|dados|sua|seu|uma|um)\b|[ãõáéíóúç]/i.test(message);
+}
+
+function localizeClerkError(error: ClerkErrorShape) {
+  const code = error.code?.toLowerCase();
+  if (code && CLERK_ERROR_MESSAGES[code]) return CLERK_ERROR_MESSAGES[code];
+
+  const nestedMessage = firstErrorMessage(error.errors);
+  if (nestedMessage) return nestedMessage;
+
+  const message = error.longMessage || error.message;
+  if (!message) return undefined;
+  if (isPortugueseMessage(message)) return message;
+
+  const normalized = message.toLowerCase();
+  if (normalized.includes('password') && normalized.includes('uppercase')) return 'A senha precisa ter pelo menos uma letra maiúscula.';
+  if (normalized.includes('password') && normalized.includes('lowercase')) return 'A senha precisa ter pelo menos uma letra minúscula.';
+  if (normalized.includes('password') && normalized.includes('number')) return 'A senha precisa ter pelo menos um número.';
+  if (normalized.includes('password') && normalized.includes('special')) return 'A senha precisa ter pelo menos um caractere especial.';
+  if (normalized.includes('password') && (normalized.includes('short') || normalized.includes('at least'))) return 'A senha precisa ter pelo menos 8 caracteres.';
+  if (normalized.includes('password') && (normalized.includes('incorrect') || normalized.includes('invalid'))) return 'A senha está incorreta.';
+  if (normalized.includes('email') && (normalized.includes('invalid') || normalized.includes('valid'))) return 'Digite um e-mail válido.';
+  if (normalized.includes('already exists') || normalized.includes('already registered')) return 'Já existe uma conta com esses dados.';
+  if (normalized.includes('not found') || normalized.includes("couldn't find")) return 'Não encontramos uma conta com esses dados.';
+  if (normalized.includes('code') && normalized.includes('expired')) return 'Esse código expirou. Solicite um novo código.';
+  if (normalized.includes('code') && (normalized.includes('incorrect') || normalized.includes('invalid'))) return 'O código informado está incorreto.';
+  if (normalized.includes('captcha')) return 'A verificação de segurança falhou. Tente novamente.';
+  if (normalized.includes('too many') || normalized.includes('rate limit')) return 'Muitas tentativas. Aguarde um pouco e tente novamente.';
+
+  return 'Não foi possível concluir esta ação. Confira os dados e tente novamente.';
+}
 
 function firstErrorMessage(value: unknown): string | undefined {
   if (!value) return undefined;
@@ -35,7 +102,7 @@ function firstErrorMessage(value: unknown): string | undefined {
   if (typeof value !== 'object') return undefined;
 
   const error = value as ClerkErrorShape;
-  return error.longMessage || error.message || firstErrorMessage(error.errors);
+  return localizeClerkError(error) || firstErrorMessage(error.errors);
 }
 
 function errorMessage(error: unknown, fallback: string) {
@@ -46,11 +113,21 @@ function isValidEmail(email: string) {
   return /^\S+@\S+\.\S+$/.test(email.trim());
 }
 
-function PasswordField({ label, value, onChangeText, error, visible, onToggle }: {
+function passwordRequirementError(value: string, label = 'A senha') {
+  if (value.length < MIN_PASSWORD_LENGTH) return `${label} precisa ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`;
+  if (!/[A-Z]/.test(value)) return `${label} precisa ter pelo menos uma letra maiúscula.`;
+  if (!/[a-z]/.test(value)) return `${label} precisa ter pelo menos uma letra minúscula.`;
+  if (!/[0-9]/.test(value)) return `${label} precisa ter pelo menos um número.`;
+  if (!/[^A-Za-z0-9\s]/.test(value)) return `${label} precisa ter pelo menos um caractere especial.`;
+  return undefined;
+}
+
+function PasswordField({ label, value, onChangeText, error, help, visible, onToggle }: {
   label: string;
   value: string;
   onChangeText: (value: string) => void;
   error?: string;
+  help?: string;
   visible: boolean;
   onToggle: () => void;
 }) {
@@ -61,6 +138,7 @@ function PasswordField({ label, value, onChangeText, error, visible, onToggle }:
         value={value}
         onChangeText={onChangeText}
         error={error}
+        help={help}
         secureTextEntry={!visible}
         autoCapitalize="none"
         autoCorrect={false}
@@ -319,6 +397,12 @@ function ClerkAuthFlow() {
     setFormError(undefined);
   }
 
+  function clearInputErrors() {
+    clearFormError();
+    if (action === 'sign-up') signUp?.reset();
+    else signIn?.reset();
+  }
+
   function selectAction(nextAction: AuthAction) {
     setAction(nextAction);
     setStep('form');
@@ -447,8 +531,9 @@ function ClerkAuthFlow() {
       setFormError('Digite um e-mail válido para criar a conta.');
       return;
     }
-    if (password.length < 8) {
-      setFormError('Sua senha precisa ter pelo menos 8 caracteres.');
+    const passwordError = passwordRequirementError(password);
+    if (passwordError) {
+      setFormError(passwordError);
       return;
     }
     if (password !== passwordConfirmation) {
@@ -565,8 +650,9 @@ function ClerkAuthFlow() {
   async function submitNewPassword() {
     clearFormError();
     if (!signIn) return;
-    if (newPassword.length < 8) {
-      setFormError('Sua nova senha precisa ter pelo menos 8 caracteres.');
+    const newPasswordError = passwordRequirementError(newPassword, 'Sua nova senha');
+    if (newPasswordError) {
+      setFormError(newPasswordError);
       return;
     }
     if (newPassword !== newPasswordConfirmation) {
@@ -591,7 +677,7 @@ function ClerkAuthFlow() {
           <TextField
             label="Nome completo"
             value={fullName}
-            onChangeText={setFullName}
+            onChangeText={(value) => { setFullName(value); clearInputErrors(); }}
             error={signUpFieldError('firstName')}
             placeholder="Como você quer ser chamado?"
             autoCapitalize="words"
@@ -601,7 +687,7 @@ function ClerkAuthFlow() {
         <TextField
           label="E-mail"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(value) => { setEmail(value); clearInputErrors(); }}
           error={isSignUp ? signUpFieldError('emailAddress') : signInFieldError('identifier')}
           placeholder="voce@exemplo.com"
           keyboardType="email-address"
@@ -612,8 +698,9 @@ function ClerkAuthFlow() {
         <PasswordField
           label="Senha"
           value={password}
-          onChangeText={setPassword}
+          onChangeText={(value) => { setPassword(value); clearInputErrors(); }}
           error={isSignUp ? signUpFieldError('password') : signInFieldError('password')}
+          help={isSignUp ? PASSWORD_REQUIREMENTS_HELP : undefined}
           visible={passwordVisible}
           onToggle={() => setPasswordVisible((visible) => !visible)}
         />
@@ -621,7 +708,7 @@ function ClerkAuthFlow() {
           <PasswordField
             label="Repita sua senha"
             value={passwordConfirmation}
-            onChangeText={setPasswordConfirmation}
+            onChangeText={(value) => { setPasswordConfirmation(value); clearInputErrors(); }}
             visible={passwordVisible}
             onToggle={() => setPasswordVisible((visible) => !visible)}
           />
@@ -725,7 +812,7 @@ function ClerkAuthFlow() {
       <AuthShell eyebrow="Novo capítulo" title="Escolha uma nova senha." description="Crie uma senha nova para voltar à sua estante com tranquilidade." onBack={goBack}>
         <Card style={styles.formCard}>
           <ErrorBanner message={formError} />
-          <PasswordField label="Nova senha" value={newPassword} onChangeText={setNewPassword} visible={newPasswordVisible} onToggle={() => setNewPasswordVisible((visible) => !visible)} />
+          <PasswordField label="Nova senha" value={newPassword} onChangeText={setNewPassword} help={PASSWORD_REQUIREMENTS_HELP} visible={newPasswordVisible} onToggle={() => setNewPasswordVisible((visible) => !visible)} />
           <PasswordField label="Repita a nova senha" value={newPasswordConfirmation} onChangeText={setNewPasswordConfirmation} visible={newPasswordVisible} onToggle={() => setNewPasswordVisible((visible) => !visible)} />
           <AppButton label="Salvar nova senha" icon="check" loading={loading} onPress={() => void submitNewPassword()} />
         </Card>

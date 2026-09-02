@@ -2,7 +2,7 @@ import { ClerkProvider, useAuth, useClerk } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import { useQueryClient } from '@tanstack/react-query';
 import * as SecureStore from 'expo-secure-store';
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { appEnv } from '../config/env';
 import { configureApiSession } from '../services/api';
 
@@ -29,7 +29,7 @@ function ClerkSessionBridge({ children }: React.PropsWithChildren) {
     await clerk.signOut();
   }, [clerk, queryClient]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     configureApiSession({ getToken, onUnauthorized: signOut });
   }, [getToken, signOut]);
 

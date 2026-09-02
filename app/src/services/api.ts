@@ -9,7 +9,7 @@ type SessionAccessor = {
 
 let sessionAccessor: SessionAccessor = {
   getToken: async () => null,
-  devUserId: appEnv.devUserId
+  devUserId: appEnv.authMode === 'development' ? appEnv.devUserId : undefined
 };
 let handlingUnauthorized = false;
 
@@ -32,7 +32,7 @@ api.interceptors.request.use(async (config) => {
 
   if (token) {
     config.headers.Authorization = 'Bearer ' + token;
-  } else if (sessionAccessor.devUserId) {
+  } else if (appEnv.authMode === 'development' && sessionAccessor.devUserId) {
     config.headers['x-dev-user-id'] = sessionAccessor.devUserId;
   }
 

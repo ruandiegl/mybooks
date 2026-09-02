@@ -9,10 +9,11 @@ const server = createServer(app);
 
 registerChatSocket(server);
 
-server.listen(env.PORT, () => {
+server.listen(env.PORT, '0.0.0.0', () => {
   console.info(JSON.stringify({
     level: 'info',
     message: 'MyBooks API iniciada.',
+    host: '0.0.0.0',
     port: env.PORT,
     authMode: env.AUTH_MODE,
     storageMode: env.STORAGE_MODE

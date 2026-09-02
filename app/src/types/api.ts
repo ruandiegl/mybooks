@@ -1,3 +1,9 @@
+export type ProfileStats = {
+  bookCount: number;
+  matchCount: number;
+  conversationCount: number;
+};
+
 export type User = {
   id: string;
   name: string;
@@ -6,6 +12,7 @@ export type User = {
   avatarUrl?: string | null;
   bio?: string | null;
   city?: string | null;
+  stats?: ProfileStats | null;
 };
 
 export type BookImage = {

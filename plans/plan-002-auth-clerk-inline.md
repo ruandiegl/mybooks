@@ -19,6 +19,7 @@ Permitir que a pessoa entre ou crie uma conta sem sair do app, sem abrir uma URL
 - Login, cadastro e verificação de e-mail serão etapas da mesma tela nativa. `finalize()` será chamado sem navegação externa; a troca para as rotas privadas ocorrerá pelo estado da sessão.
 - A recuperação de senha ficará acessível no login e será feita com código de e-mail e nova senha na própria tela, sem criar tokens no backend.
 - O botão Google usará `useSignInWithGoogle()` e `@clerk/expo-google-signin` em Android/iOS; na web, usará `useSSO({ strategy: 'oauth_google' })` como fallback inevitável do provedor.
+- A senha do cadastro e da redefinição exigirá pelo menos 8 caracteres, com maiúscula, minúscula, número e caractere especial, respeitando o mínimo obrigatório do Clerk; erros do Clerk serão apresentados em português.
 - MFA será tratado quando o Clerk retornar `needs_second_factor` ou `needs_client_trust`, priorizando os fatores disponíveis e apresentando uma mensagem orientativa quando a confirmação de dispositivo exigir uma configuração adicional.
 - Não será instalado shadcn web nem usado DOM/Tailwind/Radix: o projeto não possui `components.json` e sua regra de UI é shadcn adaptado a primitives React Native.
 
@@ -67,6 +68,7 @@ Manter a direção “biblioteca social de bolso” já registrada em `docs/09-d
 - O código pode ser reenviado e a etapa pode ser reiniciada sem perder a tela.
 - O teclado não cobre os campos nem o botão principal em telas pequenas.
 - O botão Google aparece em login e cadastro, usa o seletor nativo em mobile e tratamento OAuth no web.
+- Cadastro e redefinição rejeitam senhas fora da política de 8 caracteres com maiúscula, minúscula, número e caractere especial; mensagens do Clerk são traduzidas para português.
 - O logout continua limpando cache e retornando à tela pública.
 - API permanece protegida pelo Bearer token Clerk; nenhuma senha ou chave secreta chega ao frontend.
 - Teste visual no web local confirmou a landing, a tela de login, a tela de cadastro, a validação client-side e a URL preservada sem redirecionamento. O teste completo de credenciais depende de um usuário de teste e das estratégias habilitadas no Dashboard.

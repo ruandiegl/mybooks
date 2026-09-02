@@ -18,6 +18,28 @@ export const usersRepository = {
     return prisma.user.findUnique({ where: { id }, select: publicUserSelect });
   },
 
+  async findByIdWithStats(id) {
+    const [user, bookCount, matchCount, conversationCount] = await prisma.$transaction([
+      prisma.user.findUnique({ where: { id }, select: publicUserSelect }),
+      prisma.book.count({ where: { ownerId: id } }),
+      prisma.match.count({
+        where: {
+          status: 'ACTIVE',
+          OR: [{ userAId: id }, { userBId: id }]
+        }
+      }),
+      prisma.conversation.count({
+        where: { members: { some: { userId: id } } }
+      })
+    ]);
+
+    if (!user) return null;
+    return {
+      ...user,
+      stats: { bookCount, matchCount, conversationCount }
+    };
+  },
+
   findByClerkUserId(clerkUserId) {
     return prisma.user.findUnique({ where: { clerkUserId }, select: publicUserSelect });
   },

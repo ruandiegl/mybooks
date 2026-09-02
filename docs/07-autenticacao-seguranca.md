@@ -10,6 +10,10 @@ Recuperação de senha, código por e-mail e políticas de credencial pertencem 
 
 Após o cadastro, o app solicita a confirmação do e-mail antes de finalizar a sessão. Quando a instância exigir MFA, a tela também trata código por e-mail, telefone, autenticador ou código de recuperação, conforme os fatores habilitados no Clerk.
 
+## Política de senha e mensagens
+
+O cadastro e a redefinição de senha validam no app uma senha com pelo menos 8 caracteres, incluindo uma letra maiúscula, uma letra minúscula, um número e um caractere especial. As mensagens de erro retornadas pelo Clerk são convertidas para português antes de serem exibidas nos campos e no aviso global. A mesma política de complexidade também precisa estar configurada no Dashboard Clerk para que a validação do servidor fique alinhada com a experiência do app.
+
 ## Login com Google
 
 O botão `Continuar com Google` usa o login nativo do Google em Android/iOS, com o seletor seguro de contas do aparelho. Para web, o Clerk usa o fallback OAuth oficial e retorna à aplicação após o consentimento do Google. O provedor Google precisa estar habilitado no Dashboard Clerk; o login nativo exige development build e os client IDs públicos configurados no ambiente do app. Nenhum secret do Google ou do Clerk é enviado ao frontend.

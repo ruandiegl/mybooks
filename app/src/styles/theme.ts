@@ -17,6 +17,12 @@ export const theme = {
     dangerSoft: '#FFDAD6',
     success: '#236B4A',
     successSoft: '#D8F3E6',
+    profileHeroStart: '#271719',
+    profileHeroEnd: '#7145BA',
+    profileHeroAccent: '#B90041',
+    profileHeroScrim: 'rgba(255, 255, 255, 0.78)',
+    profileHeroPattern: 'rgba(255, 255, 255, 0.14)',
+    profileMetricDivider: '#E3BDC0',
     white: '#FFFFFF',
     black: '#1A1014',
     overlay: 'rgba(39, 23, 25, 0.62)'
