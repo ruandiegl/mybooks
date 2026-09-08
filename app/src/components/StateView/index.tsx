@@ -5,7 +5,14 @@ import { theme } from '../../styles/theme';
 import { AppButton } from '../AppButton';
 import { styles } from './styles';
 type Icon = ComponentProps<typeof MaterialIcons>['name'];
-type Props = { title?: string; description?: string; icon?: Icon; loading?: boolean; actionLabel?: string; onAction?: () => void };
-export function StateView({ title = 'Carregando', description, icon = 'auto-stories', loading, actionLabel, onAction }: Props) {
-  return <View style={styles.box}>{loading ? <ActivityIndicator size="large" color={theme.colors.primary} /> : <View style={styles.icon}><MaterialIcons name={icon} size={32} color={theme.colors.primary} /></View>}<Text style={styles.title}>{title}</Text>{description ? <Text style={styles.description}>{description}</Text> : null}{actionLabel && onAction ? <AppButton label={actionLabel} variant="outline" onPress={onAction} /> : null}</View>;
+type Props = { title?: string; description?: string; icon?: Icon; loading?: boolean; compact?: boolean; actionVariant?: ComponentProps<typeof AppButton>['variant']; actionLabel?: string; onAction?: () => void };
+export function StateView({ title = 'Carregando', description, icon = 'auto-stories', loading, compact, actionVariant = 'outline', actionLabel, onAction }: Props) {
+  return (
+    <View style={[styles.box, compact && styles.compact]}>
+      {loading ? <ActivityIndicator size="large" color={theme.colors.primary} /> : <View style={[styles.icon, compact && styles.compactIcon]}><MaterialIcons name={icon} size={compact ? 28 : 32} color={theme.colors.primary} /></View>}
+      <Text style={[styles.title, compact && styles.compactTitle]}>{title}</Text>
+      {description ? <Text style={styles.description}>{description}</Text> : null}
+      {actionLabel && onAction ? <AppButton label={actionLabel} variant={actionVariant} onPress={onAction} /> : null}
+    </View>
+  );
 }

@@ -21,6 +21,18 @@ npm start
 
 O container da API aguarda a saúde do PostgreSQL e executa `prisma migrate deploy` antes de iniciar o servidor.
 
+## Dados de demonstração
+
+Para criar contas locais e livros disponíveis na descoberta, execute dentro de `API`:
+
+```bash
+npx prisma db seed
+```
+
+A seed é idempotente: pode ser executada novamente sem duplicar os registros. Ela cria quatro perfis, doze livros disponíveis e um like reverso preparado para testar um match usando `dev-mybooks-user` no modo `development`. Esses perfis são registros do domínio e não criam contas no Clerk; em `AUTH_MODE=clerk`, faça login com uma conta Clerk real para curtir os livros seed.
+
+No ambiente de desenvolvimento, a descoberta entra em loop ao consumir a fila: livros recusados podem reaparecer, enquanto livros curtidos permanecem fora da fila. Em produção, a fila continua encerrando quando não há novos livros.
+
 Se `5433` estiver ocupado, defina `POSTGRES_HOST_PORT=5434` antes do Compose e altere a porta correspondente no `API/.env` quando executar a API fora do container. Em dispositivo físico, `localhost` aponta para o telefone. Troque `EXPO_PUBLIC_API_BASE_URL` e `EXPO_PUBLIC_SOCKET_URL` pelo IP da máquina na rede, por exemplo `http://192.168.0.10:3001`.
 
 ## Modos externos

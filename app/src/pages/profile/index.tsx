@@ -2,19 +2,18 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppButton } from '../../components/AppButton';
 import { AppScreen } from '../../components/AppScreen';
 import { Avatar } from '../../components/Avatar';
 import { Badge } from '../../components/Badge';
 import { BookCard } from '../../components/BookCard';
-import { Card } from '../../components/Card';
-import { ProfileHero } from '../../components/ProfileHero';
 import { ProfileMetricRow, type ProfileMetric } from '../../components/ProfileMetricRow';
 import { ProfileTabs, type ProfileTabKey } from '../../components/ProfileTabs';
 import { StateView } from '../../components/StateView';
 import { TextField } from '../../components/TextField';
+import { TopBar } from '../../components/TopBar';
 import { useSession } from '../../providers/SessionProvider';
 import { api, apiErrorMessage } from '../../services/api';
 import { theme } from '../../styles/theme';
@@ -28,6 +27,9 @@ type Props = { navigation: Navigation };
 export function Profile({ navigation }: Props) {
   const session = useSession();
   const insets = useSafeAreaInsets();
+  const { width, fontScale } = useWindowDimensions();
+  const stackedIdentity = width < 360 || fontScale > 1.3;
+  const bookWidth = (Math.min(width, 672) - theme.spacing.md * 3) / 2;
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<ProfileTabKey>('shelf');
   const [editing, setEditing] = useState(false);
@@ -76,6 +78,10 @@ export function Profile({ navigation }: Props) {
   ] : [];
 
   function openEditor() {
+    setName(profile?.name || '');
+    setCity(profile?.city || '');
+    setBio(profile?.bio || '');
+    setPhone(profile?.phone || '');
     setNameError(undefined);
     setEditing(true);
   }
@@ -107,54 +113,56 @@ export function Profile({ navigation }: Props) {
 
   const profileIntro = (
     <View style={styles.introStack}>
-      <View style={styles.heroWrap}>
-        <ProfileHero onEdit={openEditor} />
-        <View style={styles.identityCard}>
-          <View style={styles.avatarFrame}>
-            <Avatar name={profile?.name || 'Leitor MyBooks'} url={profile?.avatarUrl} size={92} />
+      <TopBar title="Meu perfil" action={
+        <AppButton label="Editar" accessibilityLabel="Editar perfil" variant="outline" icon="edit" style={styles.editButton} onPress={openEditor} />
+      } />
+      <View style={styles.identity}>
+        <View style={[styles.identityRow, stackedIdentity && styles.identityStacked]}>
+          <Avatar name={profile?.name || 'Leitor MyBooks'} url={profile?.avatarUrl} size={72} />
+          <View style={[styles.identityCopy, stackedIdentity && styles.identityCopyStacked]}>
+            <Text accessibilityRole="header" style={styles.name}>{profile?.name}</Text>
+            {profile?.city ? <View style={styles.location}>
+              <MaterialIcons name="place" size={16} color={theme.colors.secondary} />
+              <Text style={styles.locationText}>{profile.city}</Text>
+            </View> : null}
           </View>
-          <Text style={styles.name}>{profile?.name}</Text>
-          {profile?.city ? <View style={styles.location}><MaterialIcons name="place" size={16} color={theme.colors.primary} /><Text style={styles.locationText}>{profile.city}</Text></View> : null}
-          <Text numberOfLines={3} style={styles.bio}>{profile?.bio || 'Conte um pouco sobre as histórias que você quer colocar em circulação.'}</Text>
-          <Badge label={session.mode === 'clerk' ? 'Conta protegida' : 'Ambiente local'} variant="violet" />
         </View>
+        {profile?.bio ? <Text numberOfLines={3} style={styles.bio}>{profile.bio}</Text> : null}
       </View>
-      {metrics.length === 3 ? <Card style={styles.metricCard}><ProfileMetricRow metrics={metrics} /></Card> : null}
+      {metrics.length === 3 ? <View style={styles.metrics}><ProfileMetricRow metrics={metrics} /></View> : null}
+      <ProfileTabs value={activeTab} onChange={setActiveTab} />
     </View>
   );
 
   const shelfHeader = (
     <View style={styles.listHeader}>
       {profileIntro}
-      <View style={styles.collectionHeader}>
+      <View style={[styles.collectionHeader, fontScale > 1.3 && styles.collectionStacked]}>
         <View style={styles.collectionCopy}>
-          <Text style={styles.eyebrow}>Minha biblioteca</Text>
-          <Text style={styles.sectionTitle}>Livros em circulação</Text>
+          <Text accessibilityRole="header" style={styles.sectionTitle}>Seus livros</Text>
         </View>
-        <AppButton label="Adicionar" variant="outline" icon="add" style={styles.addBook} onPress={() => navigation.navigate('BookCreate')} />
+        {books.length > 0 ? <AppButton label="Adicionar" accessibilityLabel="Adicionar livro" icon="add" style={styles.addBook} onPress={() => navigation.navigate('BookCreate')} /> : null}
       </View>
-      <ProfileTabs value={activeTab} onChange={setActiveTab} />
     </View>
   );
 
   const aboutHeader = (
     <View style={styles.listHeader}>
       {profileIntro}
-      <ProfileTabs value={activeTab} onChange={setActiveTab} />
     </View>
   );
 
   const emptyLibrary = booksQuery.isLoading
-    ? <StateView loading title="Abrindo sua estante" />
+    ? <StateView compact loading title="Abrindo sua estante" />
     : booksQuery.isError
-      ? <StateView title="Não foi possível abrir sua estante" description="Confira a conexão e tente novamente." icon="cloud-off" actionLabel="Tentar novamente" onAction={() => booksQuery.refetch()} />
-      : <StateView title="Sua estante está esperando uma história" description="Cadastre seu primeiro livro e coloque uma nova leitura em circulação." icon="auto-stories" actionLabel="Adicionar livro" onAction={() => navigation.navigate('BookCreate')} />;
+      ? <StateView compact title="Não foi possível abrir sua estante" description="Confira a conexão e tente novamente." icon="cloud-off" actionLabel="Tentar novamente" onAction={() => booksQuery.refetch()} />
+      : <StateView compact title="Sua estante começa aqui" description="Adicione seu primeiro livro para encontrar leitores e combinar trocas." icon="auto-stories" actionLabel="Adicionar livro" actionVariant="primary" onAction={() => navigation.navigate('BookCreate')} />;
 
   if (profileQuery.isLoading) return <AppScreen><StateView loading title="Preparando seu perfil" /></AppScreen>;
   if (profileQuery.isError || !profile) return <AppScreen><StateView title="Perfil indisponível" description="Não foi possível carregar sua identidade agora." icon="cloud-off" actionLabel="Tentar novamente" onAction={() => profileQuery.refetch()} /></AppScreen>;
 
   return (
-    <AppScreen>
+    <AppScreen style={styles.screen}>
       {activeTab === 'shelf' ? <FlatList
         data={books}
         numColumns={2}
@@ -165,26 +173,29 @@ export function Profile({ navigation }: Props) {
         ListEmptyComponent={emptyLibrary}
         ListFooterComponent={<View style={styles.footer}>
           {booksQuery.isFetchingNextPage ? <Text style={styles.footerText}>Carregando mais livros…</Text> : booksQuery.hasNextPage ? <AppButton label="Carregar mais" variant="outline" onPress={() => booksQuery.fetchNextPage()} /> : null}
-          <AppButton label="Sair da conta" variant="ghost" icon="logout" onPress={() => session.signOut()} />
         </View>}
         refreshControl={<RefreshControl refreshing={profileQuery.isRefetching || booksQuery.isRefetching} onRefresh={refreshAll} tintColor={theme.colors.primary} />}
         onEndReached={() => { if (booksQuery.hasNextPage && !booksQuery.isFetchingNextPage) void booksQuery.fetchNextPage(); }}
         onEndReachedThreshold={0.4}
-        renderItem={({ item }) => <BookCard book={item} style={styles.bookItem} onPress={() => navigation.navigate('BookDetails', { bookId: item.id })} />}
+        renderItem={({ item }) => <BookCard book={item} style={{ flexGrow: 0, flexShrink: 0, flexBasis: bookWidth, width: bookWidth }} onPress={() => navigation.navigate('BookDetails', { bookId: item.id })} />}
       /> : <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: Math.max(112, insets.bottom + 72) }]}
+        contentContainerStyle={styles.scroll}
         refreshControl={<RefreshControl refreshing={profileQuery.isRefetching || booksQuery.isRefetching} onRefresh={refreshAll} tintColor={theme.colors.primary} />}
       >
         {aboutHeader}
-        <Card style={styles.aboutCard}>
-          <View style={styles.aboutIntro}><Text style={styles.eyebrow}>Sobre você</Text><Text style={styles.aboutTitle}>Uma pequena apresentação para cada troca.</Text></View>
+        <View style={styles.aboutSection}>
+          <Text accessibilityRole="header" style={styles.sectionTitle}>Suas informações</Text>
           <View style={styles.aboutRow}><MaterialIcons name="person-outline" size={20} color={theme.colors.secondary} /><View style={styles.aboutCopy}><Text style={styles.aboutLabel}>Nome</Text><Text style={styles.aboutValue}>{profile.name}</Text></View></View>
           <View style={styles.aboutRow}><MaterialIcons name="place" size={20} color={theme.colors.secondary} /><View style={styles.aboutCopy}><Text style={styles.aboutLabel}>Cidade</Text><Text style={styles.aboutValue}>{profile.city || 'Ainda não informada'}</Text></View></View>
           <View style={styles.aboutRow}><MaterialIcons name="mail-outline" size={20} color={theme.colors.secondary} /><View style={styles.aboutCopy}><Text style={styles.aboutLabel}>E-mail</Text><Text style={styles.aboutValue}>{profile.email || 'Ainda não informado'}</Text></View></View>
+          <View style={styles.aboutRow}><MaterialIcons name="phone" size={20} color={theme.colors.secondary} /><View style={styles.aboutCopy}><Text style={styles.aboutLabel}>Telefone</Text><Text style={styles.aboutValue}>{profile.phone || 'Ainda não informado'}</Text></View></View>
           <View style={styles.aboutRow}><MaterialIcons name="menu-book" size={20} color={theme.colors.secondary} /><View style={styles.aboutCopy}><Text style={styles.aboutLabel}>Bio</Text><Text style={styles.aboutValue}>{profile.bio || 'Você ainda não escreveu uma bio.'}</Text></View></View>
-          <AppButton label="Editar perfil" variant="outline" icon="edit" onPress={openEditor} />
-        </Card>
-        <AppButton label="Sair da conta" variant="ghost" icon="logout" onPress={() => session.signOut()} />
+        </View>
+        <View style={styles.accountSection}>
+          <Text accessibilityRole="header" style={styles.sectionTitle}>Conta</Text>
+          <Badge label={session.mode === 'clerk' ? 'Conta protegida' : 'Ambiente local'} variant="violet" />
+          <AppButton label="Sair da conta" variant="ghost" icon="logout" style={styles.signOut} onPress={() => session.signOut()} />
+        </View>
       </ScrollView>}
       <Modal visible={editing} animationType="slide" onRequestClose={closeEditor}>
         <View style={[styles.modalSafe, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
@@ -195,11 +206,11 @@ export function Profile({ navigation }: Props) {
               <View style={styles.modalHeaderSpacer} />
             </View>
             <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.modalScroll}>
-              <View style={styles.editorIdentity}><View style={styles.editorAvatar}><Avatar name={name || 'Leitor MyBooks'} url={profile.avatarUrl} size={72} /></View><Text style={styles.editorHint}>Sua foto vem da conta conectada e poderá ser alterada quando o perfil tiver um fluxo de mídia próprio.</Text></View>
-              <TextField label="Nome" value={name} onChangeText={(value) => { setName(value); if (nameError) setNameError(undefined); }} error={nameError} autoCapitalize="words" />
-              <TextField label="Cidade" value={city} onChangeText={setCity} placeholder="Ex.: São Paulo" />
+              <View style={styles.editorIdentity}><Avatar name={name || 'Leitor MyBooks'} url={profile.avatarUrl} size={72} /><Text style={styles.editorHint}>Foto da sua conta conectada.</Text></View>
+              <TextField label="Nome" value={name} maxLength={80} onChangeText={(value) => { setName(value); if (nameError) setNameError(undefined); }} error={nameError} autoCapitalize="words" />
+              <TextField label="Cidade" value={city} maxLength={100} onChangeText={setCity} placeholder="Ex.: São Paulo" />
               <TextField label="Telefone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" textContentType="telephoneNumber" />
-              <TextField label="Bio" value={bio} onChangeText={setBio} multiline placeholder="Conte um pouco sobre seus gostos literários" help="Use até 280 caracteres." />
+              <TextField label="Bio" value={bio} onChangeText={setBio} maxLength={280} multiline placeholder="Conte um pouco sobre seus gostos literários" help={`${bio.length}/280 caracteres`} />
               <AppButton label="Salvar alterações" icon="check" loading={saveMutation.isPending} onPress={saveProfile} />
             </ScrollView>
           </KeyboardAvoidingView>

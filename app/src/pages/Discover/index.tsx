@@ -51,6 +51,7 @@ export function Discover() {
       if (data.match) Alert.alert('Deu match!', 'Vocês gostaram dos livros um do outro. A conversa já está disponível.');
       void queryClient.invalidateQueries({ queryKey: ['conversations'] });
       void queryClient.invalidateQueries({ queryKey: ['matches'] });
+      if (books.length <= 1) void query.refetch();
     },
     onError: (error) => {
       resetCard();

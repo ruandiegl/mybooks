@@ -1,4 +1,5 @@
 import { prisma } from '../../shared/database/prisma.js';
+import { env } from '../../config/env.js';
 
 const includeBook = {
   images: {
@@ -39,16 +40,34 @@ export const booksRepository = {
   },
 
   async listDiscovery(ownerId, { cursor, limit }) {
-    return prisma.book.findMany({
-      where: {
-        ownerId: { not: ownerId },
-        availability: 'AVAILABLE',
-        interactions: { none: { actorId: ownerId } }
-      },
+    const pagination = {
       include: includeBook,
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {})
+    };
+    const availableBooks = {
+      ownerId: { not: ownerId },
+      availability: 'AVAILABLE'
+    };
+    const unseen = await prisma.book.findMany({
+      where: {
+        ...availableBooks,
+        interactions: { none: { actorId: ownerId } }
+      },
+      ...pagination
+    });
+
+    if (unseen.length || env.NODE_ENV !== 'development') return unseen;
+
+    return prisma.book.findMany({
+      where: {
+        ...availableBooks,
+        interactions: {
+          some: { actorId: ownerId, action: 'PASS' }
+        }
+      },
+      ...pagination
     });
   },
 
