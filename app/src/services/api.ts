@@ -1,17 +1,19 @@
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { appEnv } from '../config/env';
 
 type SessionAccessor = {
-  getToken: () => Promise<string | null>;
-  devUserId?: string;
-  onUnauthorized?: () => Promise<void>;
+  getAccessToken: () => Promise<string | null>;
+  refresh: () => Promise<boolean>;
+  onUnauthorized: () => Promise<void>;
 };
 
 let sessionAccessor: SessionAccessor = {
-  getToken: async () => null,
-  devUserId: appEnv.authMode === 'development' ? appEnv.devUserId : undefined
+  getAccessToken: async () => null,
+  refresh: async () => false,
+  onUnauthorized: async () => undefined
 };
-let handlingUnauthorized = false;
+let refreshPromise: Promise<boolean> | null = null;
+let unauthorizedPromise: Promise<void> | null = null;
 
 export function configureApiSession(accessor: SessionAccessor) {
   sessionAccessor = accessor;
@@ -27,13 +29,11 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use(async (config) => {
-  const token = await sessionAccessor.getToken();
+  const token = await sessionAccessor.getAccessToken();
   config.headers = config.headers ?? {};
 
   if (token) {
     config.headers.Authorization = 'Bearer ' + token;
-  } else if (appEnv.authMode === 'development' && sessionAccessor.devUserId) {
-    config.headers['x-dev-user-id'] = sessionAccessor.devUserId;
   }
 
   return config;
@@ -42,17 +42,27 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    if (
-      error.response?.status === 401
-      && sessionAccessor.onUnauthorized
-      && !handlingUnauthorized
-    ) {
-      handlingUnauthorized = true;
-      try {
-        await sessionAccessor.onUnauthorized();
-      } finally {
-        handlingUnauthorized = false;
+    const request = error.config as (InternalAxiosRequestConfig & { _authRetry?: boolean }) | undefined;
+    const isRefreshRequest = request?.url?.includes('/auth/refresh');
+
+    if (error.response?.status === 401 && request && !request._authRetry && !isRefreshRequest) {
+      request._authRetry = true;
+      refreshPromise ??= sessionAccessor.refresh().finally(() => { refreshPromise = null; });
+      const refreshed = await refreshPromise;
+
+      if (refreshed) {
+        const token = await sessionAccessor.getAccessToken();
+        request.headers = request.headers ?? {};
+        if (token) request.headers.Authorization = 'Bearer ' + token;
+        return api.request(request);
       }
+    }
+
+    if (error.response?.status === 401) {
+      unauthorizedPromise ??= sessionAccessor.onUnauthorized().finally(() => { unauthorizedPromise = null; });
+      try {
+        await unauthorizedPromise;
+      } catch { /* limpeza local não deve mascarar o 401 original */ }
     }
     return Promise.reject(error);
   }
@@ -60,7 +70,8 @@ api.interceptors.response.use(
 
 export function apiErrorMessage(error: unknown, fallback = 'Não foi possível concluir a operação.') {
   if (error instanceof AxiosError) {
-    return error.response?.data?.error?.message || fallback;
+    const payload = error.response?.data as { error?: { message?: string } } | undefined;
+    return payload?.error?.message || fallback;
   }
   return fallback;
 }

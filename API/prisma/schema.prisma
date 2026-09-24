@@ -8,23 +8,75 @@ datasource db {
 }
 
 model User {
-  id                  String               @id @default(uuid())
-  clerkUserId         String               @unique
-  name                String
-  email               String?              @unique
-  legacyPassHash      String?              @map("passHash")
-  phone               String?
-  avatarUrl           String?
-  bio                 String?
-  city                String?
-  books               Book[]
-  interactions        Interaction[]        @relation("InteractionActor")
-  matchesAsUserA      Match[]              @relation("MatchUserA")
-  matchesAsUserB      Match[]              @relation("MatchUserB")
-  conversationMembers ConversationMember[]
-  messages            Message[]
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  id                         String               @id @default(uuid())
+  clerkUserId                String?              @unique
+  name                       String
+  email                      String?              @unique
+  passwordHash               String?
+  legacyPassHash             String?              @map("passHash")
+  emailVerifiedAt            DateTime?
+  pendingRegistrationExpiresAt DateTime?
+  firstName                  String?
+  lastName                   String?
+  cpfHash                    String?              @unique
+  cpfEncrypted               String?
+  phone                      String?
+  interests                  String[]             @default([])
+  profileCompletedAt         DateTime?
+  booksOnboardingCompletedAt DateTime?
+  isActive                   Boolean              @default(false)
+  avatarUrl                  String?
+  bio                        String?
+  city                       String?
+  books                      Book[]
+  interactions               Interaction[]        @relation("InteractionActor")
+  matchesAsUserA             Match[]              @relation("MatchUserA")
+  matchesAsUserB             Match[]              @relation("MatchUserB")
+  conversationMembers        ConversationMember[]
+  messages                   Message[]
+  authSessions               AuthSession[]
+  authCodes                  AuthCode[]
+  createdAt                  DateTime             @default(now())
+  updatedAt                  DateTime             @updatedAt
+
+  @@index([pendingRegistrationExpiresAt])
+}
+
+model AuthSession {
+  id               String       @id @default(uuid())
+  userId           String
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String       @unique
+  familyId         String
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  replacedById     String?      @unique
+  replacedBy       AuthSession? @relation("AuthSessionReplacement", fields: [replacedById], references: [id], onDelete: SetNull)
+  replaces         AuthSession? @relation("AuthSessionReplacement")
+  userAgent        String?
+  ipHash           String?
+  createdAt        DateTime     @default(now())
+  lastUsedAt       DateTime     @default(now())
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([expiresAt])
+}
+
+model AuthCode {
+  id         String       @id @default(uuid())
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       AuthCodeType
+  codeHash   String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  attempts   Int          @default(0)
+  lastSentAt DateTime?
+  createdAt  DateTime     @default(now())
+
+  @@index([userId, type])
+  @@index([expiresAt])
 }
 
 model Book {
@@ -157,4 +209,9 @@ enum InteractionAction {
 enum MatchStatus {
   ACTIVE
   ARCHIVED
+}
+
+enum AuthCodeType {
+  EMAIL_VERIFY
+  PASSWORD_RESET
 }

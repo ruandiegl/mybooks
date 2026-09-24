@@ -13,6 +13,7 @@ COPY prisma ./prisma
 RUN npm run prisma:generate
 
 COPY src ./src
+COPY assets ./assets
 
 ENV NODE_ENV=production
 USER node

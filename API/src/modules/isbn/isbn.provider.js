@@ -1,12 +1,33 @@
 import { env } from '../../config/env.js';
 import { AppError } from '../../shared/errors/AppError.js';
+import { isbnProviderBookSchema } from './isbn.schemas.js';
 
 const cache = new Map();
 const cacheTtlMs = 10 * 60 * 1000;
+const cacheMaxEntries = 500;
+
+function pruneExpired(now) {
+  for (const [key, entry] of cache) {
+    if (entry.expiresAt <= now) cache.delete(key);
+  }
+}
+
+function cacheBook(isbn, value) {
+  const now = Date.now();
+  pruneExpired(now);
+
+  if (cache.has(isbn)) cache.delete(isbn);
+  if (cache.size >= cacheMaxEntries) {
+    cache.delete(cache.keys().next().value);
+  }
+
+  cache.set(isbn, { value, expiresAt: now + cacheTtlMs });
+}
 
 export async function fetchBookByIsbn(isbn) {
   const cached = cache.get(isbn);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
+  if (cached) cache.delete(isbn);
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), env.ISBN_API_TIMEOUT_MS);
@@ -45,8 +66,8 @@ export async function fetchBookByIsbn(isbn) {
       });
     }
 
-    const value = await response.json();
-    cache.set(isbn, { value, expiresAt: Date.now() + cacheTtlMs });
+    const value = isbnProviderBookSchema.parse(await response.json());
+    cacheBook(isbn, value);
     return value;
   } catch (error) {
     if (error instanceof AppError) throw error;

@@ -1,8 +1,6 @@
 # 11. Qualidade e testes
 
-## Verificações atuais
-
-A suíte possui 29 testes Vitest em 9 arquivos. Ela cobre fundação HTTP, ISBN, livros, ownership, matches, chat, chaves R2, template de e-mail e funções puras do fluxo mobile. O app usa TypeScript estrito como primeira barreira. Antes de uma entrega:
+Antes de uma entrega:
 
 ```bash
 cd API
@@ -12,26 +10,16 @@ npx prisma validate
 npx prisma generate
 
 cd ../app
+npm test
 npm run typecheck
 npx expo-doctor
 npx expo export --platform android --output-dir .validation-export --clear
 ```
 
-## Casos prioritários
+A suíte deve cobrir política/limite bcrypt, CPF/celular/e-mail, códigos, concorrência de cadastro, enumeração, refresh/replay, sessão revogada, rate limit, ownership HTTP/Socket.IO, avatar e decisões de onboarding. No app, cobre regras puras de senha, refresh único e guards.
 
-- dígitos verificadores ISBN-10 e ISBN-13;
-- rota privada sem identidade;
-- usuário não pode alterar livro/imagem de outra pessoa;
-- LIKE repetido e mensagem repetida não duplicam dados;
-- match só nasce com interesse mútuo;
-- membro não autorizado não entra em sala;
-- presign rejeita tipo e tamanho inválidos;
-- falha de BrasilAPI, R2 ou Resend não expõe segredo.
-- consulta ISBN não sobrescreve campo já revisado no app;
-- mensagem otimista é substituída sem duplicação e falha permite retry.
+Para o fluxo de ISBN, cubra no app aceitação exclusiva de EAN-13 `978`/`979` com checksum válido, rejeição sem chamada HTTP de QR/URL/texto/EAN de produto, preenchimento após leitura e fallback manual. Na API, cubra Zod/checksum, cache, timeout, chave do rate limit e respostas `404/422/429/503` sem vazamento.
 
-## Definition of Done
+Na validação desta entrega, o app teve 7 arquivos e 32 testes aprovados, além de typecheck, Expo Doctor 21/21 e export Android. Na API, o lint passou sem erros; 23 arquivos e 161 testes foram aprovados, com 1 arquivo e 1 teste ignorados após ampliar a cobertura de payload externo, cache, rate limit e sanitização de logs. `prisma validate` confirmou o schema e `prisma generate` gerou o Prisma Client 6.19.3.
 
-Código compila, lint e testes passam, migração foi exercitada em PostgreSQL, fluxo foi testado em Android/iOS proporcionalmente ao risco, estados de UI estão completos e documentação/contrato foram atualizados.
-
-Se Docker, credenciais ou dispositivo não estiverem disponíveis, o item correspondente permanece explicitamente pendente; validação estática não deve ser registrada como teste ponta a ponta.
+Migração em PostgreSQL limpo, entrega Resend, R2, dois usuários no Socket.IO e dispositivo Android/iOS são evidências separadas. O aceite físico do scanner deve incluir permissão negada e bloqueada, baixa luz, código danificado, offline, `404`, `503` e limite excedido. Se o ambiente não existir, registre como pendente; typecheck, export e mocks não equivalem a teste ponta a ponta.

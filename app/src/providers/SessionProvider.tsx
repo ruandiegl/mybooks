@@ -1,110 +1,137 @@
-import { ClerkProvider, useAuth, useClerk } from '@clerk/expo';
-import { tokenCache } from '@clerk/expo/token-cache';
 import { useQueryClient } from '@tanstack/react-query';
-import * as SecureStore from 'expo-secure-store';
-import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { appEnv } from '../config/env';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react';
+import { authApi } from '../features/auth/authApi';
+import { clearTokens, loadTokens, saveTokens } from '../features/auth/authStorage';
 import { configureApiSession } from '../services/api';
+import type { AuthSessionResponse, AuthTokens, User } from '../types/api';
 
 type SessionContextValue = {
   isLoaded: boolean;
   isSignedIn: boolean;
-  mode: 'clerk' | 'development';
-  devUserId?: string;
+  user: User | null;
   getToken: () => Promise<string | null>;
-  startAuth?: (mode: 'sign-in' | 'sign-up') => Promise<void>;
+  establishSession: (response: AuthSessionResponse) => Promise<void>;
+  refreshSession: () => Promise<boolean>;
+  refreshUser: () => Promise<User | null>;
   signOut: () => Promise<void>;
 };
 
 const SessionContext = createContext<SessionContextValue | null>(null);
-const DEV_SESSION_KEY = 'mybooks.dev.session';
 
-function ClerkSessionBridge({ children }: React.PropsWithChildren) {
-  const queryClient = useQueryClient();
-  const { isLoaded, isSignedIn, getToken } = useAuth();
-  const clerk = useClerk();
-
-  const signOut = useCallback(async () => {
-    queryClient.clear();
-    await clerk.signOut();
-  }, [clerk, queryClient]);
-
-  useLayoutEffect(() => {
-    configureApiSession({ getToken, onUnauthorized: signOut });
-  }, [getToken, signOut]);
-
-  const value = useMemo<SessionContextValue>(() => ({
-    isLoaded,
-    isSignedIn: Boolean(isSignedIn),
-    mode: 'clerk',
-    getToken,
-    signOut
-  }), [getToken, isLoaded, isSignedIn, signOut]);
-
-  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
-}
-
-function DevelopmentSessionBridge({ children }: React.PropsWithChildren) {
-  const queryClient = useQueryClient();
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [isSignedIn, setIsSignedIn] = useState(false);
-
-  useEffect(() => {
-    SecureStore.getItemAsync(DEV_SESSION_KEY)
-      .then((value) => setIsSignedIn(value === 'active'))
-      .finally(() => setIsLoaded(true));
-  }, []);
-
-  const getToken = useCallback(async () => null, []);
-
-  const startAuth = useCallback(async () => {
-    await SecureStore.setItemAsync(DEV_SESSION_KEY, 'active');
-    setIsSignedIn(true);
-  }, []);
-
-  const signOut = useCallback(async () => {
-    queryClient.clear();
-    await SecureStore.deleteItemAsync(DEV_SESSION_KEY);
-    setIsSignedIn(false);
-  }, [queryClient]);
-
-  useEffect(() => {
-    configureApiSession({
-      getToken,
-      devUserId: appEnv.devUserId,
-      onUnauthorized: signOut
-    });
-  }, [getToken, signOut]);
-
-  const value = useMemo<SessionContextValue>(() => ({
-    isLoaded,
-    isSignedIn,
-    mode: 'development',
-    devUserId: appEnv.devUserId,
-    getToken,
-    startAuth,
-    signOut
-  }), [getToken, isLoaded, isSignedIn, signOut, startAuth]);
-
-  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
+function sessionTokens(response: AuthSessionResponse): AuthTokens {
+  const expiresAt = Date.parse(response.expiresAt);
+  if (!Number.isFinite(expiresAt)) throw new Error('Expiração de sessão inválida.');
+  return { accessToken: response.accessToken, refreshToken: response.refreshToken, expiresAt };
 }
 
 export function SessionProvider({ children }: React.PropsWithChildren) {
-  if (appEnv.authMode === 'clerk' && appEnv.clerkPublishableKey) {
-    return (
-      <ClerkProvider publishableKey={appEnv.clerkPublishableKey} tokenCache={tokenCache}>
-        <ClerkSessionBridge>{children}</ClerkSessionBridge>
-      </ClerkProvider>
-    );
-  }
+  const queryClient = useQueryClient();
+  const tokensRef = useRef<AuthTokens | null>(null);
+  const [tokens, setTokens] = useState<AuthTokens | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
 
-  return <DevelopmentSessionBridge>{children}</DevelopmentSessionBridge>;
+  const replaceTokens = useCallback(async (next: AuthTokens | null) => {
+    if (next) await saveTokens(next);
+    else await clearTokens();
+    tokensRef.current = next;
+    setTokens(next);
+  }, []);
+
+  const establishSession = useCallback(async (response: AuthSessionResponse) => {
+    await replaceTokens(sessionTokens(response));
+    setUser(response.user);
+  }, [replaceTokens]);
+
+  const clearSession = useCallback(async () => {
+    await replaceTokens(null);
+    setUser(null);
+    queryClient.clear();
+  }, [queryClient, replaceTokens]);
+
+  const refreshSession = useCallback(async () => {
+    const current = tokensRef.current;
+    if (!current?.refreshToken) return false;
+
+    try {
+      await establishSession(await authApi.refresh(current.refreshToken));
+      return true;
+    } catch {
+      await clearSession();
+      return false;
+    }
+  }, [clearSession, establishSession]);
+
+  const getToken = useCallback(async () => tokensRef.current?.accessToken ?? null, []);
+
+  const refreshUser = useCallback(async () => {
+    if (!tokensRef.current) return null;
+    const currentUser = await authApi.me();
+    setUser(currentUser);
+    return currentUser;
+  }, []);
+
+  const signOut = useCallback(async () => {
+    const refreshToken = tokensRef.current?.refreshToken;
+    await clearSession();
+    if (refreshToken) {
+      try { await authApi.logout(refreshToken); } catch { /* logout local continua válido offline */ }
+    }
+  }, [clearSession]);
+
+  useLayoutEffect(() => {
+    configureApiSession({ getAccessToken: getToken, refresh: refreshSession, onUnauthorized: clearSession });
+  }, [clearSession, getToken, refreshSession]);
+
+  useEffect(() => {
+    let active = true;
+
+    const hydrate = async () => {
+      try {
+        const stored = await loadTokens();
+        if (!stored || !active) return;
+        tokensRef.current = stored;
+        setTokens(stored);
+
+        if (stored.expiresAt <= Date.now() + 60_000 && !await refreshSession()) return;
+        const currentUser = await refreshUser();
+        if (!active && currentUser) return;
+      } catch {
+        if (active) await clearSession();
+      } finally {
+        if (active) setIsLoaded(true);
+      }
+    };
+
+    void hydrate();
+    return () => { active = false; };
+  }, [clearSession, refreshSession, refreshUser]);
+
+  const value = useMemo<SessionContextValue>(() => ({
+    isLoaded,
+    isSignedIn: Boolean(tokens && user),
+    user,
+    getToken,
+    establishSession,
+    refreshSession,
+    refreshUser,
+    signOut
+  }), [establishSession, getToken, isLoaded, refreshSession, refreshUser, signOut, tokens, user]);
+
+  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 
 export function useSession() {
   const context = useContext(SessionContext);
-  if (!context) {
-    throw new Error('useSession deve ser usado dentro de SessionProvider.');
-  }
+  if (!context) throw new Error('useSession deve ser usado dentro de SessionProvider.');
   return context;
 }

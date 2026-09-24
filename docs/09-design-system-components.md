@@ -14,6 +14,8 @@ A família oficial é Be Vietnam Pro. Títulos usam peso 700/800; corpo usa 400;
 
 `AppButton`, `TextField`, `Card`, `Badge`, `Avatar`, `IsbnBadge`, `AppScreen`, `TopBar`, `StateView`, `BookCard`, `SearchField` e `ToggleGroup` são reutilizáveis. O chat possui primitives próprias em `components/chat`. Estenda variantes nesses componentes antes de copiar estilos para páginas.
 
+`BarcodeScannerModal` é a superfície nativa de leitura em `BookCreate`. O modal mantém enquadramento legível, ação explícita para fechar e acesso visível ao cadastro manual. A permissão é pedida sob demanda; estados negado e bloqueado devem explicar o próximo passo sem impedir digitação, e leituras inválidas não substituem o ISBN atual nem disparam carregamento remoto.
+
 ## Regras shadcn no mobile
 
 O projeto segue princípios de composição, variantes e tokens do shadcn, implementados com primitives React Native. Não há DOM, Tailwind web ou Radix nas telas nativas. Estados de hover não substituem pressed, focus, disabled, loading, erro e acessibilidade mobile.
@@ -34,4 +36,4 @@ Como esse fluxo depende de código nativo, ele precisa de um development build o
 
 ## Revisão visual
 
-Verifique telas pequenas, teclado aberto, texto longo, capa ausente, safe area, contraste, alvos de toque de pelo menos 44 pt/48 dp e todos os estados assíncronos. O swipe de descoberta sempre mantém botões equivalentes. A tela respeita redução de movimento e adapta o cartão quando recebe dimensões horizontais, embora o binário atual seja distribuído em orientação retrato.
+Verifique telas pequenas, teclado aberto, texto longo, capa ausente, safe area, contraste, alvos de toque de pelo menos 44 pt/48 dp e todos os estados assíncronos. No scanner, inclua permissão negada/bloqueada, baixa luz, código danificado, offline, ISBN ausente, indisponibilidade externa e limite excedido; o fallback manual deve permanecer alcançável. O swipe de descoberta sempre mantém botões equivalentes. A tela respeita redução de movimento e adapta o cartão quando recebe dimensões horizontais, embora o binário atual seja distribuído em orientação retrato.

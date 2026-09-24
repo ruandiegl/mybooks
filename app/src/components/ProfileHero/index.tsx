@@ -21,7 +21,7 @@ export function ProfileHero({ onEdit }: Props) {
       </View>
       <View style={styles.topRow}>
         <View style={styles.brandLockup}>
-          <Text style={styles.brand}>mybooks.</Text>
+          <Text style={styles.brand}>TrocaLivros</Text>
           <Text style={styles.meta}>perfil de leitor</Text>
         </View>
         <Pressable

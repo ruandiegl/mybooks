@@ -42,7 +42,7 @@ export function Chat({ route }: Props) {
     let current: Socket | null = null;
 
     setConnectionState('connecting');
-    createChatSocket({ getToken: session.getToken, devUserId: session.devUserId }).then((created) => {
+    createChatSocket({ getToken: session.getToken }).then((created) => {
       if (!active) return created.close();
       current = created;
       setSocket(created);
@@ -74,7 +74,7 @@ export function Chat({ route }: Props) {
       if (typingTimer.current) clearTimeout(typingTimer.current);
       current?.close();
     };
-  }, [conversationId, me.data?.id, queryClient, session.devUserId, session.getToken]);
+  }, [conversationId, me.data?.id, queryClient, session.getToken]);
 
   const ordered = useMemo(() => orderMessagePages(messages.data), [messages.data]);
 

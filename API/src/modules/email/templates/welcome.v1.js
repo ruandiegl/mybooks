@@ -1,5 +1,5 @@
 export const welcomeEmailV1 = {
-  subject: 'Sua estante MyBooks está pronta',
+  subject: 'Sua estante TrocaLivros está pronta',
   html({ name }) {
     const safeName = String(name)
       .replaceAll('&', '&amp;')
@@ -10,7 +10,7 @@ export const welcomeEmailV1 = {
 
     return [
       '<main style="font-family:Arial,sans-serif;color:#271719">',
-      '<h1>Bem-vindo ao MyBooks, ' + safeName + '.</h1>',
+      '<h1>Bem-vindo ao TrocaLivros, ' + safeName + '.</h1>',
       '<p>Cadastre seu primeiro livro e comece a descobrir novas leituras.</p>',
       '</main>'
     ].join('');

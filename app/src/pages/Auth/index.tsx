@@ -1,838 +1,135 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useSignIn, useSignUp } from '@clerk/expo';
-import { useSignInWithGoogle } from '@clerk/expo/google';
-import { useSSO } from '@clerk/expo';
-import { useState, type ReactNode } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppButton } from '../../components/AppButton';
 import { Card } from '../../components/Card';
+import { PasswordRequirements } from '../../components/PasswordRequirements';
 import { TextField } from '../../components/TextField';
+import { VerificationCodeField } from '../../components/VerificationCodeField';
+import { authApi, authErrorMessage } from '../../features/auth/authApi';
+import { maskBrazilianPhone, maskCpf } from '../../features/auth/inputMasks';
+import { passwordIssues, validatePasswordConfirmation } from '../../features/auth/passwordRules';
 import { useSession } from '../../providers/SessionProvider';
 import { theme } from '../../styles/theme';
 import { styles } from './styles';
 
-type AuthAction = 'sign-in' | 'sign-up';
-type AuthStep = 'landing' | 'form' | 'verify-email' | 'mfa' | 'reset-email' | 'reset-code' | 'reset-password';
-type MfaStrategy = 'email_code' | 'phone_code' | 'totp' | 'backup_code';
+type AuthStep = 'landing' | 'register' | 'verify' | 'login' | 'forgot' | 'reset';
+const validEmail = (value: string) => /^\S+@\S+\.\S+$/.test(value.trim());
 
-type ClerkErrorShape = {
-  code?: string;
-  message?: string;
-  longMessage?: string;
-  errors?: ClerkErrorShape[];
-};
-
-const MIN_PASSWORD_LENGTH = 8;
-const PASSWORD_REQUIREMENTS_HELP = 'Mínimo de 8 caracteres, com pelo menos uma maiúscula, uma minúscula, um número e um caractere especial.';
-
-const CLERK_ERROR_MESSAGES: Record<string, string> = {
-  form_password_length_too_short: 'A senha precisa ter pelo menos 8 caracteres.',
-  form_password_length_too_long: 'A senha é muito longa. Escolha uma senha menor.',
-  form_password_no_uppercase: 'A senha precisa ter pelo menos uma letra maiúscula.',
-  form_password_no_lowercase: 'A senha precisa ter pelo menos uma letra minúscula.',
-  form_password_no_number: 'A senha precisa ter pelo menos um número.',
-  form_password_no_special_char: 'A senha precisa ter pelo menos um caractere especial.',
-  form_password_not_strong_enough: PASSWORD_REQUIREMENTS_HELP,
-  form_password_pwned: 'Essa senha foi encontrada em vazamentos conhecidos. Escolha outra senha.',
-  form_password_compromised: 'Essa senha foi comprometida. Escolha uma senha diferente.',
-  form_password_incorrect: 'A senha está incorreta.',
-  form_identifier_not_found: 'Não encontramos uma conta com esse e-mail.',
-  form_identifier_exists: 'Já existe uma conta com esse e-mail.',
-  form_email_address_invalid: 'Digite um e-mail válido.',
-  form_param_format_invalid: 'Confira o formato do dado informado.',
-  form_param_value_invalid: 'O dado informado não é válido.',
-  form_param_value_not_allowed: 'Esse valor não é permitido.',
-  form_param_value_required: 'Preencha este campo.',
-  form_code_incorrect: 'O código informado está incorreto.',
-  form_code_expired: 'Esse código expirou. Solicite um novo código.',
-  verification_failed: 'Não foi possível confirmar o código. Tente novamente.',
-  captcha_invalid: 'A verificação de segurança falhou. Tente novamente.',
-  not_allowed_access: 'Este e-mail não tem permissão para acessar a aplicação.',
-  too_many_requests: 'Muitas tentativas. Aguarde um pouco e tente novamente.',
-  user_locked: 'Sua conta está temporariamente bloqueada. Aguarde e tente novamente.',
-  session_exists: 'Você já está conectado.',
-  oauth_access_denied: 'O acesso pelo Google foi cancelado.',
-  external_account_not_found: 'Não foi possível encontrar essa conta Google.',
-};
-
-function isPortugueseMessage(message: string) {
-  return /\b(não|senha|conta|e-mail|código|digite|confira|tente|criar|acesso|dados|sua|seu|uma|um)\b|[ãõáéíóúç]/i.test(message);
+function ErrorBanner({ message }: { message?: string }) {
+  if (!message) return null;
+  return <View accessibilityRole="alert" style={styles.errorBanner}><MaterialIcons name="error-outline" size={19} color={theme.colors.danger} /><Text style={styles.errorBannerText}>{message}</Text></View>;
 }
 
-function localizeClerkError(error: ClerkErrorShape) {
-  const code = error.code?.toLowerCase();
-  if (code && CLERK_ERROR_MESSAGES[code]) return CLERK_ERROR_MESSAGES[code];
-
-  const nestedMessage = firstErrorMessage(error.errors);
-  if (nestedMessage) return nestedMessage;
-
-  const message = error.longMessage || error.message;
-  if (!message) return undefined;
-  if (isPortugueseMessage(message)) return message;
-
-  const normalized = message.toLowerCase();
-  if (normalized.includes('password') && normalized.includes('uppercase')) return 'A senha precisa ter pelo menos uma letra maiúscula.';
-  if (normalized.includes('password') && normalized.includes('lowercase')) return 'A senha precisa ter pelo menos uma letra minúscula.';
-  if (normalized.includes('password') && normalized.includes('number')) return 'A senha precisa ter pelo menos um número.';
-  if (normalized.includes('password') && normalized.includes('special')) return 'A senha precisa ter pelo menos um caractere especial.';
-  if (normalized.includes('password') && (normalized.includes('short') || normalized.includes('at least'))) return 'A senha precisa ter pelo menos 8 caracteres.';
-  if (normalized.includes('password') && (normalized.includes('incorrect') || normalized.includes('invalid'))) return 'A senha está incorreta.';
-  if (normalized.includes('email') && (normalized.includes('invalid') || normalized.includes('valid'))) return 'Digite um e-mail válido.';
-  if (normalized.includes('already exists') || normalized.includes('already registered')) return 'Já existe uma conta com esses dados.';
-  if (normalized.includes('not found') || normalized.includes("couldn't find")) return 'Não encontramos uma conta com esses dados.';
-  if (normalized.includes('code') && normalized.includes('expired')) return 'Esse código expirou. Solicite um novo código.';
-  if (normalized.includes('code') && (normalized.includes('incorrect') || normalized.includes('invalid'))) return 'O código informado está incorreto.';
-  if (normalized.includes('captcha')) return 'A verificação de segurança falhou. Tente novamente.';
-  if (normalized.includes('too many') || normalized.includes('rate limit')) return 'Muitas tentativas. Aguarde um pouco e tente novamente.';
-
-  return 'Não foi possível concluir esta ação. Confira os dados e tente novamente.';
+function NoticeBanner({ message }: { message?: string }) {
+  if (!message) return null;
+  return <View accessibilityRole="alert" style={styles.noticeBanner}><MaterialIcons name="check-circle-outline" size={19} color={theme.colors.success} /><Text style={styles.noticeBannerText}>{message}</Text></View>;
 }
 
-function firstErrorMessage(value: unknown): string | undefined {
-  if (!value) return undefined;
-  if (typeof value === 'string') return value;
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const message = firstErrorMessage(item);
-      if (message) return message;
-    }
-    return undefined;
-  }
-  if (typeof value !== 'object') return undefined;
-
-  const error = value as ClerkErrorShape;
-  return localizeClerkError(error) || firstErrorMessage(error.errors);
+function InlineLink({ label, onPress, disabled = false }: { label: string; onPress: () => void; disabled?: boolean }) {
+  return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={styles.inlineLink}><Text style={[styles.inlineLinkText, disabled && styles.disabledLink]}>{label}</Text></Pressable>;
 }
 
-function errorMessage(error: unknown, fallback: string) {
-  return firstErrorMessage(error) || fallback;
-}
-
-function isValidEmail(email: string) {
-  return /^\S+@\S+\.\S+$/.test(email.trim());
-}
-
-function passwordRequirementError(value: string, label = 'A senha') {
-  if (value.length < MIN_PASSWORD_LENGTH) return `${label} precisa ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`;
-  if (!/[A-Z]/.test(value)) return `${label} precisa ter pelo menos uma letra maiúscula.`;
-  if (!/[a-z]/.test(value)) return `${label} precisa ter pelo menos uma letra minúscula.`;
-  if (!/[0-9]/.test(value)) return `${label} precisa ter pelo menos um número.`;
-  if (!/[^A-Za-z0-9\s]/.test(value)) return `${label} precisa ter pelo menos um caractere especial.`;
-  return undefined;
-}
-
-function PasswordField({ label, value, onChangeText, error, help, visible, onToggle }: {
-  label: string;
-  value: string;
-  onChangeText: (value: string) => void;
-  error?: string;
-  help?: string;
-  visible: boolean;
-  onToggle: () => void;
-}) {
+function PasswordInput({ label, value, onChangeText }: { label: string; value: string; onChangeText: (value: string) => void }) {
+  const [visible, setVisible] = useState(false);
   return (
     <View style={styles.passwordField}>
-      <TextField
-        label={label}
-        value={value}
-        onChangeText={onChangeText}
-        error={error}
-        help={help}
-        secureTextEntry={!visible}
-        autoCapitalize="none"
-        autoCorrect={false}
-        textContentType="password"
-        style={styles.passwordInput}
-      />
-      <Pressable
-        accessibilityLabel={visible ? 'Ocultar senha' : 'Mostrar senha'}
-        accessibilityRole="button"
-        hitSlop={8}
-        onPress={onToggle}
-        style={styles.passwordToggle}
-      >
+      <TextField accessibilityLabel={label} label={label} value={value} onChangeText={onChangeText} secureTextEntry={!visible} autoCapitalize="none" autoCorrect={false} autoComplete="password" textContentType="password" style={styles.passwordInput} />
+      <Pressable accessibilityLabel={visible ? 'Ocultar senha' : 'Mostrar senha'} accessibilityRole="button" hitSlop={8} onPress={() => setVisible((current) => !current)} style={styles.passwordToggle}>
         <MaterialIcons name={visible ? 'visibility-off' : 'visibility'} size={20} color={theme.colors.mutedForeground} />
       </Pressable>
     </View>
   );
 }
 
-function ErrorBanner({ message }: { message?: string }) {
-  if (!message) return null;
-  return (
-    <View accessibilityRole="alert" style={styles.errorBanner}>
-      <MaterialIcons name="error-outline" size={19} color={theme.colors.danger} />
-      <Text style={styles.errorBannerText}>{message}</Text>
-    </View>
-  );
-}
-
-function InlineLink({ label, onPress }: { label: string; onPress: () => void }) {
-  return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={styles.inlineLink}>
-      <Text style={styles.inlineLinkText}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function GoogleAuthControls({ loading, onPress }: { loading: boolean; onPress: () => void }) {
-  return (
-    <View style={styles.socialAuth}>
-      <View style={styles.socialDivider}>
-        <View style={styles.socialDividerLine} />
-        <Text style={styles.socialDividerText}>ou continue com</Text>
-        <View style={styles.socialDividerLine} />
-      </View>
-      <Pressable
-        accessibilityLabel="Continuar com Google"
-        accessibilityRole="button"
-        disabled={loading}
-        onPress={onPress}
-        style={({ pressed }) => [styles.googleButton, loading && styles.googleButtonDisabled, pressed && { opacity: 0.82 }]}
-      >
-        <View style={styles.googleLogo}>
-          <Text style={styles.googleLogoText}>G</Text>
-        </View>
-        <Text style={styles.googleLabel}>{loading ? 'Conectando ao Google...' : 'Continuar com Google'}</Text>
-      </Pressable>
-      <Text style={styles.socialHint}>No celular, o Google abre o seletor seguro de contas do aparelho.</Text>
-    </View>
-  );
-}
-
-function AuthLanding({ mode, loading, onAction }: {
-  mode: 'clerk' | 'development';
-  loading?: AuthAction | null;
-  onAction: (action: AuthAction) => void;
-}) {
-  return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.body}>
-        <Text style={styles.brand}>mybooks.</Text>
-        <View style={styles.hero}>
-          <View style={styles.mark}>
-            <MaterialIcons name="auto-stories" size={42} color={theme.colors.white} />
-          </View>
-          <Text style={styles.title}>
-            Livros parados.{"\n"}
-            <Text style={styles.accent}>Histórias circulando.</Text>
-          </Text>
-          <Text style={styles.description}>
-            Encontre leitores por perto, combine trocas e converse com segurança em um só lugar.
-          </Text>
-        </View>
-        <View style={styles.actions}>
-          <AppButton
-            label={mode === 'development' ? 'Entrar no modo local' : 'Entrar'}
-            icon="arrow-forward"
-            loading={loading === 'sign-in'}
-            onPress={() => onAction('sign-in')}
-          />
-          <AppButton
-            label="Criar minha conta"
-            variant="outline"
-            loading={loading === 'sign-up'}
-            onPress={() => onAction('sign-up')}
-          />
-          <Text style={styles.finePrint}>
-            Ao continuar, você concorda com os termos da comunidade. Sua conta e seus dados ficam protegidos pelo Clerk.
-          </Text>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
-
-function AuthShell({ eyebrow, title, description, onBack, children }: {
-  eyebrow: string;
-  title: string;
-  description: string;
-  onBack: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboard}>
-        <ScrollView contentContainerStyle={styles.formScroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <View style={styles.authTop}>
-            <Pressable accessibilityLabel="Voltar" accessibilityRole="button" onPress={onBack} style={styles.backButton}>
-              <MaterialIcons name="arrow-back" size={20} color={theme.colors.foreground} />
-              <Text style={styles.backLabel}>Voltar</Text>
-            </Pressable>
-            <Text style={styles.authBrand}>mybooks.</Text>
-          </View>
-          <View style={styles.formIntro}>
-            <View style={styles.formMark}>
-              <MaterialIcons name="auto-stories" size={22} color={theme.colors.white} />
-            </View>
-            <Text style={styles.formEyebrow}>{eyebrow}</Text>
-            <Text style={styles.formTitle}>{title}</Text>
-            <Text style={styles.formDescription}>{description}</Text>
-          </View>
-          {children}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  );
-}
-
-function VerificationStep({ action, email, code, onCodeChange, error, loading, onSubmit, onResend, onChangeEmail }: {
-  action: AuthAction;
-  email: string;
-  code: string;
-  onCodeChange: (value: string) => void;
-  error?: string;
-  loading: boolean;
-  onSubmit: () => void;
-  onResend: () => void;
-  onChangeEmail: () => void;
-}) {
-  return (
-    <Card style={styles.formCard}>
-      <Text style={styles.stepTitle}>{action === 'sign-up' ? 'Confirme seu e-mail' : 'Digite o código de acesso'}</Text>
-      <Text style={styles.stepDescription}>
-        Enviamos um código para <Text style={styles.emphasis}>{email}</Text>. Ele é válido por alguns minutos.
-      </Text>
-      <TextField
-        label="Código de verificação"
-        value={code}
-        onChangeText={onCodeChange}
-        error={error}
-        placeholder="000000"
-        keyboardType="number-pad"
-        autoCapitalize="none"
-        maxLength={8}
-        textContentType="oneTimeCode"
-      />
-      <AppButton label="Confirmar código" icon="verified" loading={loading} onPress={onSubmit} />
-      {action === 'sign-up' ? <View nativeID="clerk-captcha" style={styles.captchaMount} /> : null}
-      <View style={styles.stepActions}>
-        <InlineLink label="Enviar outro código" onPress={onResend} />
-        <InlineLink label="Usar outro e-mail" onPress={onChangeEmail} />
-      </View>
-    </Card>
-  );
-}
-
-function MfaStep({ strategy, code, onCodeChange, error, loading, onSubmit, onChangeStrategy }: {
-  strategy: MfaStrategy;
-  code: string;
-  onCodeChange: (value: string) => void;
-  error?: string;
-  loading: boolean;
-  onSubmit: () => void;
-  onChangeStrategy: () => void;
-}) {
-  const labels: Record<MfaStrategy, string> = {
-    email_code: 'seu e-mail',
-    phone_code: 'seu telefone',
-    totp: 'seu aplicativo autenticador',
-    backup_code: 'seus códigos de recuperação'
-  };
-
-  return (
-    <Card style={styles.formCard}>
-      <Text style={styles.stepTitle}>Mais uma camada de segurança</Text>
-      <Text style={styles.stepDescription}>Digite o código enviado para {labels[strategy]} para continuar.</Text>
-      <TextField
-        label={strategy === 'totp' ? 'Código do autenticador' : 'Código de segurança'}
-        value={code}
-        onChangeText={onCodeChange}
-        error={error}
-        placeholder="000000"
-        keyboardType="number-pad"
-        autoCapitalize="none"
-        maxLength={12}
-      />
-      <AppButton label="Continuar" icon="lock-open" loading={loading} onPress={onSubmit} />
-      <InlineLink label="Escolher outra forma" onPress={onChangeStrategy} />
-    </Card>
-  );
-}
-
-function DevelopmentAuthFlow({ startAuth }: { startAuth?: (mode: AuthAction) => Promise<void> }) {
-  const [loading, setLoading] = useState<AuthAction | null>(null);
-
-  async function authenticate(action: AuthAction) {
-    if (!startAuth) return;
-    try {
-      setLoading(action);
-      await startAuth(action);
-    } catch {
-      Alert.alert('Não foi possível abrir a autenticação', 'Confira sua conexão e tente novamente.');
-    } finally {
-      setLoading(null);
-    }
-  }
-
-  return <AuthLanding mode="development" loading={loading} onAction={authenticate} />;
-}
-
-function ClerkAuthFlow() {
-  const { signIn, errors: signInErrors, fetchStatus: signInFetchStatus } = useSignIn();
-  const { signUp, errors: signUpErrors, fetchStatus: signUpFetchStatus } = useSignUp();
-  const { startGoogleAuthenticationFlow } = useSignInWithGoogle();
-  const { startSSOFlow } = useSSO();
-  const [action, setAction] = useState<AuthAction>('sign-in');
+export function Auth() {
+  const { establishSession } = useSession();
   const [step, setStep] = useState<AuthStep>('landing');
-  const [formError, setFormError] = useState<string>();
-  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [passwordConfirmation, setPasswordConfirmation] = useState('');
+  const [confirmation, setConfirmation] = useState('');
+  const [cpf, setCpf] = useState('');
+  const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [newPasswordConfirmation, setNewPasswordConfirmation] = useState('');
-  const [passwordVisible, setPasswordVisible] = useState(false);
-  const [newPasswordVisible, setNewPasswordVisible] = useState(false);
-  const [mfaStrategy, setMfaStrategy] = useState<MfaStrategy>('email_code');
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const [newConfirmation, setNewConfirmation] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  const [notice, setNotice] = useState<string>();
+  const [resendSeconds, setResendSeconds] = useState(0);
 
-  const loading = signInFetchStatus === 'fetching' || signUpFetchStatus === 'fetching';
-  const signInFieldError = (field: 'identifier' | 'password' | 'code') => firstErrorMessage(signInErrors?.fields?.[field]);
-  const signUpFieldError = (field: 'firstName' | 'emailAddress' | 'password' | 'code') => firstErrorMessage(signUpErrors?.fields?.[field]);
+  useEffect(() => {
+    if (resendSeconds <= 0) return undefined;
+    const timer = setInterval(() => setResendSeconds((value) => Math.max(0, value - 1)), 1000);
+    return () => clearInterval(timer);
+  }, [resendSeconds]);
 
-  function clearFormError() {
-    setFormError(undefined);
-  }
+  const title = useMemo(() => ({ landing: '', register: 'Crie sua conta', verify: 'Confirme seu e-mail', login: 'Entre na sua conta', forgot: 'Recupere sua senha', reset: 'Defina uma nova senha' }[step]), [step]);
+  const go = (next: AuthStep) => { setError(undefined); setNotice(undefined); setStep(next); };
+  const submit = async (action: () => Promise<void>, fallback: string) => {
+    setBusy(true); setError(undefined);
+    try { await action(); } catch (cause) { setError(authErrorMessage(cause, fallback)); } finally { setBusy(false); }
+  };
 
-  function clearInputErrors() {
-    clearFormError();
-    if (action === 'sign-up') signUp?.reset();
-    else signIn?.reset();
-  }
+  const register = () => submit(async () => {
+    if (!validEmail(email)) { setError('Digite um e-mail válido.'); return; }
+    const issues = passwordIssues(password);
+    if (issues.length) { setError(issues[0]); return; }
+    const confirmationError = validatePasswordConfirmation(password, confirmation);
+    if (confirmationError) { setError(confirmationError); return; }
+    if (!cpf.trim()) { setError('Informe um CPF válido.'); return; }
+    if (!phone.trim()) { setError('Informe um celular válido.'); return; }
+    const result = await authApi.register({ email: email.trim().toLowerCase(), password, cpf, phone });
+    setEmail(result.email); setCode(''); setResendSeconds(60); go('verify');
+  }, 'Não foi possível criar sua conta. Confira os dados e tente novamente.');
 
-  function selectAction(nextAction: AuthAction) {
-    setAction(nextAction);
-    setStep('form');
-    setFormError(undefined);
-    setCode('');
-    setPassword('');
-    setPasswordConfirmation('');
-  }
+  const verify = () => submit(async () => {
+    if (code.length !== 6) { setError('Digite o código de 6 dígitos.'); return; }
+    await establishSession(await authApi.verifyEmail({ email, code }));
+  }, 'Código inválido ou expirado.');
 
-  function goBack() {
-    clearFormError();
-    setCode('');
-    if (step === 'landing') return;
-    if (step !== 'form') {
-      setStep('form');
-      return;
-    }
-    setStep('landing');
-  }
+  const login = () => submit(async () => {
+    if (!validEmail(email) || !password) { setError('Informe e-mail e senha.'); return; }
+    await establishSession(await authApi.login({ email: email.trim().toLowerCase(), password }));
+  }, 'E-mail ou senha inválidos.');
 
-  function resetToEmailForm() {
-    clearFormError();
-    setCode('');
-    setStep('form');
-  }
+  const forgot = () => submit(async () => {
+    if (!validEmail(email)) { setError('Digite um e-mail válido.'); return; }
+    await authApi.forgotPassword(email.trim().toLowerCase()); setCode('');
+    setNotice('Se existir uma conta para este e-mail, enviaremos um código.'); setStep('reset');
+  }, 'Não foi possível processar a solicitação.');
 
-  async function finishSignIn() {
-    const result = await signIn?.finalize();
-    if (result?.error) throw result.error;
-  }
+  const reset = () => submit(async () => {
+    if (code.length !== 6) { setError('Digite o código de 6 dígitos.'); return; }
+    const issues = passwordIssues(newPassword);
+    if (issues.length) { setError(issues[0]); return; }
+    const confirmationError = validatePasswordConfirmation(newPassword, newConfirmation);
+    if (confirmationError) { setError(confirmationError); return; }
+    await authApi.resetPassword({ email: email.trim().toLowerCase(), code, password: newPassword });
+    setPassword(''); setNewPassword(''); setNewConfirmation(''); setNotice('Senha alterada. Entre novamente com sua nova senha.'); setStep('login');
+  }, 'Código inválido ou expirado.');
 
-  async function finishSignUp() {
-    const result = await signUp?.finalize();
-    if (result?.error) throw result.error;
-  }
+  const resend = () => submit(async () => {
+    await authApi.resendVerification(email); setResendSeconds(60); setNotice('Se o cadastro estiver pendente, um novo código será enviado.');
+  }, 'Aguarde e tente reenviar novamente.');
 
-  function availableMfaStrategy(): MfaStrategy | undefined {
-    const factors = signIn?.supportedSecondFactors;
-    if (!Array.isArray(factors)) return undefined;
-    const strategies: MfaStrategy[] = ['email_code', 'phone_code', 'totp', 'backup_code'];
-    return strategies.find((candidate) => factors.some((factor) => factor.strategy === candidate));
-  }
-
-  async function sendMfaCode(strategy: MfaStrategy) {
-    if (!signIn) return;
-    const result = strategy === 'email_code'
-      ? await signIn.mfa.sendEmailCode()
-      : strategy === 'phone_code'
-        ? await signIn.mfa.sendPhoneCode()
-        : undefined;
-    if (result?.error) throw result.error;
-  }
-
-  async function submitGoogle() {
-    clearFormError();
-    setGoogleLoading(true);
-    try {
-      const result = Platform.OS === 'web'
-        ? await startSSOFlow({ strategy: 'oauth_google' })
-        : await startGoogleAuthenticationFlow();
-
-      if (result.createdSessionId && result.setActive) {
-        await result.setActive({ session: result.createdSessionId });
-        return;
-      }
-
-      if (result.signUp?.status === 'missing_requirements') {
-        setFormError('Sua conta Google precisa de mais um dado antes de entrar. Confira as configurações de cadastro no Clerk.');
-      }
-    } catch (error) {
-      const code = typeof error === 'object' && error !== null && 'code' in error
-        ? String((error as { code?: unknown }).code)
-        : undefined;
-      if (code === 'SIGN_IN_CANCELLED' || code === '-5') return;
-      setFormError(errorMessage(error, 'Não foi possível entrar com o Google agora. Tente novamente.'));
-    } finally {
-      setGoogleLoading(false);
-    }
-  }
-
-  async function submitSignIn() {
-    clearFormError();
-    if (!signIn) return;
-    if (!isValidEmail(email)) {
-      setFormError('Digite um e-mail válido para entrar.');
-      return;
-    }
-    if (!password) {
-      setFormError('Digite sua senha para entrar.');
-      return;
-    }
-
-    try {
-      const result = await signIn.password({ emailAddress: email.trim(), password });
-      if (result.error) throw result.error;
-      if (signIn.status === 'complete') {
-        await finishSignIn();
-        return;
-      }
-      if (signIn.status === 'needs_second_factor') {
-        const strategy = availableMfaStrategy();
-        if (!strategy) throw new Error('Sua conta pede uma segunda etapa que ainda não está disponível nesta tela.');
-        setMfaStrategy(strategy);
-        if (strategy === 'email_code' || strategy === 'phone_code') await sendMfaCode(strategy);
-        setCode('');
-        setStep('mfa');
-        return;
-      }
-      if (signIn.status === 'needs_client_trust') {
-        throw new Error('Este acesso precisa ser confirmado pelo dispositivo. Tente novamente neste aparelho.');
-      }
-      throw new Error('Não foi possível concluir o acesso. Confira seus dados e tente novamente.');
-    } catch (error) {
-      setFormError(errorMessage(error, 'Não foi possível entrar. Confira seus dados e tente novamente.'));
-    }
-  }
-
-  async function submitSignUp() {
-    clearFormError();
-    if (!signUp) return;
-    if (fullName.trim().length < 2) {
-      setFormError('Digite seu nome para criar a conta.');
-      return;
-    }
-    if (!isValidEmail(email)) {
-      setFormError('Digite um e-mail válido para criar a conta.');
-      return;
-    }
-    const passwordError = passwordRequirementError(password);
-    if (passwordError) {
-      setFormError(passwordError);
-      return;
-    }
-    if (password !== passwordConfirmation) {
-      setFormError('As senhas precisam ser iguais.');
-      return;
-    }
-
-    try {
-      const names = fullName.trim().split(/\s+/);
-      const firstName = names.shift() || fullName.trim();
-      const lastName = names.join(' ') || undefined;
-      const result = await signUp.password({ emailAddress: email.trim(), password, firstName, lastName });
-      if (result.error) throw result.error;
-      if (signUp.status === 'complete') {
-        await finishSignUp();
-        return;
-      }
-      if (signUp.unverifiedFields?.includes('email_address')) {
-        const verification = await signUp.verifications.sendEmailCode();
-        if (verification.error) throw verification.error;
-        setCode('');
-        setStep('verify-email');
-        return;
-      }
-      throw new Error('Ainda faltam dados para concluir seu cadastro.');
-    } catch (error) {
-      setFormError(errorMessage(error, 'Não foi possível criar sua conta. Confira os dados e tente novamente.'));
-    }
-  }
-
-  async function submitMfa() {
-    clearFormError();
-    if (!signIn || !code.trim()) {
-      setFormError('Digite o código de segurança.');
-      return;
-    }
-    try {
-      let result: { error?: unknown };
-      if (mfaStrategy === 'email_code') result = await signIn.mfa.verifyEmailCode({ code: code.trim() });
-      else if (mfaStrategy === 'phone_code') result = await signIn.mfa.verifyPhoneCode({ code: code.trim() });
-      else if (mfaStrategy === 'totp') result = await signIn.mfa.verifyTOTP({ code: code.trim() });
-      else result = await signIn.mfa.verifyBackupCode({ code: code.trim() });
-      if (result.error) throw result.error;
-      await finishSignIn();
-    } catch (error) {
-      setFormError(errorMessage(error, 'O código não foi aceito. Confira e tente novamente.'));
-    }
-  }
-
-  async function submitEmailVerification() {
-    clearFormError();
-    if (!signUp || !code.trim()) {
-      setFormError('Digite o código recebido por e-mail.');
-      return;
-    }
-    try {
-      const result = await signUp.verifications.verifyEmailCode({ code: code.trim() });
-      if (result.error) throw result.error;
-      if (signUp.status === 'complete') await finishSignUp();
-      else throw new Error('O cadastro ainda precisa de mais uma confirmação.');
-    } catch (error) {
-      setFormError(errorMessage(error, 'O código não foi aceito. Confira e tente novamente.'));
-    }
-  }
-
-  async function resendEmailCode() {
-    clearFormError();
-    try {
-      const result = step === 'verify-email'
-        ? await signUp?.verifications.sendEmailCode()
-        : mfaStrategy === 'email_code'
-          ? await signIn?.mfa.sendEmailCode()
-          : await signIn?.mfa.sendPhoneCode();
-      if (result?.error) throw result.error;
-    } catch (error) {
-      setFormError(errorMessage(error, 'Não foi possível enviar outro código agora.'));
-    }
-  }
-
-  async function beginPasswordReset() {
-    clearFormError();
-    if (!signIn) return;
-    if (!isValidEmail(email)) {
-      setFormError('Digite o e-mail da sua conta.');
-      return;
-    }
-    try {
-      const result = await signIn.create({ identifier: email.trim() });
-      if (result.error) throw result.error;
-      const codeResult = await signIn.resetPasswordEmailCode.sendCode();
-      if (codeResult.error) throw codeResult.error;
-      setCode('');
-      setStep('reset-code');
-    } catch (error) {
-      setFormError(errorMessage(error, 'Não foi possível iniciar a recuperação agora.'));
-    }
-  }
-
-  async function verifyPasswordResetCode() {
-    clearFormError();
-    if (!signIn || !code.trim()) {
-      setFormError('Digite o código recebido por e-mail.');
-      return;
-    }
-    try {
-      const result = await signIn.resetPasswordEmailCode.verifyCode({ code: code.trim() });
-      if (result.error) throw result.error;
-      setStep('reset-password');
-    } catch (error) {
-      setFormError(errorMessage(error, 'O código não foi aceito. Confira e tente novamente.'));
-    }
-  }
-
-  async function submitNewPassword() {
-    clearFormError();
-    if (!signIn) return;
-    const newPasswordError = passwordRequirementError(newPassword, 'Sua nova senha');
-    if (newPasswordError) {
-      setFormError(newPasswordError);
-      return;
-    }
-    if (newPassword !== newPasswordConfirmation) {
-      setFormError('As senhas precisam ser iguais.');
-      return;
-    }
-    try {
-      const result = await signIn.resetPasswordEmailCode.submitPassword({ password: newPassword, signOutOfOtherSessions: true });
-      if (result.error) throw result.error;
-      await finishSignIn();
-    } catch (error) {
-      setFormError(errorMessage(error, 'Não foi possível atualizar sua senha.'));
-    }
-  }
-
-  function renderForm() {
-    const isSignUp = action === 'sign-up';
-    return (
-      <Card style={styles.formCard}>
-        <ErrorBanner message={formError || firstErrorMessage(isSignUp ? signUpErrors?.global : signInErrors?.global)} />
-        {isSignUp ? (
-          <TextField
-            label="Nome completo"
-            value={fullName}
-            onChangeText={(value) => { setFullName(value); clearInputErrors(); }}
-            error={signUpFieldError('firstName')}
-            placeholder="Como você quer ser chamado?"
-            autoCapitalize="words"
-            textContentType="name"
-          />
-        ) : null}
-        <TextField
-          label="E-mail"
-          value={email}
-          onChangeText={(value) => { setEmail(value); clearInputErrors(); }}
-          error={isSignUp ? signUpFieldError('emailAddress') : signInFieldError('identifier')}
-          placeholder="voce@exemplo.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          textContentType="emailAddress"
-        />
-        <PasswordField
-          label="Senha"
-          value={password}
-          onChangeText={(value) => { setPassword(value); clearInputErrors(); }}
-          error={isSignUp ? signUpFieldError('password') : signInFieldError('password')}
-          help={isSignUp ? PASSWORD_REQUIREMENTS_HELP : undefined}
-          visible={passwordVisible}
-          onToggle={() => setPasswordVisible((visible) => !visible)}
-        />
-        {isSignUp ? (
-          <PasswordField
-            label="Repita sua senha"
-            value={passwordConfirmation}
-            onChangeText={(value) => { setPasswordConfirmation(value); clearInputErrors(); }}
-            visible={passwordVisible}
-            onToggle={() => setPasswordVisible((visible) => !visible)}
-          />
-        ) : (
-          <InlineLink label="Esqueci minha senha" onPress={() => { clearFormError(); setStep('reset-email'); }} />
-        )}
-        {isSignUp ? <View nativeID="clerk-captcha" style={styles.captchaMount} /> : null}
-        <GoogleAuthControls loading={loading || googleLoading} onPress={() => void submitGoogle()} />
-        <AppButton label={isSignUp ? 'Criar minha conta' : 'Entrar'} icon="arrow-forward" loading={loading || googleLoading} onPress={() => void (isSignUp ? submitSignUp() : submitSignIn())} />
-        <View style={styles.modeSwitch}>
-          <Text style={styles.modeSwitchLabel}>{isSignUp ? 'Já tem uma conta?' : 'Ainda não tem uma conta?'}</Text>
-          <InlineLink label={isSignUp ? 'Entrar' : 'Criar conta'} onPress={() => selectAction(isSignUp ? 'sign-in' : 'sign-up')} />
-        </View>
-        <Text style={styles.legal}>Seus dados de acesso são processados com segurança pelo Clerk.</Text>
-      </Card>
-    );
-  }
-
-  if (!signIn || !signUp) return <AuthLanding mode="clerk" loading={null} onAction={selectAction} />;
-  if (step === 'landing') return <AuthLanding mode="clerk" loading={null} onAction={selectAction} />;
-
-  if (step === 'verify-email') {
-    return (
-      <AuthShell eyebrow="Quase lá" title="Confirme seu e-mail." description="Só falta confirmar que este e-mail é seu para liberar sua estante." onBack={goBack}>
-        <ErrorBanner message={formError} />
-        <VerificationStep
-          action="sign-up"
-          email={email}
-          code={code}
-          onCodeChange={setCode}
-          error={firstErrorMessage(signUpErrors?.fields?.code)}
-          loading={loading}
-          onSubmit={() => void submitEmailVerification()}
-          onResend={() => void resendEmailCode()}
-          onChangeEmail={resetToEmailForm}
-        />
-      </AuthShell>
-    );
-  }
-
-  if (step === 'mfa') {
-    return (
-      <AuthShell eyebrow="Acesso protegido" title="Mais uma etapa." description="Uma confirmação extra ajuda a manter sua conta e suas conversas protegidas." onBack={goBack}>
-        <ErrorBanner message={formError} />
-        <MfaStep
-          strategy={mfaStrategy}
-          code={code}
-          onCodeChange={setCode}
-          error={signInFieldError('code')}
-          loading={loading}
-          onSubmit={() => void submitMfa()}
-          onChangeStrategy={() => setFormError('Para usar outra forma, volte e entre novamente para selecionar o próximo método disponível.')}
-        />
-      </AuthShell>
-    );
-  }
-
-  if (step === 'reset-email') {
-    return (
-      <AuthShell eyebrow="Recupere seu acesso" title="Vamos encontrar sua conta." description="Digite o e-mail usado no MyBooks e enviaremos um código de recuperação." onBack={goBack}>
-        <Card style={styles.formCard}>
-          <ErrorBanner message={formError} />
-          <TextField
-            label="E-mail"
-            value={email}
-            onChangeText={setEmail}
-            error={signInFieldError('identifier')}
-            placeholder="voce@exemplo.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            textContentType="emailAddress"
-          />
-          <AppButton label="Enviar código" icon="mail-outline" loading={loading} onPress={() => void beginPasswordReset()} />
-        </Card>
-      </AuthShell>
-    );
-  }
-
-  if (step === 'reset-code') {
-    return (
-      <AuthShell eyebrow="Recupere seu acesso" title="Confirme o código." description="Use o código que enviamos para continuar com a troca da senha." onBack={goBack}>
-        <ErrorBanner message={formError} />
-        <VerificationStep
-          action="sign-in"
-          email={email}
-          code={code}
-          onCodeChange={setCode}
-          error={signInFieldError('code')}
-          loading={loading}
-          onSubmit={() => void verifyPasswordResetCode()}
-          onResend={() => void beginPasswordReset()}
-          onChangeEmail={resetToEmailForm}
-        />
-      </AuthShell>
-    );
-  }
-
-  if (step === 'reset-password') {
-    return (
-      <AuthShell eyebrow="Novo capítulo" title="Escolha uma nova senha." description="Crie uma senha nova para voltar à sua estante com tranquilidade." onBack={goBack}>
-        <Card style={styles.formCard}>
-          <ErrorBanner message={formError} />
-          <PasswordField label="Nova senha" value={newPassword} onChangeText={setNewPassword} help={PASSWORD_REQUIREMENTS_HELP} visible={newPasswordVisible} onToggle={() => setNewPasswordVisible((visible) => !visible)} />
-          <PasswordField label="Repita a nova senha" value={newPasswordConfirmation} onChangeText={setNewPasswordConfirmation} visible={newPasswordVisible} onToggle={() => setNewPasswordVisible((visible) => !visible)} />
-          <AppButton label="Salvar nova senha" icon="check" loading={loading} onPress={() => void submitNewPassword()} />
-        </Card>
-      </AuthShell>
-    );
+  if (step === 'landing') {
+    return <SafeAreaView style={styles.safe}><View style={styles.body}><Text style={styles.brand}>TrocaLivros</Text><View style={styles.hero}><View style={styles.mark}><MaterialIcons name="auto-stories" size={42} color={theme.colors.white} /></View><Text style={styles.title}>Livros parados.{"\n"}<Text style={styles.accent}>Histórias circulando.</Text></Text><Text style={styles.description}>Crie sua conta para cadastrar livros, descobrir novas leituras e combinar trocas com segurança.</Text></View><View style={styles.actions}><AppButton label="Criar minha conta" onPress={() => go('register')} /><AppButton label="Já tenho uma conta" variant="outline" onPress={() => go('login')} /></View></View></SafeAreaView>;
   }
 
   return (
-    <AuthShell
-      eyebrow={action === 'sign-up' ? 'Abra sua conta' : 'Bem-vindo de volta'}
-      title={action === 'sign-up' ? 'Crie seu espaço de leitura.' : 'Entre na sua estante.'}
-      description={action === 'sign-up' ? 'Uma conta para acompanhar livros, trocas e conversas que fazem sentido.' : 'Continue de onde parou e descubra a próxima história.'}
-      onBack={goBack}
-    >
-      {renderForm()}
-    </AuthShell>
+    <SafeAreaView style={styles.safe}><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboard}><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.formScroll}>
+      <Pressable accessibilityRole="button" onPress={() => go('landing')} style={styles.backButton}><MaterialIcons name="arrow-back" size={20} color={theme.colors.foreground} /><Text style={styles.backLabel}>Voltar</Text></Pressable>
+      <View style={styles.formIntro}><Text style={styles.formEyebrow}>Conta segura</Text><Text style={styles.formTitle}>{title}</Text>{step === 'verify' ? <Text style={styles.formDescription}>Enviamos um código para {email}.</Text> : null}</View>
+      <Card style={styles.formCard}>
+        <ErrorBanner message={error} /><NoticeBanner message={notice} />
+        {step === 'register' ? <><TextField label="E-mail" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" /><PasswordInput label="Senha" value={password} onChangeText={setPassword} /><PasswordRequirements password={password} /><PasswordInput label="Confirme a senha" value={confirmation} onChangeText={setConfirmation} /><TextField label="CPF" value={cpf} onChangeText={(value) => setCpf(maskCpf(value))} keyboardType="number-pad" autoComplete="off" placeholder="000.000.000-00" maxLength={14} /><TextField label="Celular" value={phone} onChangeText={(value) => setPhone(maskBrazilianPhone(value))} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" placeholder="(11) 91234-5678" maxLength={15} /><Text style={styles.legal}>Seus dados serão usados para proteger a conta e preparar recursos de assinatura. CPF não será exibido publicamente.</Text><AppButton label="Criar conta" loading={busy} onPress={register} /><View style={styles.modeSwitch}><Text style={styles.modeSwitchLabel}>Já tem conta?</Text><InlineLink label="Entrar" onPress={() => go('login')} /></View></> : null}
+        {step === 'verify' ? <><VerificationCodeField value={code} onChangeText={setCode} /><AppButton label="Confirmar e continuar" loading={busy} onPress={verify} /><InlineLink disabled={busy || resendSeconds > 0} label={resendSeconds > 0 ? `Reenviar em ${resendSeconds}s` : 'Reenviar código'} onPress={resend} /></> : null}
+        {step === 'login' ? <><TextField label="E-mail" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" /><PasswordInput label="Senha" value={password} onChangeText={setPassword} /><AppButton label="Entrar" loading={busy} onPress={login} /><InlineLink label="Esqueci minha senha" onPress={() => go('forgot')} /><View style={styles.modeSwitch}><Text style={styles.modeSwitchLabel}>Ainda não tem conta?</Text><InlineLink label="Criar conta" onPress={() => go('register')} /></View></> : null}
+        {step === 'forgot' ? <><Text style={styles.stepDescription}>Informe seu e-mail. A resposta será a mesma exista ou não uma conta, para proteger sua privacidade.</Text><TextField label="E-mail" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" /><AppButton label="Enviar código" loading={busy} onPress={forgot} /></> : null}
+        {step === 'reset' ? <><VerificationCodeField value={code} onChangeText={setCode} /><PasswordInput label="Nova senha" value={newPassword} onChangeText={setNewPassword} /><PasswordRequirements password={newPassword} /><PasswordInput label="Confirme a nova senha" value={newConfirmation} onChangeText={setNewConfirmation} /><AppButton label="Alterar senha" loading={busy} onPress={reset} /></> : null}
+      </Card>
+    </ScrollView></KeyboardAvoidingView></SafeAreaView>
   );
-}
-
-export function Auth() {
-  const { startAuth, mode } = useSession();
-  return mode === 'clerk' ? <ClerkAuthFlow /> : <DevelopmentAuthFlow startAuth={startAuth} />;
 }

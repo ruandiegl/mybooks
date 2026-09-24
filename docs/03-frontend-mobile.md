@@ -1,31 +1,31 @@
 # 3. Frontend mobile
 
-## Estrutura obrigatória
+Telas ficam em `app/src/pages/<Nome>/index.tsx` com `styles.ts`; componentes reutilizáveis seguem a mesma dupla. Parâmetros de navegação vivem em `src/types/navigation.ts`.
 
-Cada tela fica em `app/src/pages/<Nome>/index.tsx` com `styles.ts` ao lado. Componentes reutilizáveis seguem a mesma dupla em `app/src/components/<Nome>`. Não crie um arquivo central com estilos específicos de páginas.
+## Sessão
 
-## Rotas
+- use `useSession()`; não leia o SecureStore diretamente fora de `authStorage.ts`;
+- use a instância Axios de `services/api.ts` para rotas privadas;
+- um 401 tenta exatamente um refresh compartilhado por requisições concorrentes e repete cada requisição no máximo uma vez;
+- falha no refresh limpa tokens e cache TanStack Query;
+- Socket.IO recebe o mesmo access token em `handshake.auth.token`.
 
-- pública: `Auth`;
-- abas: `Discover`, `Library`, `Messages`, `Profile`;
-- stack: `BookCreate`, `BookDetails`, `Chat`.
+## Fluxo
 
-Os parâmetros são tipados em `src/types/navigation.ts`. Navegação nova deve atualizar esse contrato.
+`Auth` contém entrada, cadastro, confirmação de e-mail, login e recuperação. Cadastro exige e-mail, senha/confirmacão, CPF e celular. A senha tem 6–72 bytes UTF-8, maiúscula, minúscula, número e especial.
 
-## Dados e sessão
+Após confirmação, os guards derivam `auth → profile → books → app`. Perfil e livros exibem “Pular/Concluir depois”; a ação grava a conclusão da apresentação e libera o app. Perfil e Biblioteca permanecem como caminhos para completar os dados depois.
 
-- use a instância Axios de `src/services/api.ts`;
-- use TanStack Query para cache, carregamento e invalidação;
-- obtenha sessão por `useSession()`; não leia token diretamente;
-- o token Clerk é persistido pelo cache seguro do pacote Clerk/Expo;
-- o modo local usa `expo-secure-store` e nunca pode ser habilitado em produção.
+Toda tela deve tratar loading, erro, vazio e retry, respeitar safe area/teclado, usar rótulos visíveis e `accessibilityLabel` em ações por ícone.
 
-## Estados de tela
+## Imagens
 
-Toda tela de dados deve tratar carregamento, erro, vazio, sucesso e atualização. Campos precisam de rótulo visível; ações só por ícone precisam de `accessibilityLabel`; botões devem ter alvo confortável; formulários devem considerar teclado e safe area.
+O app escolhe JPEG/PNG/WebP de até 8 MB, pede `presign`, envia com PUT e chama `complete`. Cancelamento da galeria não altera o estado. Uma URL arbitrária nunca é enviada como avatar.
 
-O fluxo `Auth` é nativo e mantém login, cadastro, confirmação de e-mail, MFA e recuperação de senha dentro do app. Use `useSignIn`/`useSignUp` do `@clerk/expo`, mostre os estados `fetching` e erros de campo, e chame `finalize()` somente após a etapa do Clerk estar completa. O cadastro deve manter o mount `nativeID="clerk-captcha"` para as verificações de segurança. O botão Google usa `useSignInWithGoogle` em builds nativos e `useSSO` somente como fallback OAuth na web.
+## Leitura de código de barras
 
-## ISBN e imagens
+O app usa Expo 57, React Native 0.86 e `expo-camera` 57.0.5. Em `BookCreate`, a ação de leitura abre `BarcodeScannerModal`, que solicita permissão de câmera somente nesse momento e usa `CameraView` traseira configurada apenas para `ean13`.
 
-A busca ISBN preenche título, autores, editora, sinopse, ano, páginas, temas e capa quando disponíveis, sem bloquear edição. O ISBN só é enviado como verificado quando a consulta teve sucesso. Para imagem própria, o app solicita `presign`, envia o binário por `PUT` ao R2 e chama `complete`.
+Antes de qualquer chamada HTTP, o cliente aceita somente 13 dígitos com prefixo de livro `978` ou `979` e checksum EAN-13 válido. QR, URL, texto e EAN de produto não consultam a API. Uma leitura aceita preenche o ISBN e chama automaticamente `GET /api/v1/isbn/:isbn`; os dados retornados permanecem editáveis e precisam ser revisados antes do cadastro.
+
+O cadastro manual continua disponível em todos os estados e aceita ISBN-10 válido. A leitura física direta de ISBN-10 não faz parte do scanner, e a câmera não é prometida na Web. Nenhum frame ou foto é enviado ou armazenado; uma capa externa retornada pela consulta também não é persistida automaticamente.

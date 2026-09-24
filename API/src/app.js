@@ -1,8 +1,8 @@
 import express from 'express';
+import path from 'node:path';
 import cors from 'cors';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
-import { clerkMiddleware } from '@clerk/express';
 import { env } from './config/env.js';
 import { healthRouter } from './modules/health/health.routes.js';
 import { apiRouter } from './routes/index.js';
@@ -17,6 +17,13 @@ function corsOrigin(origin, callback) {
   return callback(new Error('Origem não autorizada.'));
 }
 
+export function sanitizeRequestPath(originalUrl) {
+  if (typeof originalUrl === 'string' && /^\/api\/v1\/isbn\/[^/?#]+/i.test(originalUrl)) {
+    return '/api/v1/isbn/:isbn';
+  }
+  return originalUrl;
+}
+
 function requestLog(req, res, next) {
   const startedAt = performance.now();
   metrics.increment('httpRequests');
@@ -25,12 +32,22 @@ function requestLog(req, res, next) {
       level: 'info',
       requestId: req.requestId,
       method: req.method,
-      path: req.originalUrl,
+      path: sanitizeRequestPath(req.originalUrl),
       status: res.statusCode,
       durationMs: Math.round(performance.now() - startedAt)
     }));
   });
   next();
+}
+
+function sanitizedErrorHandler(error, req, res, next) {
+  const originalUrl = req.originalUrl;
+  req.originalUrl = sanitizeRequestPath(originalUrl);
+  try {
+    return errorHandler(error, req, res, next);
+  } finally {
+    req.originalUrl = originalUrl;
+  }
 }
 
 export function createApp() {
@@ -43,16 +60,7 @@ export function createApp() {
   app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
   app.use(cors({ origin: corsOrigin, credentials: true }));
   app.use(express.json({ limit: '1mb' }));
-
-  if (env.AUTH_MODE === 'clerk') {
-    app.use(clerkMiddleware({
-      secretKey: env.CLERK_SECRET_KEY,
-      publishableKey: env.CLERK_PUBLISHABLE_KEY,
-      authorizedParties: env.CLERK_AUTHORIZED_PARTIES.length
-        ? env.CLERK_AUTHORIZED_PARTIES
-        : undefined
-    }));
-  }
+  app.use('/covers', express.static(path.join(process.cwd(), 'assets', 'covers')));
 
   app.use('/health', healthRouter);
   app.use('/api/v1', rateLimit({
@@ -64,6 +72,6 @@ export function createApp() {
   app.use('/api/v1', apiRouter);
 
   app.use(notFoundHandler);
-  app.use(errorHandler);
+  app.use(sanitizedErrorHandler);
   return app;
 }

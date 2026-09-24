@@ -1,34 +1,45 @@
 # 5. Contrato HTTP
 
-Base: `/api/v1`. Exceto `/health`, todas as rotas exigem `Authorization: Bearer <token Clerk>`. Somente em desenvolvimento, a API aceita `x-dev-user-id`.
+Base: `/api/v1`. `/health` e as rotas públicas abaixo não exigem bearer. Todo o restante exige `Authorization: Bearer <accessToken>` nativo. Não existe cabeçalho de identidade local.
 
-## Rotas
+## Autenticação
+
+| Método | Caminho | Resultado |
+| --- | --- | --- |
+| POST | `/auth/register` | cria conta pendente; `201` |
+| POST | `/auth/verify-email` | ativa conta e emite access/refresh |
+| POST | `/auth/resend-verification` | resposta genérica `{ accepted: true }` |
+| POST | `/auth/login` | emite access/refresh |
+| POST | `/auth/refresh` | rotaciona refresh e access |
+| POST | `/auth/logout` | revoga a sessão do refresh |
+| POST | `/auth/logout-all` | revoga sessões do usuário autenticado |
+| POST | `/auth/forgot-password` | resposta genérica `{ accepted: true }` |
+| POST | `/auth/reset-password` | troca senha e revoga todas as sessões |
+| GET | `/auth/me` | usuário da sessão atual |
+
+`register` recebe somente `email`, `password`, `cpf` e `phone`. Se já existir um cadastro pendente não verificado com o mesmo e-mail, a chamada reutiliza imediatamente esse cadastro, atualiza senha/CPF/celular, invalida o código anterior e envia uma nova confirmação; se o novo CPF já pertencer a outra conta, ou se o e-mail já estiver verificado, a API retorna erro genérico. `verify-email` recebe `email` e código de 6 dígitos. Respostas de sessão incluem `accessToken`, `refreshToken`, `expiresAt` e `user`. Códigos, hashes, CPF protegido e metadados internos nunca são retornados.
+
+Cada grupo tem limite configurável e headers `RateLimit`; ao exceder, responde `429` com `RATE_LIMITED`. Login usa mensagem genérica para conta ausente/senha errada; recuperação e reenvio não confirmam existência.
+
+## Perfil, onboarding e avatar
 
 | Método | Caminho | Função |
 | --- | --- | --- |
-| `GET` | `/health` | saúde do serviço |
-| `GET/PATCH` | `/api/v1/me` | ler/alterar perfil atual |
-| `GET` | `/api/v1/isbn/:isbn` | validar e consultar ISBN na BrasilAPI |
-| `GET/POST` | `/api/v1/books?q=&sort=&availability=&cursor=&limit=` | listar biblioteca/criar livro |
-| `GET/PATCH/DELETE` | `/api/v1/books/:id` | detalhe/edição/exclusão |
-| `GET` | `/api/v1/discover` | livros disponíveis de outras pessoas |
-| `POST` | `/api/v1/interactions` | gostar ou passar |
-| `GET` | `/api/v1/matches` | listar matches |
-| `GET` | `/api/v1/conversations` | listar conversas |
-| `GET/POST` | `/api/v1/conversations/:id/messages` | histórico/envio HTTP |
-| `POST` | `/api/v1/conversations/:id/read` | marcar leitura |
-| `POST` | `/api/v1/books/:id/images/presign` | autorizar upload |
-| `POST` | `/api/v1/books/:id/images/complete` | confirmar imagem |
-| `DELETE` | `/api/v1/books/:id/images/:imageId` | remover imagem |
+| GET/PATCH | `/me` | ler/alterar nome, sobrenome, bio, cidade, celular e interesses |
+| POST | `/me/onboarding/profile/skip` | concluir apresentação opcional do perfil |
+| POST | `/me/onboarding/books/complete` | concluir/pular apresentação de livros |
+| POST | `/me/avatar/presign` | autorizar avatar |
+| POST | `/me/avatar/complete` | validar e vincular avatar |
+| DELETE | `/me/avatar` | remover avatar atual |
 
-## Livro
+O restante do domínio mantém `/books`, `/discover`, `/interactions`, `/matches`, `/conversations` e as rotas de imagens de livros. Todas as respostas usam `{ data }`; erros usam `{ error: { code, message, requestId, fields? } }`.
 
-`title` é obrigatório. `authors` e `subjects` são arrays. `isbn` é opcional, mas quando enviado precisa ter dígito verificador válido. O servidor responde `hasIsbnBadge`; o cliente nunca escolhe esse valor. `isbnProvider`, `isbnStatus`, `coverExternalUrl`, owner e chaves de storage enviados pelo cliente não concedem confiança: origem e selo são derivados no backend.
+## ISBN e livros
 
-## Paginação
+| Método | Caminho | Função |
+| --- | --- | --- |
+| GET | `/isbn/:isbn` | consulta privada de ISBN válido e retorna dados normalizados para revisão |
 
-Listas paginadas respondem `data.items` e `data.pageInfo` com `hasNextPage` e `nextCursor`. Limites máximos são impostos pela API.
+O parâmetro aceita ISBN-10 ou ISBN-13 conforme a validação do domínio; a leitura por câmera envia somente EAN-13 de livro com prefixo `978`/`979`. A API valida formato e checksum novamente, independentemente do cliente, e valida o payload externo antes de mapeá-lo. A consulta usa cache de 10 minutos limitado a 500 entradas, timeout e limite dedicado de 30 requisições por janela de 60 segundos, por usuário autenticado e com IP como fallback.
 
-## Idempotência
-
-Interações usam `clientActionId`; mensagens usam `clientMessageId`. Repetir o mesmo identificador não deve duplicar o evento durável.
+Os status esperados de falha são `404` para ISBN não encontrado, `422` para parâmetro inválido, `429` para limite excedido e `503` para indisponibilidade da consulta externa. Todos mantêm o envelope seguro de erro e permitem continuar pelo cadastro manual; o endpoint não cadastra o livro nem persiste automaticamente eventual URL de capa externa.
