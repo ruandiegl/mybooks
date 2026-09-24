@@ -4,11 +4,12 @@ import { styles } from './styles';
 
 type Props = TextInputProps & { label: string; error?: string; help?: string };
 
-export function TextField({ label, error, help, multiline, style, ...props }: Props) {
+export function TextField({ label, error, help, multiline, style, accessibilityLabel, ...props }: Props) {
   return (
     <View style={styles.group}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
+        accessibilityLabel={accessibilityLabel ?? label}
         placeholderTextColor={theme.colors.mutedForeground}
         multiline={multiline}
         style={[styles.input, multiline && styles.multiline, Boolean(error) && styles.error, style]}

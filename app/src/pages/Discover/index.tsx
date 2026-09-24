@@ -90,7 +90,7 @@ export function Discover() {
                 <View style={[styles.details, landscape && styles.detailsLandscape]}>
                   <Text style={styles.title}>{book.title}</Text>
                   <Text style={styles.author}>{book.authors.join(', ') || 'Autor não informado'}</Text>
-                  <Text style={styles.owner}>{book.owner?.name || 'Leitor MyBooks'}{book.owner?.city ? ' · ' + book.owner.city : ''}</Text>
+                  <Text style={styles.owner}>{book.owner?.name || 'Leitor TrocaLivros'}{book.owner?.city ? ' · ' + book.owner.city : ''}</Text>
                 </View>
               </Card>
             </Animated.View>

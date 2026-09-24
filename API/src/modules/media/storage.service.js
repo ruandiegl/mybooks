@@ -98,6 +98,27 @@ export const storageService = {
     };
   },
 
+  async createPresignedAvatarUpload({ ownerId, imageId, mimeType, size }) {
+    assertImage({ mimeType, size });
+    const storageKey = ['avatars', ownerId, imageId + '.' + extensionFor(mimeType)].join('/');
+    const uploadUrl = await getSignedUrl(
+      getClient(),
+      new PutObjectCommand({
+        Bucket: env.R2_BUCKET,
+        Key: storageKey,
+        ContentType: mimeType,
+        ContentLength: size
+      }),
+      { expiresIn: env.R2_PRESIGN_EXPIRES_IN }
+    );
+    return {
+      uploadUrl,
+      storageKey,
+      expiresIn: env.R2_PRESIGN_EXPIRES_IN,
+      headers: { 'Content-Type': mimeType }
+    };
+  },
+
   async assertUploaded(storageKey, expected) {
     const result = await getClient().send(new HeadObjectCommand({
       Bucket: env.R2_BUCKET,

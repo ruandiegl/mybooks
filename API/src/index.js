@@ -12,10 +12,11 @@ registerChatSocket(server);
 server.listen(env.PORT, '0.0.0.0', () => {
   console.info(JSON.stringify({
     level: 'info',
-    message: 'MyBooks API iniciada.',
+    message: 'TrocaLivros API iniciada.',
     host: '0.0.0.0',
     port: env.PORT,
-    authMode: env.AUTH_MODE,
+    authMode: 'native',
+    environment: env.NODE_ENV,
     storageMode: env.STORAGE_MODE
   }));
 });

@@ -1,38 +1,38 @@
-import { getAuth } from '@clerk/express';
-import { env } from '../../config/env.js';
 import { AppError } from '../../shared/errors/AppError.js';
-import { usersService } from '../users/users.service.js';
+import { verifyAccessToken } from './auth.crypto.js';
+import { authRepository } from './auth.repository.js';
 
-export function authenticate(req, _res, next) {
-  if (env.AUTH_MODE === 'development') {
-    const clerkUserId = req.header('x-dev-user-id');
-    if (!clerkUserId) {
-      return next(new AppError('Envie x-dev-user-id no modo de desenvolvimento.', {
-        statusCode: 401,
-        code: 'UNAUTHENTICATED'
-      }));
+const unauthenticated = () => new AppError('Sessão inválida ou expirada.', {
+  statusCode: 401,
+  code: 'UNAUTHENTICATED'
+});
+
+export function createAuthenticate({
+  verifyToken = verifyAccessToken,
+  findActiveSession = authRepository.findActiveSession.bind(authRepository)
+} = {}) {
+  return async function authenticateRequest(req, _res, next) {
+    try {
+      const authorization = req.header('authorization');
+      const match = typeof authorization === 'string' ? /^Bearer ([^\s]+)$/.exec(authorization) : null;
+      if (!match) return next(unauthenticated());
+
+      const identity = await verifyToken(match[1]);
+      const session = await findActiveSession(identity.sessionId, identity.userId, new Date());
+      if (!session?.user || session.user.id !== identity.userId) return next(unauthenticated());
+
+      req.identity = identity;
+      req.currentUser = session.user;
+      return next();
+    } catch {
+      return next(unauthenticated());
     }
-    req.identity = { clerkUserId };
-    return next();
-  }
-
-  const auth = getAuth(req);
-  if (!auth.userId) {
-    return next(new AppError('Sessão inválida ou expirada.', {
-      statusCode: 401,
-      code: 'UNAUTHENTICATED'
-    }));
-  }
-
-  req.identity = { clerkUserId: auth.userId, sessionId: auth.sessionId };
-  return next();
+  };
 }
 
+export const authenticate = createAuthenticate();
+
 export async function attachCurrentUser(req, _res, next) {
-  try {
-    req.currentUser = await usersService.ensureCurrentUser(req.identity.clerkUserId);
-    next();
-  } catch (error) {
-    next(error);
-  }
+  if (req.currentUser) return next();
+  return next(unauthenticated());
 }

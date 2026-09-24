@@ -1,38 +1,21 @@
 # 7. Autenticação e segurança
 
-Clerk é a autoridade de identidade. O app usa as telas nativas de login e cadastro com `useSignIn` e `useSignUp`, além do token cache seguro; a API valida a requisição com `@clerk/express`, converte `clerkUserId` em usuário do domínio e aplica autorização por recurso.
+A API é a autoridade. Senhas usam bcrypt assíncrono com custo configurável, rehash progressivo e rejeição acima de 72 bytes UTF-8. A política mínima é 6 caracteres, maiúscula, minúscula, número e especial, validada no app e na API.
 
-O fluxo de autenticação acontece dentro do app, sem abrir uma tela hospedada externa. Senhas e tokens continuam sob responsabilidade do Clerk: o MyBooks apenas coleta os campos necessários, exibe erros e estados de carregamento, e finaliza a sessão com `finalize()` após o Clerk concluir cada etapa.
+E-mail é normalizado e confirmado por código. CPF passa por dígitos verificadores; HMAC separado detecta duplicidade e AES-256-GCM protege o valor em repouso. Telefone brasileiro é normalizado para E.164.
 
-## Recuperação de senha
+Access tokens JWT HS256 têm `iss`, `aud`, `sub`, `sid`, `jti`, `iat` e `exp` curto. Refresh tokens são aleatórios, persistidos apenas por hash, rotacionados a cada uso e agrupados por família. Reuso de token revogado revoga a família. Reset de senha e logout global revogam todas as sessões.
 
-Recuperação de senha, código por e-mail e políticas de credencial pertencem ao Clerk e são apresentados em telas nativas do MyBooks. Resend não cria ou valida tokens de senha: ele é usado pelo MyBooks para e-mails transacionais, começando pela mensagem de boas-vindas. Se a equipe configurar entrega customizada no painel do provedor de identidade, isso deve manter o Clerk como emissor e verificador dos códigos.
+Códigos têm 6 dígitos, hash, TTL de 15 minutos, uso único e até 5 tentativas. Reenvio tem cooldown. Cadastro/login/verificação/reenvio/recuperação/reset/refresh têm limites separados por IP e identificador protegido por hash.
 
-Após o cadastro, o app solicita a confirmação do e-mail antes de finalizar a sessão. Quando a instância exigir MFA, a tela também trata código por e-mail, telefone, autenticador ou código de recuperação, conforme os fatores habilitados no Clerk.
+O cadastro não verificado permanece pendente por 24 horas. Repetir o cadastro com o mesmo e-mail reutiliza imediatamente o registro pendente, invalida o código anterior, atualiza senha/CPF/celular e envia um novo código, desde que o novo CPF não esteja associado a outra conta. Após a validade, o registro pendente e seus códigos são removidos de forma oportunista na próxima tentativa. Uma conta não verificada nunca pode iniciar sessão.
 
-## Política de senha e mensagens
+Helmet, CORS restrito, corpo máximo de 1 MB, request ID e erros sanitizados ficam ativos. Logs não incluem Authorization, senha, refresh, código, CPF ou telefone completo. Ownership sempre deriva da sessão.
 
-O cadastro e a redefinição de senha validam no app uma senha com pelo menos 8 caracteres, incluindo uma letra maiúscula, uma letra minúscula, um número e um caractere especial. As mensagens de erro retornadas pelo Clerk são convertidas para português antes de serem exibidas nos campos e no aviso global. A mesma política de complexidade também precisa estar configurada no Dashboard Clerk para que a validação do servidor fique alinhada com a experiência do app.
+Uploads aceitam JPEG, PNG ou WebP até 8 MB, URL pré-assinada curta, chave por usuário e confirmação por HEAD. Configure lifecycle do bucket para objetos não confirmados.
 
-## Login com Google
+A consulta de ISBN é autenticada e possui proteção própria contra abuso: 30 consultas por janela de 60 segundos, identificadas pelo usuário da sessão e por IP como fallback. No fluxo de câmera, formato, prefixo de livro e checksum são filtrados no app para evitar tráfego desnecessário, mas a API não confia nessa validação e verifica o parâmetro novamente com Zod e checksum.
 
-O botão `Continuar com Google` usa o login nativo do Google em Android/iOS, com o seletor seguro de contas do aparelho. Para web, o Clerk usa o fallback OAuth oficial e retorna à aplicação após o consentimento do Google. O provedor Google precisa estar habilitado no Dashboard Clerk; o login nativo exige development build e os client IDs públicos configurados no ambiente do app. Nenhum secret do Google ou do Clerk é enviado ao frontend.
+O scanner processa o código de barras no dispositivo. Nenhum frame ou foto é enviado, registrado ou armazenado, e uma URL de capa fornecida pelo catálogo externo não é automaticamente incorporada ao armazenamento do usuário. A resposta do catálogo passa por schema antes do cache, e os logs substituem o ISBN por `/api/v1/isbn/:isbn`. Respostas `404`, `422`, `429` e `503` seguem o envelope sanitizado, sem dados do provedor, stack ou informações de outra sessão.
 
-## Modos
-
-- `AUTH_MODE=development`: aceita `x-dev-user-id`; somente para máquina local.
-- `AUTH_MODE=clerk`: exige chaves Clerk e Bearer token.
-- produção falha na inicialização se não estiver em modo Clerk.
-
-## Upload seguro
-
-A API autoriza JPEG, PNG ou WebP de até 8 MB, gera chave restrita a `books/<owner>/<book>/<image>`, cria URL PUT curta, confirma tamanho/tipo com HEAD e só então registra a imagem. Chaves secretas R2 nunca chegam ao app.
-
-## Checklist
-
-- configurar `CLERK_AUTHORIZED_PARTIES` em produção;
-- restringir CORS a origens conhecidas;
-- usar bucket privado e domínio público/controlado em `R2_PUBLIC_URL`;
-- não registrar `Authorization`, tokens, chaves ou mensagens privadas;
-- rotacionar imediatamente qualquer segredo versionado por engano;
-- manter rate limit e limite de corpo ativos.
+Produção exige `AUTH_MODE=native`, HTTPS, segredos aleatórios base64 de 32 bytes, proxy confiável documentado, PostgreSQL com backup e R2 privado. Consulte `seguranca-auth-runbook.md` para incidentes e rotação.

@@ -1,43 +1,27 @@
 # 1. Visão geral
 
-O MyBooks conecta leitores interessados em colocar livros em circulação. Cada pessoa mantém sua biblioteca, descobre livros de outras pessoas, registra interesse, recebe um match quando o interesse é mútuo e combina a troca por chat.
+O TrocaLivros conecta leitores interessados em colocar livros em circulação. Cada pessoa cria uma conta própria, confirma o e-mail, pode completar o perfil e cadastrar livros, descobre obras de outras pessoas, recebe match por interesse mútuo e combina a troca por chat.
 
 ## Escopo do MVP
 
-- entrada, cadastro e recuperação de acesso pelo Clerk;
-- perfil público básico;
-- cadastro manual de livros ou preenchimento assistido por ISBN;
-- capa externa da BrasilAPI ou imagem própria no Cloudflare R2;
-- biblioteca em grid e detalhe do livro;
-- descoberta com ações gostar/passar;
-- match mútuo, lista de conversas e mensagens em tempo real;
-- e-mail transacional de boas-vindas pelo Resend;
-- PostgreSQL e API preparados para Docker.
+- autenticação nativa persistida no PostgreSQL, com recuperação de senha e sessões revogáveis;
+- cadastro obrigatório com e-mail, senha, CPF e celular;
+- onboarding opcional e retomável de perfil e livros;
+- perfil, biblioteca, descoberta, matches e chat em tempo real;
+- ISBN pela BrasilAPI, imagens e avatares no Cloudflare R2 e e-mails pelo Resend;
+- API e PostgreSQL preparados para Docker.
 
-Ficam fora do MVP: pagamento, logística, moderação avançada, recomendação algorítmica, notificações push e painel administrativo.
+Pagamento/assinatura, logística, moderação avançada, recomendação algorítmica, push e painel administrativo continuam fora do MVP. CPF e telefone são coletados para proteção da conta e futura assinatura; a finalidade e retenção precisam de validação jurídica antes da produção.
 
 ## Stack
 
 | Área | Tecnologia |
 | --- | --- |
-| Mobile | Expo 54, React Native 0.81, React 19, TypeScript |
-| Navegação/estado servidor | React Navigation 7, TanStack Query |
-| UI | componentes nativos inspirados em shadcn, Be Vietnam Pro, Material Icons |
+| Mobile | Expo 57, React Native 0.86, React 19, TypeScript |
+| Sessão | access JWT curto, refresh opaco rotativo e Expo SecureStore |
 | API | Node.js, Express 5, JavaScript ESM, Zod |
 | Dados | PostgreSQL 16 e Prisma 6 |
-| Identidade | Clerk Expo e Clerk Express |
-| Imagens | Cloudflare R2 via API compatível com S3 |
-| E-mail | Resend |
-| ISBN | BrasilAPI |
-| Tempo real | Socket.IO 4 |
-| Infraestrutura | Docker Compose |
+| Segurança | bcryptjs, jose, HMAC/AES-256-GCM e express-rate-limit |
+| Serviços | Cloudflare R2, Resend, BrasilAPI e Socket.IO 4 |
 
-## Mapa do repositório
-
-- `app/`: aplicativo mobile.
-- `API/`: servidor HTTP, Socket.IO e Prisma.
-- `docs/`: documentação viva.
-- `plans/`: planejamento e rastreabilidade da execução.
-- `compose.yaml`: PostgreSQL e API para desenvolvimento.
-
-O Node recomendado está em `.nvmrc`. O gerenciador oficial deste checkout é npm; não recrie `yarn.lock`.
+Pastas principais: `app/`, `API/`, `docs/` e `plans/`. O gerenciador oficial é npm.

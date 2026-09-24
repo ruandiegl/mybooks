@@ -1,16 +1,31 @@
 import { prisma } from '../../shared/database/prisma.js';
 
-const publicUserSelect = {
+export const publicUserSelect = {
   id: true,
-  clerkUserId: true,
   name: true,
   email: true,
+  emailVerifiedAt: true,
+  firstName: true,
+  lastName: true,
   phone: true,
+  interests: true,
+  isActive: true,
   avatarUrl: true,
   bio: true,
   city: true,
+  profileCompletedAt: true,
+  booksOnboardingCompletedAt: true,
   createdAt: true,
   updatedAt: true
+};
+
+export const authUserSelect = {
+  ...publicUserSelect,
+  passwordHash: true,
+  legacyPassHash: true,
+  cpfHash: true,
+  cpfEncrypted: true,
+  pendingRegistrationExpiresAt: true,
 };
 
 export const usersRepository = {
@@ -40,13 +55,22 @@ export const usersRepository = {
     };
   },
 
-  findByClerkUserId(clerkUserId) {
-    return prisma.user.findUnique({ where: { clerkUserId }, select: publicUserSelect });
-  },
-
   findByEmail(email) {
     if (!email) return null;
     return prisma.user.findUnique({ where: { email }, select: publicUserSelect });
+  },
+
+  findAuthByEmail(email) {
+    if (!email) return null;
+    return prisma.user.findUnique({ where: { email }, select: authUserSelect });
+  },
+
+  updatePasswordHash(id, passwordHash) {
+    return prisma.user.update({
+      where: { id },
+      data: { passwordHash },
+      select: authUserSelect
+    });
   },
 
   create(data) {
@@ -55,14 +79,5 @@ export const usersRepository = {
 
   update(id, data) {
     return prisma.user.update({ where: { id }, data, select: publicUserSelect });
-  },
-
-  upsertByClerkUserId(clerkUserId, data) {
-    return prisma.user.upsert({
-      where: { clerkUserId },
-      create: { clerkUserId, ...data },
-      update: data,
-      select: publicUserSelect
-    });
   }
 };

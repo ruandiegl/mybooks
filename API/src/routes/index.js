@@ -8,9 +8,11 @@ import { isbnRouter } from '../modules/isbn/isbn.routes.js';
 import { matchesRouter } from '../modules/matches/matches.routes.js';
 import { mediaRouter } from '../modules/media/media.routes.js';
 import { usersRouter } from '../modules/users/users.routes.js';
+import { authRouter } from '../modules/auth/auth.routes.js';
 
 export const apiRouter = Router();
 
+apiRouter.use('/auth', authRouter);
 apiRouter.use(authenticate, asyncHandler(attachCurrentUser));
 apiRouter.get('/discover', asyncHandler(discoverBooks));
 apiRouter.use(usersRouter);

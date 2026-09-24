@@ -1,39 +1,25 @@
 # 2. Arquitetura
 
-## Fluxo principal
-
 ```text
 Expo/React Native
-  ├─ HTTPS + Bearer Clerk ──► Express /api/v1 ──► service ──► repository ──► Prisma/PostgreSQL
-  ├─ Socket.IO autenticado ─► módulo chat ──────► service ──► Prisma/PostgreSQL
-  └─ PUT com URL temporária ───────────────────────────────────────────────► Cloudflare R2
+  ├─ CameraView ─► validação EAN-13 local ─► HTTPS + access ─► GET /api/v1/isbn/:isbn
+  ├─ HTTPS + access token ─► Express /api/v1 ─► service ─► repository ─► PostgreSQL
+  ├─ refresh token ────────► rotação/revogação de AuthSession
+  ├─ Socket.IO + access ───► mesma validação JWT + AuthSession
+  └─ PUT pré-assinado ───────────────────────────────────────────────► Cloudflare R2
 
-Express ──► Clerk (identidade)
-        ├─► BrasilAPI (ISBN)
-        └─► Resend (e-mail transacional)
+Express ──► Resend (verificação, recuperação e boas-vindas)
+        └─► BrasilAPI (ISBN)
 ```
 
-## Backend por módulo
+A API é a única autoridade de identidade. O cliente nunca escolhe `userId`/owner; rotas privadas usam `req.currentUser.id`. O access token contém `sub` e `sid`, e só é aceito se a sessão correspondente estiver ativa, não revogada, não expirada e vinculada a um usuário verificado.
 
-Cada pasta em `API/src/modules` contém o que pertence ao seu domínio:
+Cada módulo da API separa rotas, controllers, services, repositories e schemas Zod. No app, `SessionProvider` mantém a sessão, `services/api.ts` injeta bearer e coordena um único refresh para respostas 401 concorrentes, e o SecureStore persiste somente um registro versionado de tokens.
 
-- `*.routes.js`: composição de rotas;
-- `*.controller.js`: parâmetros HTTP, status e envelope;
-- `*.service.js`: regra de negócio, autorização e coordenação;
-- `*.repository.js`: consultas Prisma;
-- `*.schemas.js`: validação Zod;
-- providers/adapters: integrações externas.
+Na criação de livro, o scanner nativo reconhece apenas EAN-13 e faz a primeira validação no dispositivo. Somente códigos de livro com prefixo `978`/`979` e checksum válido seguem para a rota privada de ISBN; QR, URL, texto e EAN de outros produtos são descartados antes da rede. A API repete a validação com Zod e checksum, valida e limita o payload recebido da BrasilAPI, consulta o provedor com timeout e cache de 10 minutos limitado a 500 entradas e aplica limite dedicado por usuário autenticado, com IP como fallback. O resultado apenas preenche o formulário para revisão: não cria livro nem persiste capa automaticamente.
 
-Módulos atuais: `auth`, `books`, `chat`, `email`, `health`, `isbn`, `matches`, `media` e `users`.
+A câmera é uma entrada local e efêmera. Nenhum frame ou foto atravessa a fronteira do app, e o fluxo manual continua sendo a alternativa para Web, indisponibilidade da câmera e ISBN-10.
 
-## Frontend
+Uploads usam autorização curta e chave derivada no servidor. Capas ficam em `books/<user>/<book>/<uuid>`; avatares, em `avatars/<user>/<uuid>`. O servidor confirma tipo e tamanho antes de vincular a URL.
 
-`pages` compõem telas e chamadas; `components` implementa primitives reutilizáveis; `services` concentra rede; `providers` mantém sessão; `types` contém contratos compartilhados no app; `styles/theme.ts` é o único catálogo global de tokens.
-
-## Decisões
-
-- HTTP é a fonte durável; Socket.IO entrega eventos em tempo real.
-- O cliente pode sugerir dados de ISBN, mas o servidor valida e deriva `hasIsbnBadge`.
-- Upload usa URL pré-assinada para não transportar arquivos pelo processo Express.
-- Clerk é a autoridade de credenciais. A tabela `User` guarda perfil e vínculo `clerkUserId`, nunca senha.
-- Em desenvolvimento existe uma identidade local explícita; produção rejeita `AUTH_MODE` diferente de `clerk`.
+`clerkUserId` permanece nullable apenas como coluna histórica durante a janela de migração. Não é usado pelo runtime, autorização, seed ou payload público.

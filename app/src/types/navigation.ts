@@ -7,7 +7,13 @@ export type MainTabParamList = {
   Profile: undefined;
 };
 
+export type AuthStackParamList = {
+  Auth: undefined;
+};
+
 export type RootStackParamList = {
+  OnboardingProfile: undefined;
+  OnboardingBooks: undefined;
   Main: NavigatorScreenParams<MainTabParamList>;
   BookCreate: undefined;
   BookDetails: { bookId: string };

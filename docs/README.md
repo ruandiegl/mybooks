@@ -1,6 +1,6 @@
-# Documentação do MyBooks
+# Documentação do TrocaLivros
 
-Este diretório é a fonte de verdade das guidelines, decisões técnicas e contratos do MyBooks. O projeto é um aplicativo mobile de troca de livros, retomado como MVP de TCC.
+Este diretório é a fonte de verdade das guidelines, decisões técnicas e contratos do TrocaLivros. O projeto é um aplicativo mobile de troca de livros, retomado como MVP de TCC. Identificadores técnicos legados que usam `mybooks` permanecem inalterados para evitar impacto em banco, pacotes e integrações.
 
 ## Estado do MVP
 
@@ -25,6 +25,7 @@ A fundação do MVP está implementada: aplicativo Expo/React Native, API Expres
 | [13 — Pendências](./13-pendencias-conhecidas.md) | Limitações verificadas e próximos passos |
 | [14 — Execução do MVP](./14-execucao-do-mvp.md) | O que foi entregue e como validar |
 | [15 — Matriz de validação](./15-matriz-validacao-mvp.md) | Evidências executadas, resultados e bloqueios externos |
+| [16 — Histórico de alterações](./16-historico-de-alteracoes.md) | Registro das mudanças solicitadas no projeto |
 
 ## Regras obrigatórias
 
@@ -43,4 +44,4 @@ A fundação do MVP está implementada: aplicativo Expo/React Native, API Expres
 
 Comece por [Visão geral](./01-visao-geral.md) e [Arquitetura](./02-arquitetura.md). Para colocar o projeto em execução, siga [Docker e ambientes](./10-docker-ambientes.md) e [Execução do MVP](./14-execucao-do-mvp.md).
 
-_Última revisão: 31/08/2026._
+_Última revisão: 09/09/2026._

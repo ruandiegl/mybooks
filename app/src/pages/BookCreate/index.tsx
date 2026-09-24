@@ -3,14 +3,18 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { useRef, useState } from 'react';
-import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Image, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { AppButton } from '../../components/AppButton';
+import { BarcodeScannerModal } from '../../components/BarcodeScannerModal';
 import { Card } from '../../components/Card';
 import { IsbnBadge } from '../../components/IsbnBadge';
 import { TextField } from '../../components/TextField';
 import {
+  getIsbnLookupCandidate,
+  getScannedIsbnLookupDecision,
   mergeIsbnLookup,
   normalizeIsbnInput,
+  shouldApplyIsbnLookup,
   type BookDraft,
   type EditableBookField
 } from '../../features/books/isbnForm';
@@ -33,7 +37,9 @@ export function BookCreate({ navigation }: Props) {
   const [form, setForm] = useState(initialForm);
   const [lookup, setLookup] = useState<IsbnLookup | null>(null);
   const [image, setImage] = useState<PickedImage | null>(null);
+  const [scannerVisible, setScannerVisible] = useState(false);
   const dirtyFields = useRef(new Set<EditableBookField>());
+  const currentIsbn = useRef('');
   const pendingIsbn = useRef<string | null>(null);
   const lastConfirmedIsbn = useRef<string | null>(null);
 
@@ -41,6 +47,8 @@ export function BookCreate({ navigation }: Props) {
     if (key !== 'isbn') dirtyFields.current.add(key);
     setForm((current) => ({ ...current, [key]: value }));
     if (key === 'isbn') {
+      currentIsbn.current = value;
+      pendingIsbn.current = null;
       setLookup(null);
       lastConfirmedIsbn.current = null;
     }
@@ -48,20 +56,50 @@ export function BookCreate({ navigation }: Props) {
 
   const isbnMutation = useMutation({
     mutationFn: async (isbn: string) => (await api.get<ApiEnvelope<IsbnLookup>>('/api/v1/isbn/' + encodeURIComponent(isbn))).data.data,
-    onSuccess: (data) => {
+    onSuccess: (data, requestedIsbn) => {
+      if (!shouldApplyIsbnLookup(requestedIsbn, currentIsbn.current)) return;
       lastConfirmedIsbn.current = data.isbn;
       setLookup(data);
       setForm((current) => mergeIsbnLookup(current, data, dirtyFields.current));
     },
-    onError: (error) => Alert.alert('ISBN não encontrado', apiErrorMessage(error, 'Confira o número digitado ou continue o cadastro manualmente.')),
-    onSettled: () => { pendingIsbn.current = null; }
+    onError: (error, requestedIsbn) => {
+      if (!shouldApplyIsbnLookup(requestedIsbn, currentIsbn.current)) return;
+      Alert.alert('ISBN não encontrado', apiErrorMessage(error, 'Confira o número digitado ou continue o cadastro manualmente.'));
+    },
+    onSettled: (_data, _error, requestedIsbn) => {
+      if (pendingIsbn.current === requestedIsbn) pendingIsbn.current = null;
+    }
   });
 
-  function lookupIsbn() {
-    const normalized = normalizeIsbnInput(form.isbn);
-    if (!normalized || pendingIsbn.current === normalized || lastConfirmedIsbn.current === normalized) return;
+  function lookupIsbn(value = form.isbn) {
+    const normalized = getIsbnLookupCandidate(value, pendingIsbn.current, lastConfirmedIsbn.current);
+    if (!normalized) return;
+    currentIsbn.current = normalized;
+    setForm((current) => ({ ...current, isbn: normalized }));
     pendingIsbn.current = normalized;
     isbnMutation.mutate(normalized);
+  }
+
+  function handleScannedIsbn(isbn: string) {
+    const decision = getScannedIsbnLookupDecision(
+      isbn,
+      pendingIsbn.current,
+      lastConfirmedIsbn.current
+    );
+    setScannerVisible(false);
+    currentIsbn.current = decision.normalizedIsbn;
+    setForm((current) => ({ ...current, isbn: decision.normalizedIsbn }));
+
+    if (decision.shouldClearConfirmedLookup) {
+      lastConfirmedIsbn.current = null;
+      setLookup(null);
+    }
+    if (decision.shouldLookup) lookupIsbn(decision.normalizedIsbn);
+  }
+
+  function openScanner() {
+    Keyboard.dismiss();
+    setScannerVisible(true);
   }
 
   async function pickImage() {
@@ -116,35 +154,43 @@ export function BookCreate({ navigation }: Props) {
   const lookupConfirmed = lookup?.isbn === normalizeIsbnInput(form.isbn);
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: theme.colors.background }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
-        <View style={styles.intro}>
-          <Text style={styles.title}>Coloque um livro em circulação</Text>
-          <Text style={styles.description}>O ISBN agiliza o preenchimento, mas não é obrigatório.</Text>
-        </View>
-        <Card style={styles.isbnCard}>
-          <View style={styles.isbnRow}>
-            <View style={styles.isbnField}><TextField label="ISBN" value={form.isbn} onChangeText={(value) => set('isbn', value)} onBlur={lookupIsbn} keyboardType="number-pad" placeholder="978..." help="Aceita ISBN-10 ou ISBN-13" /></View>
-            <AppButton style={styles.lookup} label="Buscar" variant="secondary" loading={isbnMutation.isPending} disabled={!form.isbn.trim()} onPress={lookupIsbn} />
+    <>
+      <KeyboardAvoidingView style={{ flex: 1, backgroundColor: theme.colors.background }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
+          <View style={styles.intro}>
+            <Text style={styles.title}>Coloque um livro em circulação</Text>
+            <Text style={styles.description}>O ISBN agiliza o preenchimento, mas não é obrigatório.</Text>
           </View>
-          {lookupConfirmed ? <IsbnBadge /> : null}
-        </Card>
-        <Text style={styles.section}>Dados do livro</Text>
-        <TextField label="Título *" value={form.title} onChangeText={(value) => set('title', value)} placeholder="Ex.: Torto Arado" />
-        <TextField label="Autores" value={form.authors} onChangeText={(value) => set('authors', value)} placeholder="Separe por vírgulas" />
-        <TextField label="Editora" value={form.publisher} onChangeText={(value) => set('publisher', value)} />
-        <View style={styles.row}>
-          <View style={styles.half}><TextField label="Ano" value={form.year} keyboardType="number-pad" onChangeText={(value) => set('year', value)} /></View>
-          <View style={styles.half}><TextField label="Páginas" value={form.pageCount} keyboardType="number-pad" onChangeText={(value) => set('pageCount', value)} /></View>
-        </View>
-        <TextField label="Temas" value={form.subjects} onChangeText={(value) => set('subjects', value)} placeholder="Romance, Brasil, Ficção" />
-        <TextField label="Sinopse" value={form.synopsis} onChangeText={(value) => set('synopsis', value)} multiline />
-        <Text style={styles.section}>Capa</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel={image ? 'Trocar imagem da capa' : 'Escolher imagem da capa'} onPress={pickImage} style={({ pressed }) => [styles.imageButton, pressed && styles.imagePressed]}>
-          {image ? <Image source={{ uri: image.uri }} accessibilityLabel="Prévia da capa selecionada" style={styles.image} resizeMode="cover" /> : <><MaterialIcons name="add-photo-alternate" size={34} color={theme.colors.primary} /><Text style={styles.imageLabel}>Escolher imagem da capa</Text></>}
-        </Pressable>
-        <AppButton label="Publicar livro" icon="arrow-forward" loading={createMutation.isPending} onPress={() => createMutation.mutate()} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <Card style={styles.isbnCard}>
+            <TextField label="ISBN" value={form.isbn} onChangeText={(value) => set('isbn', value)} autoCapitalize="characters" autoCorrect={false} placeholder="978..." help="Aceita ISBN-10 ou ISBN-13" />
+            <View style={styles.isbnActions}>
+              <AppButton style={styles.isbnAction} label="Buscar" variant="secondary" loading={isbnMutation.isPending} disabled={!form.isbn.trim()} onPress={() => lookupIsbn()} />
+              <AppButton accessibilityLabel="Ler código de barras do ISBN" style={styles.isbnAction} label="Ler código" icon="qr-code-scanner" variant="outline" disabled={isbnMutation.isPending} onPress={openScanner} />
+            </View>
+            {lookupConfirmed ? <IsbnBadge /> : null}
+          </Card>
+          <Text style={styles.section}>Dados do livro</Text>
+          <TextField label="Título *" value={form.title} onChangeText={(value) => set('title', value)} placeholder="Ex.: Torto Arado" />
+          <TextField label="Autores" value={form.authors} onChangeText={(value) => set('authors', value)} placeholder="Separe por vírgulas" />
+          <TextField label="Editora" value={form.publisher} onChangeText={(value) => set('publisher', value)} />
+          <View style={styles.row}>
+            <View style={styles.half}><TextField label="Ano" value={form.year} keyboardType="number-pad" onChangeText={(value) => set('year', value)} /></View>
+            <View style={styles.half}><TextField label="Páginas" value={form.pageCount} keyboardType="number-pad" onChangeText={(value) => set('pageCount', value)} /></View>
+          </View>
+          <TextField label="Temas" value={form.subjects} onChangeText={(value) => set('subjects', value)} placeholder="Romance, Brasil, Ficção" />
+          <TextField label="Sinopse" value={form.synopsis} onChangeText={(value) => set('synopsis', value)} multiline />
+          <Text style={styles.section}>Capa</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel={image ? 'Trocar imagem da capa' : 'Escolher imagem da capa'} onPress={pickImage} style={({ pressed }) => [styles.imageButton, pressed && styles.imagePressed]}>
+            {image ? <Image source={{ uri: image.uri }} accessibilityLabel="Prévia da capa selecionada" style={styles.image} resizeMode="cover" /> : <><MaterialIcons name="add-photo-alternate" size={34} color={theme.colors.primary} /><Text style={styles.imageLabel}>Escolher imagem da capa</Text></>}
+          </Pressable>
+          <AppButton label="Publicar livro" icon="arrow-forward" loading={createMutation.isPending} onPress={() => createMutation.mutate()} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+      <BarcodeScannerModal
+        visible={scannerVisible}
+        onClose={() => setScannerVisible(false)}
+        onIsbnScanned={handleScannedIsbn}
+      />
+    </>
   );
 }

@@ -1,44 +1,16 @@
 # 10. Docker e ambientes
 
-O `compose.yaml` inicia PostgreSQL 16 e a API. O `API/Dockerfile` usa Node 20, instala OpenSSL e dependências com npm, gera o Prisma Client e inicia o servidor. O PostgreSQL fica publicado em `localhost:5433` por padrão para não conflitar com outros projetos; dentro da rede Compose, a API continua usando `postgres:5432`.
+O `compose.yaml` inicia PostgreSQL 16 e API; o container aplica `prisma migrate deploy`. PostgreSQL usa `localhost:5433` por padrão e `postgres:5432` dentro da rede.
 
-## Preparação
+1. copie/preencha `API/.env` e `app/.env` sem versionar valores reais;
+2. gere quatro segredos aleatórios base64 de 32 bytes para autenticação;
+3. mantenha `AUTH_MODE=native` em todos os ambientes;
+4. execute `docker compose up --build -d` e depois `npm install && npm start` em `app/`.
 
-1. instale Docker Desktop com Compose;
-2. confirme que `API/.env` existe — o workspace já deixa um arquivo local de desenvolvimento sem credenciais;
-3. confirme que `app/.env` existe — o workspace já deixa um arquivo local de desenvolvimento sem credenciais;
-4. preencha credenciais externas quando quiser testar Clerk, R2 e Resend;
-5. nunca versione os `.env` reais.
+A seed é proibida quando `NODE_ENV=production`. Em desenvolvimento, `npx prisma db seed` cria quatro contas nativas verificadas e dados de demonstração; a senha local documentada no código da seed é apenas de teste e deve ser trocada ao compartilhar o ambiente.
 
-## Execução
+R2 é opcional localmente (`STORAGE_MODE=development` retorna 503 para upload). Para testar imagens, configure credenciais mínimas, bucket privado, CORS e `R2_PUBLIC_URL`. Para e-mail real, configure Resend e domínio remetente. Em dispositivo físico, use o IP LAN da máquina em `EXPO_PUBLIC_API_BASE_URL`/`EXPO_PUBLIC_SOCKET_URL`.
 
-```bash
-docker compose up --build -d
-cd app
-npm install
-npm start
-```
+A consulta ISBN usa `ISBN_RATE_LIMIT_WINDOW_MS=60000` e `ISBN_LOOKUP_LIMIT=30`; registre apenas esses nomes e valores de configuração, nunca credenciais ou conteúdo real de `.env`. No app, o plugin de `expo-camera` declara a mensagem de permissão em português, `microphonePermission=false` e `recordAudioAndroid=false`. Mudanças nessa configuração nativa exigem novo development build; o scanner não é requisito da execução Web.
 
-O container da API aguarda a saúde do PostgreSQL e executa `prisma migrate deploy` antes de iniciar o servidor.
-
-## Dados de demonstração
-
-Para criar contas locais e livros disponíveis na descoberta, execute dentro de `API`:
-
-```bash
-npx prisma db seed
-```
-
-A seed é idempotente: pode ser executada novamente sem duplicar os registros. Ela cria quatro perfis, doze livros disponíveis e um like reverso preparado para testar um match usando `dev-mybooks-user` no modo `development`. Esses perfis são registros do domínio e não criam contas no Clerk; em `AUTH_MODE=clerk`, faça login com uma conta Clerk real para curtir os livros seed.
-
-No ambiente de desenvolvimento, a descoberta entra em loop ao consumir a fila: livros recusados podem reaparecer, enquanto livros curtidos permanecem fora da fila. Em produção, a fila continua encerrando quando não há novos livros.
-
-Se `5433` estiver ocupado, defina `POSTGRES_HOST_PORT=5434` antes do Compose e altere a porta correspondente no `API/.env` quando executar a API fora do container. Em dispositivo físico, `localhost` aponta para o telefone. Troque `EXPO_PUBLIC_API_BASE_URL` e `EXPO_PUBLIC_SOCKET_URL` pelo IP da máquina na rede, por exemplo `http://192.168.0.10:3001`.
-
-## Modos externos
-
-Para validação sem credenciais, mantenha `AUTH_MODE=development`, `STORAGE_MODE=development` e o modo equivalente no app. Esse modo permite login local, mas upload R2 retorna 503 de propósito. Para a demonstração completa, use `AUTH_MODE=clerk`, `STORAGE_MODE=r2` e configure Resend/R2.
-
-## Parada
-
-`docker compose down` para os serviços e preserva o volume. `docker compose down -v` apaga o banco local e só deve ser usado quando a perda for intencional.
+`docker compose down` preserva o volume; `docker compose down -v` apaga o banco e só deve ser usado quando a perda for intencional.

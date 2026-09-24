@@ -1,7 +1,7 @@
 import { Server } from 'socket.io';
-import { verifyToken } from '@clerk/express';
 import { env } from '../../config/env.js';
-import { usersService } from '../users/users.service.js';
+import { verifyAccessToken } from '../auth/auth.crypto.js';
+import { authRepository } from '../auth/auth.repository.js';
 import { chatService } from './chat.service.js';
 import { metrics } from '../../shared/observability/metrics.js';
 
@@ -9,31 +9,26 @@ function room(conversationId) {
   return 'conversation:' + conversationId;
 }
 
-async function authenticateSocket(socket, next) {
-  try {
-    let clerkUserId;
-
-    if (env.AUTH_MODE === 'development') {
-      clerkUserId = socket.handshake.auth?.devUserId;
-    } else {
+export function createSocketAuthenticator({
+  verifyToken = verifyAccessToken,
+  findActiveSession = authRepository.findActiveSession.bind(authRepository)
+} = {}) {
+  return async function authenticateSocket(socket, next) {
+    try {
       const token = socket.handshake.auth?.token;
-      if (!token) throw new Error('Token ausente.');
-      const payload = await verifyToken(token, {
-        secretKey: env.CLERK_SECRET_KEY,
-        jwtKey: env.CLERK_JWT_KEY,
-        authorizedParties: env.CLERK_AUTHORIZED_PARTIES.length
-          ? env.CLERK_AUTHORIZED_PARTIES
-          : undefined
-      });
-      clerkUserId = payload.sub;
-    }
+      if (typeof token !== 'string' || !token) throw new Error('Token ausente.');
 
-    if (!clerkUserId) throw new Error('Identidade ausente.');
-    socket.data.user = await usersService.ensureCurrentUser(clerkUserId);
-    next();
-  } catch {
-    next(new Error('UNAUTHENTICATED'));
-  }
+      const identity = await verifyToken(token);
+      const session = await findActiveSession(identity.sessionId, identity.userId, new Date());
+      if (!session?.user || session.user.id !== identity.userId) throw new Error('Sessão inválida.');
+
+      socket.data.identity = identity;
+      socket.data.user = session.user;
+      return next();
+    } catch {
+      return next(new Error('UNAUTHENTICATED'));
+    }
+  };
 }
 
 function reject(ack, error) {
@@ -57,7 +52,7 @@ export function registerChatSocket(httpServer) {
     }
   });
 
-  io.use(authenticateSocket);
+  io.use(createSocketAuthenticator());
 
   io.on('connection', (socket) => {
     metrics.increment('socketConnections');

@@ -8,12 +8,51 @@ export type User = {
   id: string;
   name: string;
   email?: string | null;
+  emailVerifiedAt?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
   phone?: string | null;
+  interests: string[];
+  profileCompletedAt?: string | null;
+  booksOnboardingCompletedAt?: string | null;
+  isActive: boolean;
   avatarUrl?: string | null;
   bio?: string | null;
   city?: string | null;
   stats?: ProfileStats | null;
 };
+
+export type AuthCodeType = 'EMAIL_VERIFY' | 'PASSWORD_RESET';
+
+export type AuthTokens = {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+};
+
+export type AuthSessionResponse = {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: string;
+  user: User;
+};
+
+export type RegisterInput = {
+  email: string;
+  password: string;
+  cpf: string;
+  phone: string;
+};
+
+export type RegistrationResult = {
+  userId: string;
+  email: string;
+  requiresEmailVerification: true;
+};
+
+export type VerifyEmailInput = { email: string; code: string };
+export type LoginInput = { email: string; password: string };
+export type ResetPasswordInput = { email: string; code: string; password: string };
 
 export type BookImage = {
   id: string;

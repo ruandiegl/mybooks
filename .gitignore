@@ -1,0 +1,2 @@
+# Environment variables at the repository root are local secrets.
+/.env

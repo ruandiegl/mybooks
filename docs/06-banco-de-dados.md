@@ -1,34 +1,19 @@
 # 6. Banco de dados
 
-`API/prisma/schema.prisma` é a fonte de verdade. PostgreSQL 16 é o banco do projeto e Prisma 6 é o único caminho de acesso no código novo.
+`API/prisma/schema.prisma` é a fonte de verdade; PostgreSQL 16 e Prisma 6 são o caminho de acesso.
 
-## Modelos
+## Identidade
 
-- `User`: vínculo Clerk, perfil e cidade;
-- `Book`: catálogo, ISBN validado, disponibilidade e proprietário;
-- `BookImage`: metadados e chave do objeto R2;
-- `Interaction`: ação LIKE/PASS idempotente;
-- `Match`: relação canônica entre duas pessoas;
-- `Conversation` e `ConversationMember`: chat e estado de leitura;
-- `Message`: mensagem durável com `clientMessageId` único por remetente.
+- `User`: e-mail único, hash bcrypt, verificação, expiração de cadastro pendente, CPF com HMAC único + AES-256-GCM, celular, perfil e timestamps de onboarding;
+- `AuthSession`: hash do refresh, família de rotação, expiração, revogação, substituição e metadados protegidos;
+- `AuthCode`: hash de código de verificação/reset, tipo, TTL, uso único, tentativas e cooldown.
 
-## Regras
+Livros, imagens, interações, matches, conversas e mensagens mantêm ownership e índices do domínio. IDs são UUIDs e timestamps são ISO 8601 nas respostas.
 
-- IDs são UUIDs;
-- timestamps usam `DateTime` e são emitidos em ISO 8601;
-- livro novo sempre recebe `ownerId` do usuário autenticado;
-- ISBN válido pode ser único por edição/owner conforme evolução do produto, mas não deve impedir diferentes pessoas de possuir a mesma edição;
-- exclusões em cascata devem ser deliberadas e revisadas;
-- consultas de descoberta, histórico e relações usam índices definidos no schema/migração.
+## Migração nativa
 
-## Migrações
+`20260911120000_native_auth_onboarding` adiciona credenciais e sessões sem apagar registros. Contas legadas permanecem inativas e sem senha inventada; precisam passar por um procedimento explícito de recuperação/migração. `clerkUserId` fica nullable temporariamente para auditoria e futura remoção.
 
-A migração `20260831140000_mvp_foundation` preserva usuários e livros legados, cria vínculos Clerk de transição e adiciona o domínio social. Em ambiente local:
+`20260911143000_pending_registration_retry` adiciona `pendingRegistrationExpiresAt`. Uma nova tentativa com o mesmo e-mail de um cadastro ainda não verificado reutiliza o mesmo `User` imediatamente, substitui senha/CPF/celular/código e reenvia a confirmação, desde que o novo CPF não esteja vinculado a outra conta. Cadastros pendentes expirados são removidos junto com seus códigos antes de uma nova tentativa.
 
-```bash
-cd API
-npx prisma generate
-npx prisma migrate dev
-```
-
-Nunca edite um banco compartilhado manualmente para substituir uma migração. Faça backup antes de aplicar a migração em dados reais e valide registros legados sem proprietário.
+Antes de produção: gerar backup testado, aplicar `prisma migrate deploy`, conferir contagens/relações, validar contas legadas e ensaiar restore. Nunca altere banco compartilhado manualmente.

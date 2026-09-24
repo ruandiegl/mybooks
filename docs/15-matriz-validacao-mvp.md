@@ -1,65 +1,54 @@
 # 15. Matriz de validação do MVP
 
-Data da execução: 31/08/2026.
+Data da execução atual: 11/09/2026.
 
-Esta matriz separa evidência executada de expectativa arquitetural. Um item bloqueado por ambiente não deve ser apresentado no TCC como teste ponta a ponta concluído.
+## Evidências executadas
 
-## Evidências concluídas
-
-| Área | Verificação | Resultado |
+| Área | Verificação | Resultado atual |
 | --- | --- | --- |
-| API | `npm run lint` | aprovado |
-| API | `npm test` | 29 testes, 9 arquivos, todos aprovados |
-| Prisma | `prisma validate` com URL PostgreSQL descartável | schema válido |
-| Prisma | `prisma generate` | client 6.19.3 gerado |
-| Processo HTTP | iniciar API, chamar `/health` e rota privada | `200 ok` e `401` sem identidade |
-| Compose | parse estrutural dos serviços e `depends_on` | PostgreSQL e API válidos; API aguarda banco saudável |
-| App | `npm run typecheck` | aprovado sem erros |
-| Expo | `expo-doctor` | 18/18 verificações aprovadas |
-| Android | export com Hermes | bundle de 1.182 módulos gerado |
-| Acessibilidade visual | contraste dos pares semânticos principais | entre 5,00:1 e 16,37:1 |
-| ISBN externo | consulta pública `9788545702870` | `/api/isbn/v1` respondeu `200` com o livro Akira |
-| CRUD real | criação, busca, selo ISBN e exclusão temporária via API containerizada | aprovado; registro removido ao final |
-| Segredos | varredura por padrões de chaves privadas/Clerk/R2/Resend | nenhum segredo encontrado |
+| API | recorte Vitest de ISBN/books | 25 aprovados |
+| API | suíte Vitest completa após o scanner | 23 arquivos e 161 testes aprovados; 1 arquivo e 1 teste ignorados |
+| API | integração nativa com PostgreSQL | 1/1 aprovado com `RUN_AUTH_INTEGRATION=true` |
+| API | ESLint | aprovado sem erros |
+| App | suíte Vitest | 7 arquivos e 32 testes aprovados |
+| App | TypeScript estrito | aprovado |
+| Prisma | validate/generate após o scanner | schema válido e Prisma Client 6.19.3 gerado |
+| Compose | migração + seed | 6 migrações aplicadas; 4 usuários, 12 livros, 2 matches e 2 conversas |
+| HTTP real | cadastro/login/me/refresh/replay/logout | `201/200`, rotação válida e revogações `401` |
+| Auth | cadastro, códigos, login, reset, rotação/replay e falha de e-mail | cobertos por testes unitários/mockados |
+| HTTP | bearer ausente/inválido, sessão revogada e rate limit | cobertos por testes de rota/middleware |
+| Socket.IO | token ausente/inválido e sessão revogada | cobertos por teste do autenticador |
+| Mobile | senha, sessão, onboarding e regras do scanner | incluídos nos 32 testes aprovados |
+| Perfil/avatar | campos permitidos, URL arbitrária e ownership da chave | cobertos por testes de service |
+| Expo | Doctor | 21/21 verificações aprovadas |
+| Android | export Hermes | 1.063 módulos; diretório temporário removido |
+| Dependências | `npm audit --omit=dev` | API: 4 altas no grafo Prisma sem fix compatível; app: 36 moderadas transitivas sem correção disponível |
 
-O export Android foi usado apenas como validação e seu diretório temporário foi removido em seguida.
+Os testes Resend/R2 e em dispositivo permanecem externos; a evidência acima não os substitui.
 
-## Regras automatizadas
+O export Android confirma empacotamento, não o comportamento da câmera. O aceite externo precisa ser repetido em Android e iOS físicos e cobrir permissão negada/bloqueada, baixa luz, código danificado, offline, `404`, `503` e `429`, sempre verificando o fallback manual. Não há aceite de scanner na Web nem de leitura física direta de ISBN-10.
 
-Os testes cobrem:
+## Roteiro funcional manual
 
-- normalização e dígitos verificadores de ISBN-10/ISBN-13;
-- cache, não encontrado e rate limit do provedor ISBN;
-- origem ISBN e capa externa definidas pelo backend, sem confiar no payload;
-- selo para ISBN válido e fallback manual quando o provedor falha;
-- ownership na edição/exclusão de livros;
-- remoção de objetos de capa e limpeza após falha de metadados;
-- chave R2 exata, impedindo ataques por prefixo parecido;
-- interação própria bloqueada e match apenas com LIKE reverso;
-- membership, paginação e normalização de mensagens;
-- escape de HTML no template de boas-vindas;
-- preenchimento ISBN no app sem sobrescrever campo revisado;
-- substituição de mensagem otimista e estado de retry sem duplicação.
+1. cadastrar e-mail, senha forte, CPF válido e celular;
+2. confirmar que não há acesso privado antes do código;
+3. verificar e-mail e passar por perfil e livros, testando salvar e pular;
+4. reiniciar o app e confirmar restauração/refresh da sessão;
+5. sair, entrar novamente e executar recuperação de senha;
+6. testar avatar válido, tipo/tamanho inválido e tentativa de chave de outro usuário;
+7. ler um EAN-13 `978`/`979` válido, revisar os dados preenchidos e concluir o cadastro manualmente;
+8. confirmar que QR, URL, texto, EAN de produto e checksum inválido não chamam a API;
+9. repetir com dois usuários para match, conversa e sessão Socket.IO.
 
-## Bloqueios externos
+## Bloqueios externos para aceite de produção
 
-| Item | Estado | Necessário para concluir |
-| --- | --- | --- |
-| PostgreSQL real e migração do zero | aprovado | Compose executado; banco saudável e 5 migrações aplicadas |
-| Clerk real | bloqueado | chaves de teste, configuração de redirect/deep link e conta de e-mail |
-| Cloudflare R2 | bloqueado | bucket de teste, CORS, domínio público e credenciais limitadas |
-| Resend | bloqueado | API key de teste e remetente/domínio permitido |
-| Chat com duas pessoas | bloqueado | banco ativo e dois usuários/dispositivos |
-| Android/iOS físico | bloqueado | dispositivo ou simulador configurado |
+| Item | Necessário |
+| --- | --- |
+| PostgreSQL limpo | aplicar todas as migrações, seed e validar integridade/restore |
+| Resend | chave, domínio remetente e caixa postal real |
+| Cloudflare R2 | bucket privado, CORS, domínio e credenciais mínimas |
+| HTTPS/proxy | domínio TLS e confirmação da cadeia real usada por `trust proxy` |
+| Android/iOS | dispositivos físicos, câmera, cenários de falha, fallback manual e revisão de teclado/acessibilidade |
+| LGPD | aprovação de finalidade, base legal e retenção de CPF/celular |
 
-## Dependências e risco residual
-
-`npm audit --omit=dev` encontrou advisories transitivos sem correção oferecida pelo npm na combinação atual: 4 ocorrências altas no grafo Prisma da API e 52 no grafo Expo/React Native do app. Não foi aplicado `--force`, porque isso pode quebrar Prisma, Expo, Clerk e o build nativo. A triagem deve considerar se cada pacote vulnerável participa do runtime ou apenas da ferramenta de build e deve terminar com nova execução desta matriz.
-
-## Próximo aceite reproduzível
-
-1. manter o Compose ativo ou repetir `docker compose up --build -d` quando necessário;
-2. configurar Clerk, R2 e Resend em ambiente de teste;
-3. executar testes de integração em banco isolado e o roteiro de dois usuários em `docs/14-execucao-do-mvp.md`;
-4. instalar/configurar dispositivo ou simulador Android/iOS;
-5. registrar capturas, logs sem dados pessoais e resultado observado para o TCC.
+Não declarar produção pronta enquanto esses itens estiverem pendentes.

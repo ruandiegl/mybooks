@@ -1,20 +1,19 @@
 # 13. Pendências conhecidas
 
-## Bloqueios de ambiente
+## Produção
 
-- Docker Desktop foi configurado e validado em 31/08/2026; PostgreSQL ficou saudável em `5433` e as 5 migrações foram aplicadas. O stack pode ser parado com `docker compose down` e o volume deve ser preservado para manter os dados locais.
-- Não foram fornecidas credenciais Clerk, R2 ou Resend; as integrações foram implementadas e validadas estaticamente, mas precisam de teste ponta a ponta em um ambiente configurado.
-- `R2_PUBLIC_URL` deve apontar para domínio público/customizado válido para exibir capas; o endpoint S3 do bucket não deve ser assumido como público.
+- validar finalidade, base legal, retenção, exportação e exclusão de CPF/celular com o responsável jurídico/LGPD;
+- configurar HTTPS, domínio, CORS e cadeia real de proxies antes de confiar em `trust proxy=1`;
+- provisionar PostgreSQL gerenciado, backup automático, teste de restore e monitoração;
+- configurar Resend com domínio verificado e monitorar bounces/entrega;
+- configurar R2 privado, CORS, credenciais mínimas e lifecycle de uploads abandonados;
+- criar processo de migração/recuperação para contas legadas antes de remover fisicamente `clerkUserId`;
+- realizar testes com dois usuários reais e em Android/iOS físico, incluindo acessibilidade;
+- aceitar o scanner em Android e iOS físicos com permissão negada/bloqueada, baixa luz, código danificado, offline, ISBN não encontrado (`404`), provedor indisponível (`503`) e limite excedido (`429`). O cadastro manual, inclusive de ISBN-10, deve permanecer funcional em todos esses casos.
+- antes de escalar a API para múltiplas réplicas, mover os rate limits geral, de autenticação e de ISBN do armazenamento em memória para um store compartilhado, como Redis; em memória, cada processo mantém sua própria cota e reinícios zeram a janela.
 
-## Cobertura ainda necessária
+O scanner não oferece leitura física direta de ISBN-10 e não deve ser anunciado como recurso Web. Esses limites são decisões do escopo atual, não defeitos a mascarar no aceite.
 
-- testes de integração com banco para ownership, match e paginação;
-- testes Socket.IO com dois usuários reais;
-- teste em dispositivo Android e iOS, incluindo deep link do Clerk;
-- validação com maior tamanho de fonte do sistema e leitor de tela em dispositivo;
-- política lifecycle no bucket R2 para apagar uploads enviados, mas nunca confirmados;
-- política de moderação, bloqueio e denúncia antes de piloto público.
+## Segurança/dependências
 
-## Dependências
-
-Em 31/08/2026, `npm audit --omit=dev` reportou 4 ocorrências altas na API, ligadas ao grafo Prisma/deepmerge, e 52 ocorrências no app, concentradas no grafo Expo/React Native e ferramentas relacionadas. O npm não ofereceu correção compatível para esses grafos. Isso não equivale automaticamente a uma vulnerabilidade explorável pelo MyBooks, mas exige triagem por advisory e atualização planejada da stack. Não use `npm audit fix --force` sem avaliar compatibilidade e repetir todo o aceite.
+Em 11/09/2026, `npm audit --omit=dev` reportou 4 ocorrências altas no grafo Prisma (`deepmerge-ts`, sem correção compatível) e 36 vulnerabilidades moderadas transitivas no grafo Expo/React Navigation, sem correção disponível. Os relatórios precisam de triagem por advisory e alcance no runtime. Não executar `npm audit fix --force`; uma atualização incompatível exige avaliação separada e repetição do aceite. MFA, bloqueio adaptativo, moderação e painel de revogação administrativa ficam para evolução posterior.

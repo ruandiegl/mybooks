@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppButton } from '../../components/AppButton';
 import { AppScreen } from '../../components/AppScreen';
 import { Avatar } from '../../components/Avatar';
+import { AvatarPicker } from '../../components/AvatarPicker';
 import { Badge } from '../../components/Badge';
 import { BookCard } from '../../components/BookCard';
 import { ProfileMetricRow, type ProfileMetric } from '../../components/ProfileMetricRow';
@@ -14,6 +15,7 @@ import { ProfileTabs, type ProfileTabKey } from '../../components/ProfileTabs';
 import { StateView } from '../../components/StateView';
 import { TextField } from '../../components/TextField';
 import { TopBar } from '../../components/TopBar';
+import { maskBrazilianPhone } from '../../features/auth/inputMasks';
 import { useSession } from '../../providers/SessionProvider';
 import { api, apiErrorMessage } from '../../services/api';
 import { theme } from '../../styles/theme';
@@ -33,10 +35,12 @@ export function Profile({ navigation }: Props) {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<ProfileTabKey>('shelf');
   const [editing, setEditing] = useState(false);
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [city, setCity] = useState('');
   const [bio, setBio] = useState('');
   const [phone, setPhone] = useState('');
+  const [interests, setInterests] = useState('');
   const [nameError, setNameError] = useState<string | undefined>();
 
   const profileQuery = useQuery({
@@ -52,14 +56,23 @@ export function Profile({ navigation }: Props) {
 
   useEffect(() => {
     if (!profileQuery.data) return;
-    setName(profileQuery.data.name);
+    setFirstName(profileQuery.data.firstName || '');
+    setLastName(profileQuery.data.lastName || '');
     setCity(profileQuery.data.city || '');
     setBio(profileQuery.data.bio || '');
-    setPhone(profileQuery.data.phone || '');
+    setPhone(maskBrazilianPhone(profileQuery.data.phone || ''));
+    setInterests(profileQuery.data.interests.join(', '));
   }, [profileQuery.data]);
 
   const saveMutation = useMutation({
-    mutationFn: async () => (await api.patch<ApiEnvelope<User>>('/api/v1/me', { name: name.trim(), city: city.trim() || null, bio: bio.trim() || null, phone: phone.trim() || null })).data.data,
+    mutationFn: async () => (await api.patch<ApiEnvelope<User>>('/api/v1/me', {
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      city: city.trim() || null,
+      bio: bio.trim() || null,
+      phone: phone.trim() || null,
+      interests: interests.split(',').map((item) => item.trim()).filter(Boolean)
+    })).data.data,
     onSuccess: (user) => {
       queryClient.setQueryData(['me'], user);
       setEditing(false);
@@ -78,16 +91,25 @@ export function Profile({ navigation }: Props) {
   ] : [];
 
   function openEditor() {
-    setName(profile?.name || '');
+    setFirstName(profile?.firstName || '');
+    setLastName(profile?.lastName || '');
     setCity(profile?.city || '');
     setBio(profile?.bio || '');
-    setPhone(profile?.phone || '');
+    setPhone(maskBrazilianPhone(profile?.phone || ''));
+    setInterests(profile?.interests.join(', ') || '');
     setNameError(undefined);
     setEditing(true);
   }
 
   function hasChanges() {
-    return Boolean(profile && (name !== profile.name || city !== (profile.city || '') || bio !== (profile.bio || '') || phone !== (profile.phone || '')));
+    return Boolean(profile && (
+      firstName !== (profile.firstName || '')
+      || lastName !== (profile.lastName || '')
+      || city !== (profile.city || '')
+      || bio !== (profile.bio || '')
+      || phone !== maskBrazilianPhone(profile.phone || '')
+      || interests !== profile.interests.join(', ')
+    ));
   }
 
   function closeEditor() {
@@ -99,8 +121,8 @@ export function Profile({ navigation }: Props) {
   }
 
   function saveProfile() {
-    if (name.trim().length < 2) {
-      setNameError('Digite pelo menos 2 caracteres.');
+    if (!firstName.trim()) {
+      setNameError('Digite seu nome.');
       return;
     }
     setNameError(undefined);
@@ -118,7 +140,7 @@ export function Profile({ navigation }: Props) {
       } />
       <View style={styles.identity}>
         <View style={[styles.identityRow, stackedIdentity && styles.identityStacked]}>
-          <Avatar name={profile?.name || 'Leitor MyBooks'} url={profile?.avatarUrl} size={72} />
+          <Avatar name={profile?.name || 'Leitor TrocaLivros'} url={profile?.avatarUrl} size={72} />
           <View style={[styles.identityCopy, stackedIdentity && styles.identityCopyStacked]}>
             <Text accessibilityRole="header" style={styles.name}>{profile?.name}</Text>
             {profile?.city ? <View style={styles.location}>
@@ -193,7 +215,7 @@ export function Profile({ navigation }: Props) {
         </View>
         <View style={styles.accountSection}>
           <Text accessibilityRole="header" style={styles.sectionTitle}>Conta</Text>
-          <Badge label={session.mode === 'clerk' ? 'Conta protegida' : 'Ambiente local'} variant="violet" />
+          <Badge label="Conta protegida" variant="violet" />
           <AppButton label="Sair da conta" variant="ghost" icon="logout" style={styles.signOut} onPress={() => session.signOut()} />
         </View>
       </ScrollView>}
@@ -206,11 +228,13 @@ export function Profile({ navigation }: Props) {
               <View style={styles.modalHeaderSpacer} />
             </View>
             <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.modalScroll}>
-              <View style={styles.editorIdentity}><Avatar name={name || 'Leitor MyBooks'} url={profile.avatarUrl} size={72} /><Text style={styles.editorHint}>Foto da sua conta conectada.</Text></View>
-              <TextField label="Nome" value={name} maxLength={80} onChangeText={(value) => { setName(value); if (nameError) setNameError(undefined); }} error={nameError} autoCapitalize="words" />
+              <View style={styles.editorIdentity}><AvatarPicker name={[firstName, lastName].filter(Boolean).join(' ')} avatarUrl={profile.avatarUrl} onUploaded={() => { void profileQuery.refetch(); void session.refreshUser(); }} /></View>
+              <TextField label="Nome" value={firstName} maxLength={50} onChangeText={(value) => { setFirstName(value); if (nameError) setNameError(undefined); }} error={nameError} autoCapitalize="words" />
+              <TextField label="Sobrenome" value={lastName} maxLength={80} onChangeText={setLastName} autoCapitalize="words" />
               <TextField label="Cidade" value={city} maxLength={100} onChangeText={setCity} placeholder="Ex.: São Paulo" />
-              <TextField label="Telefone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" textContentType="telephoneNumber" />
+              <TextField label="Telefone" value={phone} onChangeText={(value) => setPhone(maskBrazilianPhone(value))} keyboardType="phone-pad" textContentType="telephoneNumber" placeholder="(11) 91234-5678" maxLength={15} />
               <TextField label="Bio" value={bio} onChangeText={setBio} maxLength={280} multiline placeholder="Conte um pouco sobre seus gostos literários" help={`${bio.length}/280 caracteres`} />
+              <TextField label="Interesses" value={interests} onChangeText={setInterests} placeholder="Fantasia, clássicos, romance" help="Separe por vírgulas." />
               <AppButton label="Salvar alterações" icon="check" loading={saveMutation.isPending} onPress={saveProfile} />
             </ScrollView>
           </KeyboardAvoidingView>

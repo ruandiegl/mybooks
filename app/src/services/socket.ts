@@ -3,7 +3,6 @@ import { appEnv } from '../config/env';
 
 type SocketSession = {
   getToken: () => Promise<string | null>;
-  devUserId?: string;
 };
 
 export async function createChatSocket(session: SocketSession): Promise<Socket> {
@@ -12,8 +11,6 @@ export async function createChatSocket(session: SocketSession): Promise<Socket> 
   return io(appEnv.socketUrl, {
     autoConnect: false,
     transports: ['websocket'],
-    auth: token
-      ? { token }
-      : { devUserId: session.devUserId || appEnv.devUserId }
+    auth: { token }
   });
 }
