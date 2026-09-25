@@ -24,6 +24,11 @@ model User {
   interests                  String[]             @default([])
   profileCompletedAt         DateTime?
   booksOnboardingCompletedAt DateTime?
+  premiumTrialStartedAt     DateTime?
+  premiumTrialEndsAt        DateTime?
+  premiumOfferPromptedAt    DateTime?
+  premiumOfferCohort        PremiumOfferCohort @default(NEW)
+  dailyLikeUsages           LikeDailyUsage[]
   isActive                   Boolean              @default(false)
   avatarUrl                  String?
   bio                        String?
@@ -122,6 +127,18 @@ model BookImage {
   @@map("BookImage")
 }
 
+model LikeDailyUsage {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetBookId String
+  quotaDate    DateTime @db.Date
+  createdAt    DateTime @default(now())
+
+  @@unique([userId, targetBookId, quotaDate])
+  @@index([userId, quotaDate])
+}
+
 model Interaction {
   id             String            @id @default(uuid())
   actorId        String
@@ -193,6 +210,11 @@ model Message {
 enum IsbnStatus {
   NONE
   VALID
+}
+
+enum PremiumOfferCohort {
+  EXISTING
+  NEW
 }
 
 enum BookAvailability {

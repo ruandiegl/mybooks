@@ -6,6 +6,8 @@ import { discoverBooks } from '../modules/books/books.controller.js';
 import { chatRouter } from '../modules/chat/chat.routes.js';
 import { isbnRouter } from '../modules/isbn/isbn.routes.js';
 import { matchesRouter } from '../modules/matches/matches.routes.js';
+import { likesRouter } from '../modules/likes/likes.routes.js';
+import { premiumRouter } from '../modules/premium/premium.routes.js';
 import { mediaRouter } from '../modules/media/media.routes.js';
 import { usersRouter } from '../modules/users/users.routes.js';
 import { authRouter } from '../modules/auth/auth.routes.js';
@@ -14,6 +16,8 @@ export const apiRouter = Router();
 
 apiRouter.use('/auth', authRouter);
 apiRouter.use(authenticate, asyncHandler(attachCurrentUser));
+apiRouter.use('/premium', premiumRouter);
+apiRouter.use('/likes', likesRouter);
 apiRouter.get('/discover', asyncHandler(discoverBooks));
 apiRouter.use(usersRouter);
 apiRouter.use('/books/:bookId/images', mediaRouter);

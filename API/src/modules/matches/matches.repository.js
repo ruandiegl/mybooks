@@ -13,8 +13,8 @@ const matchInclude = {
 };
 
 export const matchesRepository = {
-  upsertInteraction({ actorId, targetBookId, action, clientActionId }) {
-    return prisma.interaction.upsert({
+  upsertInteraction({ actorId, targetBookId, action, clientActionId }, transactionClient = prisma) {
+    return transactionClient.interaction.upsert({
       where: { actorId_targetBookId: { actorId, targetBookId } },
       create: { actorId, targetBookId, action, clientActionId },
       update: { action, clientActionId }

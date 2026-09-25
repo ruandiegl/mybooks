@@ -5,6 +5,7 @@ import { env } from '../../config/env.js';
 import { asyncHandler } from '../../shared/http/asyncHandler.js';
 import { authenticate } from './auth.middleware.js';
 import { createAuthController } from './auth.controller.js';
+import { cookieSessionGuard, readRefreshCookie } from './auth.web-session.js';
 
 const defaults = {
   register: { windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS, limit: env.AUTH_REGISTER_LIMIT },
@@ -27,7 +28,7 @@ const limitedResponse = (req, res) => res.status(429).json({
 
 const rateKey = (scope) => (req) => {
   const ip = ipKeyGenerator(req.ip || '0.0.0.0');
-  const subject = req.body?.email || req.body?.refreshToken || '';
+  const subject = req.body?.email || req.body?.refreshToken || readRefreshCookie(req) || '';
   return createHash('sha256').update(`${scope}:${ip}:${String(subject).trim().toLowerCase()}`).digest('hex');
 };
 
@@ -46,11 +47,11 @@ export function createAuthRouter({ service, authenticateMiddleware = authenticat
   const config = Object.fromEntries(Object.entries(defaults).map(([name, value]) => [name, { ...value, ...limits[name] }]));
 
   router.post('/register', limiter('register', config.register), asyncHandler(controller.register));
-  router.post('/verify-email', limiter('verify', config.verify), asyncHandler(controller.verifyEmail));
+  router.post('/verify-email', cookieSessionGuard, limiter('verify', config.verify), asyncHandler(controller.verifyEmail));
   router.post('/resend-verification', limiter('resend', config.resend), asyncHandler(controller.resendVerification));
-  router.post('/login', limiter('login', config.login), asyncHandler(controller.login));
-  router.post('/refresh', limiter('refresh', config.refresh), asyncHandler(controller.refresh));
-  router.post('/logout', limiter('logout', config.logout), asyncHandler(controller.logout));
+  router.post('/login', cookieSessionGuard, limiter('login', config.login), asyncHandler(controller.login));
+  router.post('/refresh', cookieSessionGuard, limiter('refresh', config.refresh), asyncHandler(controller.refresh));
+  router.post('/logout', cookieSessionGuard, limiter('logout', config.logout), asyncHandler(controller.logout));
   router.post('/forgot-password', limiter('forgot', config.forgot), asyncHandler(controller.forgotPassword));
   router.post('/reset-password', limiter('reset', config.reset), asyncHandler(controller.resetPassword));
   router.post('/logout-all', authenticateMiddleware, asyncHandler(controller.logoutAll));
