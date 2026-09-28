@@ -6,11 +6,11 @@ type SocketSession = {
 };
 
 export async function createChatSocket(session: SocketSession): Promise<Socket> {
-  const token = await session.getToken();
-
   return io(appEnv.socketUrl, {
     autoConnect: false,
     transports: ['websocket'],
-    auth: { token }
+    auth: (callback) => {
+      void session.getToken().then((token) => callback({ token })).catch(() => callback({ token: null }));
+    }
   });
 }

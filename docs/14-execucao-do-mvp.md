@@ -16,6 +16,9 @@
 - cadastro, consulta, edição e exclusão de livros no app;
 - novo frontend mobile com design system nativo inspirado em shadcn;
 - Dockerfile, Compose, exemplos de ambiente, testes e documentação.
+- transporte de sessão web com cookie HttpOnly, sem refresh token no JSON do navegador;
+- infraestrutura de build PWA, manifesto/iOS, ícones, linking, notices web, tratamento de fotos HEIC/JPEG e cache limitado;
+- proxy Caddy preparado em `web/`; serviço Railway, domínio, smoke do proxy e aceite físico ainda pendentes.
 
 ## Evidências locais
 
@@ -26,6 +29,10 @@ A BrasilAPI pública respondeu `200` em `/api/isbn/v1/9788545702870`, confirmand
 Na validação do scanner, o app teve 7 arquivos e 32 testes aprovados, typecheck aprovado, Expo Doctor 21/21 e export Android concluído. Na API, o lint passou sem erros; 23 arquivos e 161 testes foram aprovados, com 1 arquivo e 1 teste ignorados. O schema Prisma foi validado e o Prisma Client 6.19.3 foi gerado. O teste físico Android/iOS permanece como aceite externo.
 
 Consulte a [matriz de validação](./15-matriz-validacao-mvp.md) para os comandos, resultados e limites da evidência.
+
+Em 28/09/2026, o app passou typecheck e 47 testes em 12 arquivos; a API passou lint e teve 170 testes em 23 arquivos aprovados, com 1 ignorado. A PWA exportou 821 módulos e passou seu smoke de manifesto/cache/bundle. O Android exportou 1.067 módulos Hermes. O smoke Caddy foi escrito, mas não executou porque Caddy não está instalado e o daemon Docker não está acessível.
+
+O plano 007 adicionou adaptadores web de API/sessão, avisos, deep links, conversão local de fotos HEIC/JPEG e token atualizado no handshake Socket.IO. A exportação, o manifesto e o service worker foram validados localmente. Isso ainda não prova o funcionamento no domínio Railway: falta publicar/configurar o serviço, confirmar upstream/porta, HTTPS e `CLIENT_ORIGINS`, executar o proxy e testar a sessão em Safari/iPhone. Este checkout não contém uma implementação do Premium de teste; não declarar paridade desse fluxo até integrá-lo.
 
 ## Roteiro de aceite completo
 

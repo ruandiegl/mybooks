@@ -10,16 +10,16 @@ import React, {
   useState
 } from 'react';
 import { authApi } from '../features/auth/authApi';
-import { clearTokens, loadTokens, saveTokens } from '../features/auth/authStorage';
+import { sessionTransport, type SessionResponse, type SessionSnapshot } from '../features/auth/authTransport';
 import { configureApiSession } from '../services/api';
-import type { AuthSessionResponse, AuthTokens, User } from '../types/api';
+import type { User } from '../types/api';
 
 type SessionContextValue = {
   isLoaded: boolean;
   isSignedIn: boolean;
   user: User | null;
   getToken: () => Promise<string | null>;
-  establishSession: (response: AuthSessionResponse) => Promise<void>;
+  establishSession: (response: SessionResponse) => Promise<void>;
   refreshSession: () => Promise<boolean>;
   refreshUser: () => Promise<User | null>;
   signOut: () => Promise<void>;
@@ -27,65 +27,58 @@ type SessionContextValue = {
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
-function sessionTokens(response: AuthSessionResponse): AuthTokens {
-  const expiresAt = Date.parse(response.expiresAt);
-  if (!Number.isFinite(expiresAt)) throw new Error('Expiração de sessão inválida.');
-  return { accessToken: response.accessToken, refreshToken: response.refreshToken, expiresAt };
-}
-
 export function SessionProvider({ children }: React.PropsWithChildren) {
   const queryClient = useQueryClient();
-  const tokensRef = useRef<AuthTokens | null>(null);
-  const [tokens, setTokens] = useState<AuthTokens | null>(null);
+  const sessionRef = useRef<SessionSnapshot | null>(null);
+  const [session, setSession] = useState<SessionSnapshot | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  const replaceTokens = useCallback(async (next: AuthTokens | null) => {
-    if (next) await saveTokens(next);
-    else await clearTokens();
-    tokensRef.current = next;
-    setTokens(next);
+  const replaceSession = useCallback((next: SessionSnapshot | null) => {
+    sessionRef.current = next;
+    setSession(next);
   }, []);
 
-  const establishSession = useCallback(async (response: AuthSessionResponse) => {
-    await replaceTokens(sessionTokens(response));
-    setUser(response.user);
-  }, [replaceTokens]);
+  const establishSession = useCallback(async (response: SessionResponse) => {
+    const next = await sessionTransport.accept(response);
+    replaceSession(next);
+    setUser(next.user ?? response.user);
+  }, [replaceSession]);
 
   const clearSession = useCallback(async () => {
-    await replaceTokens(null);
+    await sessionTransport.clear();
+    replaceSession(null);
     setUser(null);
     queryClient.clear();
-  }, [queryClient, replaceTokens]);
+  }, [queryClient, replaceSession]);
 
   const refreshSession = useCallback(async () => {
-    const current = tokensRef.current;
-    if (!current?.refreshToken) return false;
-
-    try {
-      await establishSession(await authApi.refresh(current.refreshToken));
-      return true;
-    } catch {
+    const next = await sessionTransport.refresh(sessionRef.current);
+    if (!next) {
       await clearSession();
       return false;
     }
-  }, [clearSession, establishSession]);
 
-  const getToken = useCallback(async () => tokensRef.current?.accessToken ?? null, []);
+    replaceSession(next);
+    if (next.user) setUser(next.user);
+    return true;
+  }, [clearSession, replaceSession]);
+
+  const getToken = useCallback(async () => sessionTransport.getToken(sessionRef.current), []);
 
   const refreshUser = useCallback(async () => {
-    if (!tokensRef.current) return null;
+    if (!sessionRef.current) return null;
     const currentUser = await authApi.me();
     setUser(currentUser);
+    replaceSession({ ...sessionRef.current, user: currentUser });
     return currentUser;
-  }, []);
+  }, [replaceSession]);
 
   const signOut = useCallback(async () => {
-    const refreshToken = tokensRef.current?.refreshToken;
+    const current = sessionRef.current;
+    const remoteSignOut = sessionTransport.signOut(current);
     await clearSession();
-    if (refreshToken) {
-      try { await authApi.logout(refreshToken); } catch { /* logout local continua válido offline */ }
-    }
+    await remoteSignOut;
   }, [clearSession]);
 
   useLayoutEffect(() => {
@@ -97,14 +90,24 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
 
     const hydrate = async () => {
       try {
-        const stored = await loadTokens();
-        if (!stored || !active) return;
-        tokensRef.current = stored;
-        setTokens(stored);
+        const restored = await sessionTransport.restore();
+        if (!restored || !active) return;
+        replaceSession(restored);
+        if (restored.user) setUser(restored.user);
 
-        if (stored.expiresAt <= Date.now() + 60_000 && !await refreshSession()) return;
-        const currentUser = await refreshUser();
-        if (!active && currentUser) return;
+        if (restored.expiresAt <= Date.now() + 60_000) {
+          try {
+            if (!await refreshSession()) return;
+          } catch {
+            return;
+          }
+        }
+        if (!restored.user) {
+          const currentUser = await authApi.me();
+          if (!active) return;
+          setUser(currentUser);
+          replaceSession({ ...sessionRef.current!, user: currentUser });
+        }
       } catch {
         if (active) await clearSession();
       } finally {
@@ -114,18 +117,18 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
 
     void hydrate();
     return () => { active = false; };
-  }, [clearSession, refreshSession, refreshUser]);
+  }, [clearSession, refreshSession, replaceSession]);
 
   const value = useMemo<SessionContextValue>(() => ({
     isLoaded,
-    isSignedIn: Boolean(tokens && user),
+    isSignedIn: Boolean(session && user),
     user,
     getToken,
     establishSession,
     refreshSession,
     refreshUser,
     signOut
-  }), [establishSession, getToken, isLoaded, refreshSession, refreshUser, signOut, tokens, user]);
+  }), [establishSession, getToken, isLoaded, refreshSession, refreshUser, session, signOut, user]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

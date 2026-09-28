@@ -58,4 +58,16 @@ describe('API native session interceptor', () => {
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(onUnauthorized).toHaveBeenCalledTimes(1);
   });
+
+  it('preserves the session when refresh fails temporarily', async () => {
+    const refreshError = Object.assign(new Error('service unavailable'), { response: { status: 503 } });
+    const refresh = vi.fn(async () => { throw refreshError; });
+    const onUnauthorized = vi.fn(async () => undefined);
+    configureApiSession({ getAccessToken: async () => 'expired', refresh, onUnauthorized });
+    api.defaults.adapter = unauthorized;
+
+    await expect(api.get('/one')).rejects.toBeInstanceOf(AxiosError);
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(onUnauthorized).not.toHaveBeenCalled();
+  });
 });

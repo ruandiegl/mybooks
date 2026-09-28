@@ -4,7 +4,7 @@ Este diretório é a fonte de verdade das guidelines, decisões técnicas e cont
 
 ## Estado do MVP
 
-A fundação do MVP está implementada: aplicativo Expo/React Native, API Express modular, Prisma/PostgreSQL via Docker, autenticação Clerk, consulta ISBN pela BrasilAPI, upload direto para Cloudflare R2, e-mail transacional por Resend, matches e chat Socket.IO. O ambiente local Docker já está configurado; credenciais externas e aceite em dispositivo ainda dependem do ambiente de teste.
+A fundação do MVP usa aplicativo Expo/React Native, API Express modular, Prisma/PostgreSQL, autenticação própria, consulta ISBN pela BrasilAPI, upload direto para Cloudflare R2, e-mail transacional por Resend, matches e chat Socket.IO. A PWA compartilha as telas do app pelo React Native Web. Build e smoke PWA locais passam; faltam publicar o serviço web na Railway, confirmar a sessão no domínio HTTPS e concluir o aceite em iPhone. Clerk não faz parte do runtime.
 
 ## Índice
 
@@ -16,7 +16,7 @@ A fundação do MVP está implementada: aplicativo Expo/React Native, API Expres
 | [04 — Backend](./04-backend-api.md) | Estrutura modular, validação, erros e segurança HTTP |
 | [05 — Contrato API](./05-contrato-api.md) | Endpoints HTTP e envelopes de resposta |
 | [06 — Banco](./06-banco-de-dados.md) | Modelos Prisma, relações e migrações |
-| [07 — Autenticação e segurança](./07-autenticacao-seguranca.md) | Clerk, autorização, segredos e upload seguro |
+| [07 — Autenticação e segurança](./07-autenticacao-seguranca.md) | Sessões nativas e web, autorização, segredos e upload seguro |
 | [08 — Chat em tempo real](./08-tempo-real-chat.md) | Eventos Socket.IO, salas e idempotência |
 | [09 — Design system](./09-design-system-components.md) | Tokens e componentes reutilizáveis no estilo shadcn |
 | [10 — Docker e ambientes](./10-docker-ambientes.md) | Execução local e variáveis de ambiente |
@@ -26,6 +26,7 @@ A fundação do MVP está implementada: aplicativo Expo/React Native, API Expres
 | [14 — Execução do MVP](./14-execucao-do-mvp.md) | O que foi entregue e como validar |
 | [15 — Matriz de validação](./15-matriz-validacao-mvp.md) | Evidências executadas, resultados e bloqueios externos |
 | [16 — Histórico de alterações](./16-historico-de-alteracoes.md) | Registro das mudanças solicitadas no projeto |
+| [Publicação Web/PWA](../web/README.md) | Build Expo, proxy Caddy e variáveis para o serviço Railway |
 
 ## Regras obrigatórias
 
@@ -44,4 +45,4 @@ A fundação do MVP está implementada: aplicativo Expo/React Native, API Expres
 
 Comece por [Visão geral](./01-visao-geral.md) e [Arquitetura](./02-arquitetura.md). Para colocar o projeto em execução, siga [Docker e ambientes](./10-docker-ambientes.md) e [Execução do MVP](./14-execucao-do-mvp.md).
 
-_Última revisão: 09/09/2026._
+_Última revisão: 28/09/2026._

@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { ipKeyGenerator, rateLimit } from 'express-rate-limit';
 import { env } from '../../config/env.js';
 import { asyncHandler } from '../../shared/http/asyncHandler.js';
+import { AppError } from '../../shared/errors/AppError.js';
 import { authenticate } from './auth.middleware.js';
 import { createAuthController } from './auth.controller.js';
 
@@ -40,10 +41,18 @@ const limiter = (scope, options) => rateLimit({
   handler: limitedResponse
 });
 
-export function createAuthRouter({ service, authenticateMiddleware = authenticate, getMe, limits = {} } = {}) {
+export function createAuthRouter({ service, authenticateMiddleware = authenticate, getMe, limits = {}, allowedOrigins = env.CLIENT_ORIGINS } = {}) {
   const router = Router();
   const controller = createAuthController({ service, getMe });
   const config = Object.fromEntries(Object.entries(defaults).map(([name, value]) => [name, { ...value, ...limits[name] }]));
+  const requireSameOriginBrowserRequest = (req, _res, next) => {
+    const origin = req.get('origin');
+    const fetchSite = req.get('sec-fetch-site');
+    if (!origin || !allowedOrigins.includes(origin) || fetchSite === 'cross-site') {
+      return next(new AppError('Origem não autorizada.', { statusCode: 403, code: 'BROWSER_ORIGIN_DENIED' }));
+    }
+    return next();
+  };
 
   router.post('/register', limiter('register', config.register), asyncHandler(controller.register));
   router.post('/verify-email', limiter('verify', config.verify), asyncHandler(controller.verifyEmail));
@@ -51,6 +60,10 @@ export function createAuthRouter({ service, authenticateMiddleware = authenticat
   router.post('/login', limiter('login', config.login), asyncHandler(controller.login));
   router.post('/refresh', limiter('refresh', config.refresh), asyncHandler(controller.refresh));
   router.post('/logout', limiter('logout', config.logout), asyncHandler(controller.logout));
+  router.post('/browser/login', requireSameOriginBrowserRequest, limiter('login', config.login), asyncHandler(controller.browserLogin));
+  router.post('/browser/verify-email', requireSameOriginBrowserRequest, limiter('verify', config.verify), asyncHandler(controller.browserVerifyEmail));
+  router.post('/browser/refresh', requireSameOriginBrowserRequest, limiter('refresh', config.refresh), asyncHandler(controller.browserRefresh));
+  router.post('/browser/logout', requireSameOriginBrowserRequest, limiter('logout', config.logout), asyncHandler(controller.browserLogout));
   router.post('/forgot-password', limiter('forgot', config.forgot), asyncHandler(controller.forgotPassword));
   router.post('/reset-password', limiter('reset', config.reset), asyncHandler(controller.resetPassword));
   router.post('/logout-all', authenticateMiddleware, asyncHandler(controller.logoutAll));

@@ -6,11 +6,12 @@ A API usa JavaScript ESM, Express 5, Zod e Prisma. O ponto de composição HTTP 
 
 1. request ID e log estruturado;
 2. Helmet, CORS e limite JSON de 1 MB;
-3. Clerk middleware quando configurado;
-4. rate limit em `/api/v1`;
-5. autenticação e hidratação do usuário local;
-6. rota/controller/service/repository;
-7. handler central de erro.
+3. CORS restrito e rate limit em `/api/v1`;
+4. autenticação bearer nativa e hidratação do usuário;
+5. rota/controller/service/repository;
+6. handler central de erro.
+
+As rotas `/auth/browser/login`, `/auth/browser/verify-email`, `/auth/browser/refresh` e `/auth/browser/logout` usam os mesmos services e a mesma família de `AuthSession` dos endpoints nativos. Requerem `Origin` em `CLIENT_ORIGINS`, rejeitam `Sec-Fetch-Site: cross-site` e guardam o refresh rotativo em cookie `__Host-` seguro. O refresh token não aparece no JSON web. O APK mantém os endpoints nativos.
 
 ## Respostas
 

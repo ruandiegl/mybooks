@@ -20,6 +20,11 @@
       "package": "com.mybooks.app"
     },
     "web": {
+      "output": "single",
+      "name": "TrocaLivros",
+      "shortName": "TrocaLivros",
+      "themeColor": "#B90041",
+      "backgroundColor": "#FFF8F7",
       "favicon": "./assets/favicon.png"
     },
     "plugins": [

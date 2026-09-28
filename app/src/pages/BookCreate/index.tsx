@@ -2,8 +2,8 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
-import { useRef, useState } from 'react';
-import { Alert, Image, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Image, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { AppButton } from '../../components/AppButton';
 import { BarcodeScannerModal } from '../../components/BarcodeScannerModal';
 import { Card } from '../../components/Card';
@@ -19,29 +19,33 @@ import {
   type EditableBookField
 } from '../../features/books/isbnForm';
 import { api, apiErrorMessage } from '../../services/api';
+import { Alert } from '../../services/notice';
+import { preparePickedImage, releasePreparedImage, type PreparedUploadImage } from '../../features/media/preparePickedImage';
 import { theme } from '../../styles/theme';
 import type { ApiEnvelope, Book, IsbnLookup } from '../../types/api';
 import type { RootStackParamList } from '../../types/navigation';
 import { styles } from './styles';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BookCreate'>;
-type PickedImage = { uri: string; mimeType: 'image/jpeg' | 'image/png' | 'image/webp'; size: number };
 type Presign = { imageId: string; uploadUrl: string; storageKey: string; headers: Record<string, string> };
 
 const initialForm: BookDraft = { isbn: '', title: '', authors: '', publisher: '', synopsis: '', year: '', pageCount: '', subjects: '' };
 const splitList = (value: string) => value.split(',').map((item) => item.trim()).filter(Boolean);
-const isAllowedImageType = (value?: string): value is PickedImage['mimeType'] => value === 'image/jpeg' || value === 'image/png' || value === 'image/webp';
-
 export function BookCreate({ navigation }: Props) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState(initialForm);
   const [lookup, setLookup] = useState<IsbnLookup | null>(null);
-  const [image, setImage] = useState<PickedImage | null>(null);
+  const [image, setImage] = useState<PreparedUploadImage | null>(null);
+  const imageRef = useRef<PreparedUploadImage | null>(null);
   const [scannerVisible, setScannerVisible] = useState(false);
   const dirtyFields = useRef(new Set<EditableBookField>());
   const currentIsbn = useRef('');
   const pendingIsbn = useRef<string | null>(null);
   const lastConfirmedIsbn = useRef<string | null>(null);
+
+  useEffect(() => () => {
+    if (imageRef.current) releasePreparedImage(imageRef.current);
+  }, []);
 
   const set = (key: keyof BookDraft, value: string) => {
     if (key !== 'isbn') dirtyFields.current.add(key);
@@ -103,16 +107,19 @@ export function BookCreate({ navigation }: Props) {
   }
 
   async function pickImage() {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [2, 3], quality: 0.82 });
-    if (result.canceled) return;
-    const asset = result.assets[0];
-    if (!asset.fileSize) return Alert.alert('Imagem inválida', 'Não foi possível identificar o tamanho da imagem.');
-    if (!isAllowedImageType(asset.mimeType)) return Alert.alert('Formato não aceito', 'Escolha uma imagem JPEG, PNG ou WebP.');
-    if (asset.fileSize > 8 * 1024 * 1024) return Alert.alert('Imagem muito grande', 'Escolha uma imagem de até 8 MB.');
-    setImage({ uri: asset.uri, mimeType: asset.mimeType, size: asset.fileSize });
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [2, 3], quality: 0.82 });
+      if (result.canceled) return;
+      const picked = await preparePickedImage(result.assets[0]);
+      if (imageRef.current) releasePreparedImage(imageRef.current);
+      imageRef.current = picked;
+      setImage(picked);
+    } catch (error) {
+      Alert.alert('Imagem inválida', error instanceof Error ? error.message : 'Escolha uma imagem JPEG, PNG ou WebP de até 8 MB.');
+    }
   }
 
-  async function uploadCover(bookId: string, picked: PickedImage) {
+  async function uploadCover(bookId: string, picked: PreparedUploadImage) {
     const presign = (await api.post<ApiEnvelope<Presign>>('/api/v1/books/' + bookId + '/images/presign', { mimeType: picked.mimeType, size: picked.size })).data.data;
     const blob = await (await fetch(picked.uri)).blob();
     const upload = await fetch(presign.uploadUrl, { method: 'PUT', headers: presign.headers, body: blob });

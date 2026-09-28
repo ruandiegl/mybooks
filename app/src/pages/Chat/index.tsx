@@ -21,7 +21,7 @@ import { styles } from './styles';
 type Props = NativeStackScreenProps<RootStackParamList, 'Chat'>;
 export function Chat({ route }: Props) {
   const { conversationId } = route.params;
-  const session = useSession();
+  const { getToken, refreshSession } = useSession();
   const queryClient = useQueryClient();
   const [body, setBody] = useState('');
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -40,9 +40,10 @@ export function Chat({ route }: Props) {
   useEffect(() => {
     let active = true;
     let current: Socket | null = null;
+    let recoveringAuth = false;
 
     setConnectionState('connecting');
-    createChatSocket({ getToken: session.getToken }).then((created) => {
+    createChatSocket({ getToken }).then((created) => {
       if (!active) return created.close();
       current = created;
       setSocket(created);
@@ -52,7 +53,14 @@ export function Chat({ route }: Props) {
         created.emit('message:read', { conversationId });
         void queryClient.invalidateQueries({ queryKey });
       });
-      created.on('connect_error', () => setConnectionState('offline'));
+      created.on('connect_error', (error) => {
+        setConnectionState('offline');
+        if (error.message !== 'UNAUTHENTICATED' || recoveringAuth) return;
+        recoveringAuth = true;
+        void refreshSession().then((refreshed) => {
+          if (refreshed && active) created.connect();
+        }).catch(() => undefined).finally(() => { recoveringAuth = false; });
+      });
       created.on('disconnect', () => {
         setConnectionState('offline');
         setOtherUserTyping(false);
@@ -74,7 +82,7 @@ export function Chat({ route }: Props) {
       if (typingTimer.current) clearTimeout(typingTimer.current);
       current?.close();
     };
-  }, [conversationId, me.data?.id, queryClient, session.getToken]);
+  }, [conversationId, getToken, me.data?.id, queryClient, refreshSession]);
 
   const ordered = useMemo(() => orderMessagePages(messages.data), [messages.data]);
 

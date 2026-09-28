@@ -4,6 +4,7 @@ import { api } from '../../services/api';
 import type {
   ApiEnvelope,
   AuthSessionResponse,
+  BrowserAuthSessionResponse,
   LoginInput,
   RegisterInput,
   RegistrationResult,
@@ -25,18 +26,20 @@ export const authApi = {
     return data<RegistrationResult>(await publicApi.post('/api/v1/auth/register', input));
   },
   async verifyEmail(input: VerifyEmailInput) {
-    return data<AuthSessionResponse>(await publicApi.post('/api/v1/auth/verify-email', input));
+    return data<AuthSessionResponse | BrowserAuthSessionResponse>(await publicApi.post('/api/v1/auth/verify-email', input));
   },
   async resendVerification(email: string) {
     return data<{ accepted: true }>(await publicApi.post('/api/v1/auth/resend-verification', { email }));
   },
   async login(input: LoginInput) {
-    return data<AuthSessionResponse>(await publicApi.post('/api/v1/auth/login', input));
+    return data<AuthSessionResponse | BrowserAuthSessionResponse>(await publicApi.post('/api/v1/auth/login', input));
   },
-  async refresh(refreshToken: string) {
-    return data<AuthSessionResponse>(await publicApi.post('/api/v1/auth/refresh', { refreshToken }));
+  async refresh(refreshToken?: string) {
+    if (!refreshToken) throw new Error('Não há token nativo para renovar a sessão.');
+    return data<AuthSessionResponse | BrowserAuthSessionResponse>(await publicApi.post('/api/v1/auth/refresh', { refreshToken }));
   },
-  async logout(refreshToken: string) {
+  async logout(refreshToken?: string) {
+    if (!refreshToken) throw new Error('Não há token nativo para encerrar a sessão no servidor.');
     return data<{ ok: true }>(await publicApi.post('/api/v1/auth/logout', { refreshToken }));
   },
   async forgotPassword(email: string) {

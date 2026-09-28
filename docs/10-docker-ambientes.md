@@ -14,3 +14,11 @@ R2 é opcional localmente (`STORAGE_MODE=development` retorna 503 para upload). 
 A consulta ISBN usa `ISBN_RATE_LIMIT_WINDOW_MS=60000` e `ISBN_LOOKUP_LIMIT=30`; registre apenas esses nomes e valores de configuração, nunca credenciais ou conteúdo real de `.env`. No app, o plugin de `expo-camera` declara a mensagem de permissão em português, `microphonePermission=false` e `recordAudioAndroid=false`. Mudanças nessa configuração nativa exigem novo development build; o scanner não é requisito da execução Web.
 
 `docker compose down` preserva o volume; `docker compose down -v` apaga o banco e só deve ser usado quando a perda for intencional.
+
+## Web/PWA na Railway
+
+O frontend web é um serviço separado e não altera `API/Dockerfile`. A partir da raiz do repositório, `web/Dockerfile` usa Node 22 para `npm ci`, exporta `app/` com `npm run build:web` e serve `app/dist` no Caddy. Configure Root Directory `/`, Dockerfile Path `/web/Dockerfile` e `API_UPSTREAM=http://<dominio-privado-api>:<porta>` somente depois de confirmar o hostname e a porta privados do serviço API; publique então o domínio HTTPS do serviço web.
+
+Depois da criação do domínio, adicione a origem completa do site à variável `CLIENT_ORIGINS` da API, mantendo a origem atual necessária ao APK. O proxy recebe `/api/v1`, `/health`, `/socket.io` e `/covers`; o navegador nunca recebe o endereço privado da API. Consulte [`web/README.md`](../web/README.md) para smoke tests e configurações.
+
+Build local e teste do manifesto: `cd app; npm ci; npm run build:web; npm run test:pwa`. Com Caddy instalado, `node web/tests/proxy-smoke.mjs` valida SPA, proxy, WebSocket, cache e cookie sem depender de contas externas.

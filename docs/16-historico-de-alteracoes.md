@@ -1,5 +1,15 @@
 # 16. Histórico de alterações
 
+## 28/09/2026 — Base Web/PWA compartilhada
+
+- Foi adicionada a área `web/` com Dockerfile multi-stage, configuração Caddy, roteiro de publicação Railway e smoke test de proxy HTTP/WebSocket/cache. O proxy ainda não foi executado localmente porque Caddy não está instalado e o daemon Docker está inacessível.
+- O Expo Web recebeu manifesto instalável, ícones de tamanhos 192/512/180, metadados para iOS, build `single` e service worker limitado a assets com hash e página offline sem dados privados.
+- A configuração web aponta API e Socket.IO ao mesmo origin; um smoke de build confirmou que IP local/fallback nativo não entrou no bundle.
+- A autenticação web passou a usar access token curto em memória e refresh rotativo no cookie `__Host-trocalivros_refresh`; Android/iOS continuam usando SecureStore. A API rejeita origem inválida e não envia refresh token no JSON web. Refresh/logout web usam Web Locks entre abas, falha transitória preserva cookie e sessão em memória, cookie inválido ou malformado é expirado, e um marcador não secreto preserva logout offline ao reabrir a PWA.
+- Foram adicionados linking React Navigation, avisos com callbacks no navegador, conversão HEIC/JPEG grande e renovação do token no handshake Socket.IO.
+- Validação local: app com 12 arquivos/47 testes e typecheck; API lint e 23 arquivos/170 testes (1 ignorado); export web de 821 módulos e smoke PWA aprovados; export Android Hermes de 1.067 módulos aprovado.
+- Permanecem pendentes publicação/configuração do Railway, domínio e validação de `/health` pelo proxy, smoke do Caddy em ambiente disponível, contas reais/serviços externos e aceite no Safari/iPhone. O código Premium continua ausente neste checkout.
+
 ## 11/09/2026 — Leitura de ISBN por câmera
 
 - O app Expo 57/React Native 0.86 passou a usar `expo-camera` 57.0.5 em `BarcodeScannerModal`, aberto por `BookCreate`, com câmera traseira, permissão sob demanda e leitura somente de `ean13`.

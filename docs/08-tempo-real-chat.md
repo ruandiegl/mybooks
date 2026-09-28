@@ -4,7 +4,7 @@ O histórico é carregado por HTTP. Socket.IO mantém entrega instantânea, pres
 
 ## Autenticação e salas
 
-O handshake recebe o access token nativo em `auth.token`. O servidor valida assinatura/claims e confirma no banco que `sid` está ativo antes de carregar o usuário de `sub`. Cada conexão entra em `user:<userId>`; após confirmar membership, entra em `conversation:<conversationId>`. Nunca aceite um ID de usuário informado pelo cliente como autorização.
+O handshake recebe o access token atual em `auth.token`; no web, o cliente obtém o token em memória a cada tentativa de conexão/reconexão. Se o servidor recusar por sessão inválida, o cliente tenta um refresh compartilhado e conecta novamente uma vez. O servidor valida assinatura/claims e confirma no banco que `sid` está ativo antes de carregar o usuário de `sub`. Cada conexão entra em `user:<userId>`; após confirmar membership, entra em `conversation:<conversationId>`. Nunca aceite um ID de usuário informado pelo cliente como autorização.
 
 ## Eventos
 

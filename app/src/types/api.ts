@@ -37,6 +37,12 @@ export type AuthSessionResponse = {
   user: User;
 };
 
+export type BrowserAuthSessionResponse = {
+  accessToken: string;
+  expiresAt: string;
+  user: User;
+};
+
 export type RegisterInput = {
   email: string;
   password: string;

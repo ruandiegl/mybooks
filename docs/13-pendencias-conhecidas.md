@@ -3,16 +3,20 @@
 ## Produção
 
 - validar finalidade, base legal, retenção, exportação e exclusão de CPF/celular com o responsável jurídico/LGPD;
-- configurar HTTPS, domínio, CORS e cadeia real de proxies antes de confiar em `trust proxy=1`;
+- publicar o serviço `web` Railway, configurar HTTPS/domínio e acrescentar sua origem a `CLIENT_ORIGINS` sem remover as origens usadas pelo APK;
+- executar `web/tests/proxy-smoke.mjs` em ambiente com Caddy; localmente o binário Caddy não está instalado e o daemon Docker está inacessível;
+- melhorar a recuperação da sessão ao abrir a PWA offline: o access token só existe em memória; se o primeiro refresh falhar por rede/5xx, o cookie é preservado, mas a pessoa precisa recarregar quando o serviço voltar ou autenticar novamente;
+- confirmar a cadeia real `cliente → edge Railway → Caddy → API`, incluindo `X-Forwarded-For`/`X-Forwarded-Proto`, e testar limites por IP antes de alterar `trust proxy`;
 - provisionar PostgreSQL gerenciado, backup automático, teste de restore e monitoração;
 - configurar Resend com domínio verificado e monitorar bounces/entrega;
 - configurar R2 privado, CORS, credenciais mínimas e lifecycle de uploads abandonados;
 - criar processo de migração/recuperação para contas legadas antes de remover fisicamente `clerkUserId`;
 - realizar testes com dois usuários reais e em Android/iOS físico, incluindo acessibilidade;
-- aceitar o scanner em Android e iOS físicos com permissão negada/bloqueada, baixa luz, código danificado, offline, ISBN não encontrado (`404`), provedor indisponível (`503`) e limite excedido (`429`). O cadastro manual, inclusive de ISBN-10, deve permanecer funcional em todos esses casos.
+- integrar o Premium de teste de 30 dias e 15 curtidas/dia, que não aparece no código deste checkout; cobrança real continua fora do MVP;
+- aceitar câmera/scanner, seleção e envio de JPEG/PNG/WebP/HEIC, rotas diretas, sessão renovada e chat em Android/iOS físicos, incluindo permissão negada/bloqueada e fallback manual. O cadastro manual, inclusive de ISBN-10, deve permanecer funcional.
 - antes de escalar a API para múltiplas réplicas, mover os rate limits geral, de autenticação e de ISBN do armazenamento em memória para um store compartilhado, como Redis; em memória, cada processo mantém sua própria cota e reinícios zeram a janela.
 
-O scanner não oferece leitura física direta de ISBN-10 e não deve ser anunciado como recurso Web. Esses limites são decisões do escopo atual, não defeitos a mascarar no aceite.
+O scanner não oferece leitura física direta de ISBN-10. Expo Camera tem adaptador web, mas a compatibilidade final em Safari/iPhone ainda aguarda teste físico.
 
 ## Segurança/dependências
 

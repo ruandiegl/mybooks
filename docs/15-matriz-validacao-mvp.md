@@ -1,17 +1,17 @@
 # 15. Matriz de validação do MVP
 
-Data da execução atual: 11/09/2026.
+Data da execução atual: 28/09/2026.
 
 ## Evidências executadas
 
 | Área | Verificação | Resultado atual |
 | --- | --- | --- |
 | API | recorte Vitest de ISBN/books | 25 aprovados |
-| API | suíte Vitest completa após o scanner | 23 arquivos e 161 testes aprovados; 1 arquivo e 1 teste ignorados |
+| API | suíte Vitest completa | 23 arquivos; 170 testes aprovados e 1 ignorado |
 | API | integração nativa com PostgreSQL | 1/1 aprovado com `RUN_AUTH_INTEGRATION=true` |
 | API | ESLint | aprovado sem erros |
-| App | suíte Vitest | 7 arquivos e 32 testes aprovados |
-| App | TypeScript estrito | aprovado |
+| App | suíte Vitest | 12 arquivos e 47 testes aprovados |
+| App | TypeScript estrito | aprovado nesta execução |
 | Prisma | validate/generate após o scanner | schema válido e Prisma Client 6.19.3 gerado |
 | Compose | migração + seed | 6 migrações aplicadas; 4 usuários, 12 livros, 2 matches e 2 conversas |
 | HTTP real | cadastro/login/me/refresh/replay/logout | `201/200`, rotação válida e revogações `401` |
@@ -21,12 +21,19 @@ Data da execução atual: 11/09/2026.
 | Mobile | senha, sessão, onboarding e regras do scanner | incluídos nos 32 testes aprovados |
 | Perfil/avatar | campos permitidos, URL arbitrária e ownership da chave | cobertos por testes de service |
 | Expo | Doctor | 21/21 verificações aprovadas |
-| Android | export Hermes | 1.063 módulos; diretório temporário removido |
+| Android | export Hermes | 1.067 módulos; export temporário removido após validar o resultado |
+| PWA | `npm run build:web` + `npm run test:pwa` | build de 821 módulos; 32 assets com hash; manifesto, ícones, escopo do service worker e ausência de URL local aprovados |
+| Sessão web | testes das rotas de auth/API e adaptador web | cookie HttpOnly/Secure, expiração de cookie inválido/malformado, retenção de cookie e sessão em falha transitória, rotação cross-tab com Web Locks, logout offline entre abas e access token em memória cobertos pela suíte |
+| Socket.IO web | teste de credencial por handshake | access token atualizado por conexão e tentativa única de refresh cobertos por teste |
+| API | ESLint | aprovado sem erros nesta execução |
+| Proxy Caddy | `node web/tests/proxy-smoke.mjs` | não executado: Caddy ausente no PATH e daemon Docker inacessível |
+| Railway Web | serviço, domínio, `/health` via proxy e origem em `CLIENT_ORIGINS` | pendentes; o código local ainda não foi publicado na branch remota |
+| iPhone | Safari, instalação PWA, câmera, mídia e chat | pendente de dispositivo físico e serviço web HTTPS |
 | Dependências | `npm audit --omit=dev` | API: 4 altas no grafo Prisma sem fix compatível; app: 36 moderadas transitivas sem correção disponível |
 
-Os testes Resend/R2 e em dispositivo permanecem externos; a evidência acima não os substitui.
+Os testes Resend/R2, proxy e dispositivos permanecem externos; a evidência acima não os substitui. O Premium de teste de 30 dias e limite de 15 curtidas não existe neste checkout e não foi validado como parte da PWA. Se a PWA for aberta sem rede/API disponível, o refresh inicial preserva o cookie HttpOnly, mas a tela de autenticação só tenta restaurar novamente após recarregar ou entrar de novo.
 
-O export Android confirma empacotamento, não o comportamento da câmera. O aceite externo precisa ser repetido em Android e iOS físicos e cobrir permissão negada/bloqueada, baixa luz, código danificado, offline, `404`, `503` e `429`, sempre verificando o fallback manual. Não há aceite de scanner na Web nem de leitura física direta de ISBN-10.
+Os exports Android e web confirmam empacotamento, não comportamento em dispositivo ou disponibilidade pública. O aceite externo precisa ser repetido em Android e iOS físicos e cobrir permissão negada/bloqueada, baixa luz, código danificado, offline, `404`, `503` e `429`, sempre verificando o fallback manual. Não há aceite do scanner na Web nem leitura física direta de ISBN-10.
 
 ## Roteiro funcional manual
 
@@ -47,6 +54,7 @@ O export Android confirma empacotamento, não o comportamento da câmera. O acei
 | PostgreSQL limpo | aplicar todas as migrações, seed e validar integridade/restore |
 | Resend | chave, domínio remetente e caixa postal real |
 | Cloudflare R2 | bucket privado, CORS, domínio e credenciais mínimas |
+| Railway Web | publicar o serviço `web`, validar upstream privado, `/health`, headers/cookie/WebSocket, domínio HTTPS e `CLIENT_ORIGINS` |
 | HTTPS/proxy | domínio TLS e confirmação da cadeia real usada por `trust proxy` |
 | Android/iOS | dispositivos físicos, câmera, cenários de falha, fallback manual e revisão de teclado/acessibilidade |
 | LGPD | aprovação de finalidade, base legal e retenção de CPF/celular |

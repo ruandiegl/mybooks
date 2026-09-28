@@ -12,6 +12,7 @@ export type AuthStackParamList = {
 };
 
 export type RootStackParamList = {
+  Auth: undefined;
   OnboardingProfile: undefined;
   OnboardingBooks: undefined;
   Main: NavigatorScreenParams<MainTabParamList>;
@@ -19,5 +20,5 @@ export type RootStackParamList = {
   BookDetails: { bookId: string };
   BookEdit: { bookId: string };
   Matches: undefined;
-  Chat: { conversationId: string; title: string };
+  Chat: { conversationId: string; title?: string };
 };
