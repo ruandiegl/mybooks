@@ -18,7 +18,7 @@
 - Dockerfile, Compose, exemplos de ambiente, testes e documentação.
 - transporte de sessão web com cookie HttpOnly, sem refresh token no JSON do navegador;
 - infraestrutura de build PWA, manifesto/iOS, ícones, linking, notices web, tratamento de fotos HEIC/JPEG e cache limitado;
-- proxy Caddy preparado em `web/`; serviço Railway, domínio, smoke do proxy e aceite físico ainda pendentes.
+- proxy Caddy e serviço Railway publicados em `https://trocalivros-web-production.up.railway.app`; GET público confirma HTML da PWA, `/health` pela API privada e preservação do `401` em endpoint protegido; smoke local do Caddy e aceite físico ainda pendentes.
 
 ## Evidências locais
 
@@ -30,9 +30,9 @@ Na validação do scanner, o app teve 7 arquivos e 32 testes aprovados, typechec
 
 Consulte a [matriz de validação](./15-matriz-validacao-mvp.md) para os comandos, resultados e limites da evidência.
 
-Em 28/09/2026, o app passou typecheck e 47 testes em 12 arquivos; a API passou lint e teve 172 testes em 24 arquivos aprovados, com 1 ignorado. A PWA exportou 821 módulos e passou seu smoke de manifesto/cache/bundle. O Android exportou 1.067 módulos Hermes. O smoke Caddy foi escrito, mas não executou porque Caddy não está instalado e o daemon Docker não está acessível.
+Em 28/09/2026, o app passou typecheck e 47 testes em 12 arquivos; a API passou lint e teve 172 testes em 24 arquivos aprovados, com 1 ignorado. A PWA exportou 821 módulos e passou seu smoke de manifesto/cache/bundle. O Android exportou 1.067 módulos Hermes. Os serviços API e Web estão online na Railway. O domínio público da API continua na porta 3001; a variável `PORT=3001` mantém essa URL e a API também escuta nessa porta. O PWA encaminha pelo DNS privado `mybooks-api.railway.internal:3001`. Testes GET públicos confirmaram `/health` da API, `/` e `/health` da PWA, e `401` JSON em `/api/v1/auth/me` pelo proxy. O smoke Caddy local foi escrito, mas não executou porque Caddy não está instalado e o daemon Docker não está acessível.
 
-O plano 007 adicionou adaptadores web de API/sessão, avisos, deep links, conversão local de fotos HEIC/JPEG e token atualizado no handshake Socket.IO. A exportação, o manifesto e o service worker foram validados localmente. Isso ainda não prova o funcionamento no domínio Railway: falta executar o smoke do proxy e testar a sessão em Safari/iPhone. Este checkout não contém uma implementação do Premium de teste; não declarar paridade desse fluxo até integrá-lo.
+O plano 007 adicionou adaptadores web de API/sessão, avisos, deep links, conversão local de fotos HEIC/JPEG e token atualizado no handshake Socket.IO. A exportação, o manifesto e o service worker foram validados localmente, e GETs públicos confirmam que o domínio Railway serve a PWA e encaminha a API corretamente. Ainda falta validar sessão em Safari/iPhone e executar o smoke local de WebSocket/cache do Caddy. Este checkout não contém uma implementação do Premium de teste; não declarar paridade desse fluxo até integrá-lo.
 
 ## Roteiro de aceite completo
 

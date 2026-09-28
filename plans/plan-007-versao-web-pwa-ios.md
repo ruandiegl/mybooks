@@ -29,7 +29,7 @@
 - Várias telas usam `Alert.alert`; scanner, seletor de imagem e upload R2 exigem verificação e eventual adaptação web. O backend restringe `CLIENT_ORIGINS` e o Socket.IO usa a mesma lista; `PWA_CLIENT_ORIGIN` permite acrescentar a origem PWA sem substituir valores existentes.
 - `app/app.json` só define favicon web; não há `web/`, `manifest.json`, HTML PWA nem política de cache.
 - Este checkout contém este plano 007, mas **não contém código Premium**. O plano 006 ainda não reflete a decisão posterior de teste grátis; a paridade Premium permanece uma dependência separada.
-- A API Railway deve responder `200` em `/health` antes do aceite. A checagem anterior nesta conversa retornou `502`; uma tentativa atual de leitura pelo navegador de pesquisa não comprovou recuperação. Tratar como bloqueio de ambiente, com logs/deploy Railway e teste externo, sem afirmar que está saudável.
+- A API estava retornando `502` no domínio público porque o domínio existente apontava para a porta `3001`, enquanto o processo aceitava a porta `8080` injetada pela Railway. A variável de serviço `PORT=3001` foi definida, preservando o domínio usado pelo APK; deploy `SUCCESS` e GET público `/health = 200` confirmam a recuperação.
 
 ## Escolha de implantação
 
@@ -73,7 +73,7 @@
 **Interfaces:** produz uma matriz com linha por fluxo e colunas APK, Safari, PWA instalada, API/serviço e evidência.
 
 - [x] Verificar o checkout atual: o código Premium de teste está ausente; registrar dependência e não marcar esse fluxo como entregue.
-- [ ] Confirmar Railway `GET /health = 200` externamente, migration aplicada, login de conta existente e conta nova, Socket.IO, Resend e R2. Corrigir a falha 502 se persistir antes do teste PWA.
+- [x] Confirmar Railway `GET /health = 200` externamente, deploy da API concluído e nenhuma migration pendente. Login de conta existente/nova, Socket.IO, Resend e R2 continuam no aceite manual.
 - [ ] Inventariar estados de todas as telas: Auth, onboarding, Descobrir, Biblioteca, Livro (criar/detalhes/editar), Matches, Mensagens, Chat, Perfil, ISBN, imagens e Premium.
 - [ ] Registrar screenshots do APK com conta e dados de teste, dimensões 320/360/390 pt e fonte ampliada; eles serão a referência de paridade.
 - [x] Exportar a PWA e executar o smoke do manifesto/cache/bundle: build de 821 módulos, 32 assets com hash pré-cacheados e smoke aprovado. Isso comprova o build, não o funcionamento no Safari.
@@ -88,11 +88,11 @@
 
 - [x] Configurar `web.output: "single"`, nome TrocaLivros, `display: "standalone"`, `start_url`, `scope`, cores e ícones. Personalizar `public/index.html` com manifesto e metadados iOS; build e smoke PWA aprovados.
 - [x] Criar `app/src/config/env.web.ts` para usar `window.location.origin` como API/Socket e testar ausência de URL local no bundle. A configuração nativa continua independente.
-- [x] Criar `web/Dockerfile` multi-stage com Node 22 e Caddy, contexto na raiz e saída Expo em `app/dist`; a configuração do serviço Railway segue pendente.
-- [x] Criar `web/Caddyfile` com rotas de proxy, WebSocket, encaminhamento de headers, fallback apenas para navegação HTML GET/HEAD e políticas de cache. O upstream privado e a cadeia real de proxies ainda precisam de validação na Railway.
-- [ ] Executar smoke de proxy HTTP/WebSocket/cache e validar parser Caddy. O teste foi escrito, mas não executou porque Caddy não está instalado e o daemon Docker local está inacessível.
-- [x] Criar o serviço `TrocaLivros Web` na Railway ligado à branch `codex/plan-007-pwa`, configurar root `/`, `web/Dockerfile`, `/health`, `PORT=8080`, upstream privado `mybooks-api.railway.internal:8080` e domínio HTTPS.
-- [ ] Atualizar a API para a branch publicada, configurar `PWA_CLIENT_ORIGIN` sem alterar a allowlist existente e testar login, proxy e instalação no Safari/iPhone.
+- [x] Criar `web/Dockerfile` multi-stage com Node 22 e Caddy, contexto na raiz e saída Expo em `app/dist`; deploy separado da PWA está ativo na Railway.
+- [x] Criar `web/Caddyfile` com rotas de proxy, WebSocket, encaminhamento de headers, fallback apenas para navegação HTML GET/HEAD e políticas de cache; GET público confirma `/health` privado e que erros da API não recebem fallback SPA.
+- [ ] Executar smoke local de proxy HTTP/WebSocket/cache e validar parser Caddy. O teste foi escrito, mas não executou porque Caddy não está instalado e o daemon Docker local está inacessível. Em produção, GET público confirmou `GET / = 200`, `/health = 200` pelo upstream privado e `/api/v1/auth/me = 401` JSON.
+- [x] Criar o serviço `TrocaLivros Web` na Railway ligado à branch `codex/plan-007-pwa`, configurar root `/`, `web/Dockerfile`, `/health`, `PORT=8080`, upstream privado `mybooks-api.railway.internal:3001` e domínio HTTPS `https://trocalivros-web-production.up.railway.app`.
+- [x] Atualizar a API para a branch publicada e acrescentar `PWA_CLIENT_ORIGIN` preservando a allowlist existente; testar publicamente HTML, `/health` pelo proxy e resposta JSON `401` de rota protegida. Login e instalação em iPhone permanecem no aceite manual.
 
 **Aceite:** PWA acessível publicamente no domínio do serviço `web` Railway e instalada no iPhone; API continua no serviço existente, `/health` e contratos antigos funcionam através do proxy. Uma atualização web pode ser publicada sem reconstruir a API.
 

@@ -16,12 +16,12 @@ O estágio Node usa Node 22, compatível com `app/package.json`, executa `npm ci
 
 Crie um serviço separado chamado `web` no mesmo projeto e ambiente Railway da API e do PostgreSQL. Configure:
 
-- `API_UPSTREAM=http://mybooks-api.railway.internal:8080` (domínio privado confirmado e porta observada no processo API em produção)
+- `API_UPSTREAM=http://mybooks-api.railway.internal:3001` (domínio privado e porta alinhados à porta de destino do domínio público da API)
 - `PORT=8080` (a plataforma costuma injetar essa variável; o valor padrão local também é 8080)
 
-O processo atual da API confirma que escuta em `0.0.0.0:8080`; por isso o proxy usa `http://mybooks-api.railway.internal:8080`. A instância Caddy também escuta em `PORT=8080`. O valor de `API_UPSTREAM` é consumido somente pelo Caddy e não aparece no bundle.
+Na Railway, a API define `PORT=3001` para corresponder à porta de destino do domínio público já existente, e o proxy privado usa `http://mybooks-api.railway.internal:3001`. A instância Caddy do serviço web escuta em `PORT=8080`. O valor de `API_UPSTREAM` é consumido somente pelo Caddy e não aparece no bundle.
 
-Depois que o Railway atribuir um domínio HTTPS ao serviço `web`, configure `PWA_CLIENT_ORIGIN` na API com a origem completa do site. A API combina esse valor com a lista existente de `CLIENT_ORIGINS`, preservando as origens necessárias ao APK. Faça o teste de `/health`, login, cookie, Socket.IO e carregamento da rota profunda antes de divulgar o domínio.
+O serviço Railway `TrocaLivros Web` está publicado em `https://trocalivros-web-production.up.railway.app`; `PWA_CLIENT_ORIGIN` já está configurada na API e combinada com `CLIENT_ORIGINS`, preservando as origens necessárias ao APK. Foram verificados `GET /`, `/health` através do proxy e o encaminhamento de `/api/v1/auth/me` sem fallback SPA. O login/cookie, Socket.IO e instalação ainda exigem aceite em navegador e iPhone.
 
 A renovação de sessão entre abas usa Web Locks, disponível em Safari/iOS 15.4 ou mais recente. Versões anteriores não renovam a sessão por cookie para evitar duas rotações concorrentes da mesma família.
 

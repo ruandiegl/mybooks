@@ -27,12 +27,12 @@ Data da execução atual: 28/09/2026.
 | Socket.IO web | teste de credencial por handshake | access token atualizado por conexão e tentativa única de refresh cobertos por teste |
 | API | ESLint | aprovado sem erros nesta execução |
 | Proxy Caddy | `node web/tests/proxy-smoke.mjs` | não executado: Caddy ausente no PATH e daemon Docker inacessível |
-| API Railway | endpoints browser e allowlist PWA | branch publicada; atualização da API e `PWA_CLIENT_ORIGIN` ainda pendentes |
-| Railway Web | serviço, domínio, `/health` via proxy e `PWA_CLIENT_ORIGIN` | branch/domínio configurados; primeiro deploy bem-sucedido e validação pública pendentes |
-| iPhone | Safari, instalação PWA, câmera, mídia e chat | pendente de dispositivo físico e serviço web HTTPS |
+| API Railway | endpoints browser e allowlist PWA | branch `codex/plan-007-pwa`; deploy `SUCCESS`; `PORT=3001`; domínio público `/health` `200`; migrações sem pendências; `PWA_CLIENT_ORIGIN` configurada preservando `CLIENT_ORIGINS` |
+| Railway Web | serviço, domínio, `/health` via proxy e endpoints protegidos | deploy `SUCCESS`; `GET /` `200`; `/health` via API privada `200`; `/api/v1/auth/me` retorna `401` JSON sem cair no HTML SPA |
+| iPhone | Safari, instalação PWA, câmera, mídia e chat | pendente de dispositivo físico; domínio web HTTPS já disponível |
 | Dependências | `npm audit --omit=dev` | API: 4 altas no grafo Prisma sem fix compatível; app: 36 moderadas transitivas sem correção disponível |
 
-Os testes Resend/R2, proxy e dispositivos permanecem externos; a evidência acima não os substitui. O Premium de teste de 30 dias e limite de 15 curtidas não existe neste checkout e não foi validado como parte da PWA. Se a PWA for aberta sem rede/API disponível, o refresh inicial preserva o cookie HttpOnly, mas a tela de autenticação só tenta restaurar novamente após recarregar ou entrar de novo.
+Os testes Resend/R2, sessão, WebSocket, cache e dispositivos permanecem pendentes; os GETs de produção acima comprovam a publicação e o proxy HTTP básico, não substituem esses testes. O Premium de teste de 30 dias e limite de 15 curtidas não existe neste checkout e não foi validado como parte da PWA. Se a PWA for aberta sem rede/API disponível, o refresh inicial preserva o cookie HttpOnly, mas a tela de autenticação só tenta restaurar novamente após recarregar ou entrar de novo.
 
 Os exports Android e web confirmam empacotamento, não comportamento em dispositivo ou disponibilidade pública. O aceite externo precisa ser repetido em Android e iOS físicos e cobrir permissão negada/bloqueada, baixa luz, código danificado, offline, `404`, `503` e `429`, sempre verificando o fallback manual. Não há aceite do scanner na Web nem leitura física direta de ISBN-10.
 
@@ -55,7 +55,7 @@ Os exports Android e web confirmam empacotamento, não comportamento em disposit
 | PostgreSQL limpo | aplicar todas as migrações, seed e validar integridade/restore |
 | Resend | chave, domínio remetente e caixa postal real |
 | Cloudflare R2 | bucket privado, CORS, domínio e credenciais mínimas |
-| Railway Web | validar upstream privado, `/health`, headers/cookie/WebSocket, domínio HTTPS e `PWA_CLIENT_ORIGIN` |
+| Railway Web | validar login, headers/cookie, Socket.IO/WebSocket e instalação em Safari/iPhone; domínio HTTPS, upstream privado, `/health` e `PWA_CLIENT_ORIGIN` já estão validados em produção |
 | HTTPS/proxy | domínio TLS e confirmação da cadeia real usada por `trust proxy` |
 | Android/iOS | dispositivos físicos, câmera, cenários de falha, fallback manual e revisão de teclado/acessibilidade |
 | LGPD | aprovação de finalidade, base legal e retenção de CPF/celular |
