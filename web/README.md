@@ -16,10 +16,10 @@ O estágio Node usa Node 22, compatível com `app/package.json`, executa `npm ci
 
 Crie um serviço separado chamado `web` no mesmo projeto e ambiente Railway da API e do PostgreSQL. Configure:
 
-- `API_UPSTREAM=http://mybooks-api.railway.internal:3001` (domínio e porta confirmados na configuração atual do serviço API)
+- `API_UPSTREAM=http://mybooks-api.railway.internal:8080` (domínio privado confirmado e porta observada no processo API em produção)
 - `PORT=8080` (a plataforma costuma injetar essa variável; o valor padrão local também é 8080)
 
-O serviço Railway ativo informa o domínio privado `mybooks-api` e a porta de escuta `3001`; configure `API_UPSTREAM=http://mybooks-api.railway.internal:3001`. A instância Caddy escuta em `PORT=8080`. O valor de `API_UPSTREAM` é consumido somente pelo Caddy e não aparece no bundle.
+O processo atual da API confirma que escuta em `0.0.0.0:8080`; por isso o proxy usa `http://mybooks-api.railway.internal:8080`. A instância Caddy também escuta em `PORT=8080`. O valor de `API_UPSTREAM` é consumido somente pelo Caddy e não aparece no bundle.
 
 Depois que o Railway atribuir um domínio HTTPS ao serviço `web`, configure `PWA_CLIENT_ORIGIN` na API com a origem completa do site. A API combina esse valor com a lista existente de `CLIENT_ORIGINS`, preservando as origens necessárias ao APK. Faça o teste de `/health`, login, cookie, Socket.IO e carregamento da rota profunda antes de divulgar o domínio.
 

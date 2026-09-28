@@ -91,7 +91,7 @@
 - [x] Criar `web/Dockerfile` multi-stage com Node 22 e Caddy, contexto na raiz e saída Expo em `app/dist`; a configuração do serviço Railway segue pendente.
 - [x] Criar `web/Caddyfile` com rotas de proxy, WebSocket, encaminhamento de headers, fallback apenas para navegação HTML GET/HEAD e políticas de cache. O upstream privado e a cadeia real de proxies ainda precisam de validação na Railway.
 - [ ] Executar smoke de proxy HTTP/WebSocket/cache e validar parser Caddy. O teste foi escrito, mas não executou porque Caddy não está instalado e o daemon Docker local está inacessível.
-- [x] Criar o serviço `TrocaLivros Web` na Railway ligado à branch `codex/plan-007-pwa`, configurar root `/`, `web/Dockerfile`, `/health`, `PORT=8080`, upstream privado `mybooks-api.railway.internal:3001` e domínio HTTPS.
+- [x] Criar o serviço `TrocaLivros Web` na Railway ligado à branch `codex/plan-007-pwa`, configurar root `/`, `web/Dockerfile`, `/health`, `PORT=8080`, upstream privado `mybooks-api.railway.internal:8080` e domínio HTTPS.
 - [ ] Atualizar a API para a branch publicada, configurar `PWA_CLIENT_ORIGIN` sem alterar a allowlist existente e testar login, proxy e instalação no Safari/iPhone.
 
 **Aceite:** PWA acessível publicamente no domínio do serviço `web` Railway e instalada no iPhone; API continua no serviço existente, `/health` e contratos antigos funcionam através do proxy. Uma atualização web pode ser publicada sem reconstruir a API.
