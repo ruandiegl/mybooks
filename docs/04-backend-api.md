@@ -11,7 +11,7 @@ A API usa JavaScript ESM, Express 5, Zod e Prisma. O ponto de composição HTTP 
 5. rota/controller/service/repository;
 6. handler central de erro.
 
-As rotas `/auth/browser/login`, `/auth/browser/verify-email`, `/auth/browser/refresh` e `/auth/browser/logout` usam os mesmos services e a mesma família de `AuthSession` dos endpoints nativos. Requerem `Origin` em `CLIENT_ORIGINS`, rejeitam `Sec-Fetch-Site: cross-site` e guardam o refresh rotativo em cookie `__Host-` seguro. O refresh token não aparece no JSON web. O APK mantém os endpoints nativos.
+As rotas `/auth/browser/login`, `/auth/browser/verify-email`, `/auth/browser/refresh` e `/auth/browser/logout` usam os mesmos services e a mesma família de `AuthSession` dos endpoints nativos. Requerem `Origin` na allowlist `CLIENT_ORIGINS`; o domínio PWA pode ser informado separadamente por `PWA_CLIENT_ORIGIN` e é combinado com a allowlist em memória. Rejeitam `Sec-Fetch-Site: cross-site` e guardam o refresh rotativo em cookie `__Host-` seguro. O refresh token não aparece no JSON web. O APK mantém os endpoints nativos.
 
 ## Respostas
 

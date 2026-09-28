@@ -30,9 +30,9 @@ Na validação do scanner, o app teve 7 arquivos e 32 testes aprovados, typechec
 
 Consulte a [matriz de validação](./15-matriz-validacao-mvp.md) para os comandos, resultados e limites da evidência.
 
-Em 28/09/2026, o app passou typecheck e 47 testes em 12 arquivos; a API passou lint e teve 170 testes em 23 arquivos aprovados, com 1 ignorado. A PWA exportou 821 módulos e passou seu smoke de manifesto/cache/bundle. O Android exportou 1.067 módulos Hermes. O smoke Caddy foi escrito, mas não executou porque Caddy não está instalado e o daemon Docker não está acessível.
+Em 28/09/2026, o app passou typecheck e 47 testes em 12 arquivos; a API passou lint e teve 172 testes em 24 arquivos aprovados, com 1 ignorado. A PWA exportou 821 módulos e passou seu smoke de manifesto/cache/bundle. O Android exportou 1.067 módulos Hermes. O smoke Caddy foi escrito, mas não executou porque Caddy não está instalado e o daemon Docker não está acessível.
 
-O plano 007 adicionou adaptadores web de API/sessão, avisos, deep links, conversão local de fotos HEIC/JPEG e token atualizado no handshake Socket.IO. A exportação, o manifesto e o service worker foram validados localmente. Isso ainda não prova o funcionamento no domínio Railway: falta publicar/configurar o serviço, confirmar upstream/porta, HTTPS e `CLIENT_ORIGINS`, executar o proxy e testar a sessão em Safari/iPhone. Este checkout não contém uma implementação do Premium de teste; não declarar paridade desse fluxo até integrá-lo.
+O plano 007 adicionou adaptadores web de API/sessão, avisos, deep links, conversão local de fotos HEIC/JPEG e token atualizado no handshake Socket.IO. A exportação, o manifesto e o service worker foram validados localmente. Isso ainda não prova o funcionamento no domínio Railway: falta executar o smoke do proxy e testar a sessão em Safari/iPhone. Este checkout não contém uma implementação do Premium de teste; não declarar paridade desse fluxo até integrá-lo.
 
 ## Roteiro de aceite completo
 

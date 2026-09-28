@@ -3,7 +3,7 @@
 ## Produção
 
 - validar finalidade, base legal, retenção, exportação e exclusão de CPF/celular com o responsável jurídico/LGPD;
-- publicar o serviço `web` Railway, configurar HTTPS/domínio e acrescentar sua origem a `CLIENT_ORIGINS` sem remover as origens usadas pelo APK;
+- validar domínio HTTPS do serviço `web` Railway e configurar `PWA_CLIENT_ORIGIN`; a API combina essa origem com `CLIENT_ORIGINS` sem alterar a lista usada pelo APK;
 - executar `web/tests/proxy-smoke.mjs` em ambiente com Caddy; localmente o binário Caddy não está instalado e o daemon Docker está inacessível;
 - melhorar a recuperação da sessão ao abrir a PWA offline: o access token só existe em memória; se o primeiro refresh falhar por rede/5xx, o cookie é preservado, mas a pessoa precisa recarregar quando o serviço voltar ou autenticar novamente;
 - confirmar a cadeia real `cliente → edge Railway → Caddy → API`, incluindo `X-Forwarded-For`/`X-Forwarded-Proto`, e testar limites por IP antes de alterar `trust proxy`;

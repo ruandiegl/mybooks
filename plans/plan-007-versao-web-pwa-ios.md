@@ -26,7 +26,7 @@
 - `app/.env` usa IP local; `app/src/config/env.ts` tem fallback localhost. Esse bundle não serve para iPhone fora da LAN. URLs `EXPO_PUBLIC_` ficam embutidas no build.
 - `authStorage.ts` usa `expo-secure-store`, sem web; o backend responde refresh token no JSON. A sessão web requer um transporte específico com cookie seguro, mantendo o transporte atual no APK.
 - `main-tabs.tsx` já aponta para a variante JS, apropriada para web; `main-tabs.ios.tsx` usa UIKit apenas no app nativo. `NavigationContainer` ainda não tem `linking` para URLs/histórico.
-- Várias telas usam `Alert.alert`; scanner, seletor de imagem e upload R2 exigem verificação e eventual adaptação web. O backend restringe `CLIENT_ORIGINS` e o Socket.IO usa a mesma lista.
+- Várias telas usam `Alert.alert`; scanner, seletor de imagem e upload R2 exigem verificação e eventual adaptação web. O backend restringe `CLIENT_ORIGINS` e o Socket.IO usa a mesma lista; `PWA_CLIENT_ORIGIN` permite acrescentar a origem PWA sem substituir valores existentes.
 - `app/app.json` só define favicon web; não há `web/`, `manifest.json`, HTML PWA nem política de cache.
 - Este checkout contém este plano 007, mas **não contém código Premium**. O plano 006 ainda não reflete a decisão posterior de teste grátis; a paridade Premium permanece uma dependência separada.
 - A API Railway deve responder `200` em `/health` antes do aceite. A checagem anterior nesta conversa retornou `502`; uma tentativa atual de leitura pelo navegador de pesquisa não comprovou recuperação. Tratar como bloqueio de ambiente, com logs/deploy Railway e teste externo, sem afirmar que está saudável.
@@ -91,7 +91,8 @@
 - [x] Criar `web/Dockerfile` multi-stage com Node 22 e Caddy, contexto na raiz e saída Expo em `app/dist`; a configuração do serviço Railway segue pendente.
 - [x] Criar `web/Caddyfile` com rotas de proxy, WebSocket, encaminhamento de headers, fallback apenas para navegação HTML GET/HEAD e políticas de cache. O upstream privado e a cadeia real de proxies ainda precisam de validação na Railway.
 - [ ] Executar smoke de proxy HTTP/WebSocket/cache e validar parser Caddy. O teste foi escrito, mas não executou porque Caddy não está instalado e o daemon Docker local está inacessível.
-- [ ] Criar/configurar o serviço e domínio HTTPS Railway, ajustar `CLIENT_ORIGINS` da API e testar Safari/instalação Adicionar à Tela de Início. Isso depende de publicar este código numa branch GitHub e confirmar o upstream privado.
+- [x] Criar o serviço `TrocaLivros Web` na Railway ligado à branch `codex/plan-007-pwa`, configurar root `/`, `web/Dockerfile`, `/health`, `PORT=8080`, upstream privado `mybooks-api.railway.internal:3001` e domínio HTTPS.
+- [ ] Atualizar a API para a branch publicada, configurar `PWA_CLIENT_ORIGIN` sem alterar a allowlist existente e testar login, proxy e instalação no Safari/iPhone.
 
 **Aceite:** PWA acessível publicamente no domínio do serviço `web` Railway e instalada no iPhone; API continua no serviço existente, `/health` e contratos antigos funcionam através do proxy. Uma atualização web pode ser publicada sem reconstruir a API.
 

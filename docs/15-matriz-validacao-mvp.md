@@ -7,7 +7,7 @@ Data da execução atual: 28/09/2026.
 | Área | Verificação | Resultado atual |
 | --- | --- | --- |
 | API | recorte Vitest de ISBN/books | 25 aprovados |
-| API | suíte Vitest completa | 23 arquivos; 170 testes aprovados e 1 ignorado |
+| API | suíte Vitest completa | 24 arquivos; 172 testes aprovados e 1 ignorado |
 | API | integração nativa com PostgreSQL | 1/1 aprovado com `RUN_AUTH_INTEGRATION=true` |
 | API | ESLint | aprovado sem erros |
 | App | suíte Vitest | 12 arquivos e 47 testes aprovados |
@@ -27,7 +27,8 @@ Data da execução atual: 28/09/2026.
 | Socket.IO web | teste de credencial por handshake | access token atualizado por conexão e tentativa única de refresh cobertos por teste |
 | API | ESLint | aprovado sem erros nesta execução |
 | Proxy Caddy | `node web/tests/proxy-smoke.mjs` | não executado: Caddy ausente no PATH e daemon Docker inacessível |
-| Railway Web | serviço, domínio, `/health` via proxy e origem em `CLIENT_ORIGINS` | pendentes; o código local ainda não foi publicado na branch remota |
+| API Railway | endpoints browser e allowlist PWA | branch publicada; atualização da API e `PWA_CLIENT_ORIGIN` ainda pendentes |
+| Railway Web | serviço, domínio, `/health` via proxy e `PWA_CLIENT_ORIGIN` | branch/domínio configurados; primeiro deploy bem-sucedido e validação pública pendentes |
 | iPhone | Safari, instalação PWA, câmera, mídia e chat | pendente de dispositivo físico e serviço web HTTPS |
 | Dependências | `npm audit --omit=dev` | API: 4 altas no grafo Prisma sem fix compatível; app: 36 moderadas transitivas sem correção disponível |
 
@@ -54,7 +55,7 @@ Os exports Android e web confirmam empacotamento, não comportamento em disposit
 | PostgreSQL limpo | aplicar todas as migrações, seed e validar integridade/restore |
 | Resend | chave, domínio remetente e caixa postal real |
 | Cloudflare R2 | bucket privado, CORS, domínio e credenciais mínimas |
-| Railway Web | publicar o serviço `web`, validar upstream privado, `/health`, headers/cookie/WebSocket, domínio HTTPS e `CLIENT_ORIGINS` |
+| Railway Web | validar upstream privado, `/health`, headers/cookie/WebSocket, domínio HTTPS e `PWA_CLIENT_ORIGIN` |
 | HTTPS/proxy | domínio TLS e confirmação da cadeia real usada por `trust proxy` |
 | Android/iOS | dispositivos físicos, câmera, cenários de falha, fallback manual e revisão de teclado/acessibilidade |
 | LGPD | aprovação de finalidade, base legal e retenção de CPF/celular |

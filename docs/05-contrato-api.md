@@ -23,7 +23,7 @@ Base: `/api/v1`. `/health` e as rotas públicas abaixo não exigem bearer. Rotas
 
 `register` recebe somente `email`, `password`, `cpf` e `phone`. Se já existir um cadastro pendente não verificado com o mesmo e-mail, a chamada reutiliza imediatamente esse cadastro, atualiza senha/CPF/celular, invalida o código anterior e envia uma nova confirmação; se o novo CPF já pertencer a outra conta, ou se o e-mail já estiver verificado, a API retorna erro genérico. `verify-email` recebe `email` e código de 6 dígitos. Respostas de sessão incluem `accessToken`, `refreshToken`, `expiresAt` e `user`. Códigos, hashes, CPF protegido e metadados internos nunca são retornados.
 
-As respostas web de login/verificação/refresh incluem somente `accessToken`, `expiresAt` e `user`. O refresh fica em `__Host-trocalivros_refresh` com `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, sem `Domain` e validade alinhada à sessão. Todas as rotas browser exigem origem exata em `CLIENT_ORIGINS`; logout limpa o cookie mesmo se a revogação remota falhar.
+As respostas web de login/verificação/refresh incluem somente `accessToken`, `expiresAt` e `user`. O refresh fica em `__Host-trocalivros_refresh` com `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, sem `Domain` e validade alinhada à sessão. Todas as rotas browser exigem origem exata na allowlist composta por `CLIENT_ORIGINS` e pelo `PWA_CLIENT_ORIGIN` opcional; logout limpa o cookie mesmo se a revogação remota falhar.
 
 Cada grupo tem limite configurável e headers `RateLimit`; ao exceder, responde `429` com `RATE_LIMITED`. Login usa mensagem genérica para conta ausente/senha errada; recuperação e reenvio não confirmam existência.
 
