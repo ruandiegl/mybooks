@@ -1,5 +1,44 @@
 # 16. Histórico de alterações
 
+## 24/09/2026 — Implementação do Premium gratuito de demonstração
+
+- Implementados os campos/tabela de trial e uso diário, status/ativação API, prompts de onboarding e conta existente, status no Perfil e gate da lista de curtidas recebidas.
+- Trial começa após aceite, dura 30 × 24 horas, é ativado uma vez por conta verificada e não cobra nem renova. Conta gratuita tem 15 likes distintos por dia de São Paulo; PASS não consome vaga.
+- PWA usa access token em memória e refresh cookie seguro na mesma origem HTTPS via proxy `/api`; HTTP de LAN é bloqueado, refresh entre abas usa Web Locks e logout só limpa local após revogar no servidor.
+- Ajustes de revisão: data da quota é lida depois do lock transacional; `serverNow` e timer do cliente escondem identidades exatamente no fim e limpam o cache; a contagem é rotulada como curtidas pendentes.
+- Revisão final: timeout de 30 dias dividido em blocos inferiores ao limite do navegador; logout preserva cookie quando revogação falha; Curtidas enviadas tem erro/retry e ações por ícone recebem rótulos para leitor de tela.
+- Ajuste solicitado: a oferta passou de toast a bottom sheet ancorado no rodapé, com entrada animada de baixo para cima; contas existentes elegíveis veem o painel logo após login, uma vez por sessão.
+- O bottom sheet Premium também fecha ao tocar na área externa ou ao arrastar a alça/cabeçalho para baixo; gestos curtos só fecham quando são rápidos o suficiente.
+- Validação do gesto: app 57/57, typecheck e exports Web/Android aprovados; arraste e toque fora ainda precisam de conferência em aparelhos físicos.
+- Validação: API 198 aprovados/2 ignorados, app 57 aprovados, typecheck/lint/Prisma aprovados e exports PWA/Android concluídos. Build APK e aceite físico/leitor de tela permanecem pendentes por falta de Android SDK/JDK e dispositivos.
+- Atualizados docs/01, 02, 03, 04, 05, 06, 07, 13, 14, 15, README e plano 007. A cobrança real continua fora do escopo.
+
+## 24/09/2026 — Planejamento do Premium gratuito para o MVP
+
+- Criado o plano 007 para um acesso Premium de 30 dias exatos, iniciado somente após escolha explícita; contas novas e existentes podem ativar uma vez.
+- No MVP de TCC não haverá pagamento real, cartão, transação, renovação ou gateway. Os cards semanal, mensal e anual ficam como “Em breve”, sem preço ou botão de compra.
+- Durante o período: lista/identidade de curtidas recebidas e likes ilimitados. Sem Premium: contador agregado permanece, curtidas enviadas continuam acessíveis e o limite é 15 livros curtidos por dia em America/Sao_Paulo.
+- Registrados no plano a expiração sem cobrança, os prompts distintos para contas novas/existentes, o estado no servidor e a dependência de autenticação PWA segura.
+- A revisão das políticas Apple, Google Play e Expo foi feita via Context7 e documentação oficial. A cobrança futura de recursos digitais fica para outra fase e exige novo aceite das regras por loja/região.
+- Atualizados os documentos 01, 02, 03, 04, 05, 06, 07, README, 13, 14 e 15 para distinguir decisões aprovadas, itens planejados e funcionalidades implementadas.
+
+## 24/09/2026 — Correções técnicas da tela de Curtidas
+
+- O app agora adapta nextCursor/hasMore da resposta de Curtidas ao contrato interno pageInfo, reativando a paginação infinita.
+- Curtir de volta e dispensar passaram a usar um livro disponível pertencente a quem curtiu. Quando não há livro disponível, a resposta da API é actorBook: null e o card informa por que as ações não aparecem.
+- Adicionados testes de regressão para o mapeamento da paginação e a serialização do livro de resposta.
+
+## 24/09/2026 — Tela de Curtidas
+
+- Criado módulo `likes` na API com 4 endpoints privados: `GET /likes/received` (curtidas recebidas com paginação), `GET /likes/sent` (curtidas enviadas), `GET /likes/received/count` (contagem de pendentes para badge) e `GET /likes/received/books` (livros com curtidas para filtro).
+- A contagem de pendentes usa query raw `NOT EXISTS` para identificar curtidas recebidas onde o usuário ainda não interagiu com nenhum livro do ator.
+- Ações de curtir de volta, dispensar e remover curtida reutilizam `POST /interactions` existente com upsert (`LIKE` ou `PASS`).
+- Criado componente `LikeCard` com `ImageBackground` (capa do livro), `Avatar` (28px) e gradiente inferior, suportando variantes `received` (botões de curtir/dispensar) e `sent` (botão de remover curtida).
+- Criada tela `Likes` com `ToggleGroup` (recebidas/enviadas), grid de 2 colunas via `FlatList`, paginação infinita por cursor, pull-to-refresh, filtros de ordenação e por livro, estados vazios via `StateView` e confirmação modal ao remover curtida.
+- Navegação atualizada para 5 abas: Descobrir, **Curtidas** (nova, posição central), Biblioteca, Mensagens e Perfil. Badge de contagem na aba com polling a cada 30 segundos.
+- iOS: SF Symbol `heart.fill` com badge nativo. Android/Web: MaterialIcons `favorite`.
+- Documentação atualizada: `03-frontend-mobile.md` (navegação e tela), `05-contrato-api.md` (endpoints).
+
 ## 11/09/2026 — Leitura de ISBN por câmera
 
 - O app Expo 57/React Native 0.86 passou a usar `expo-camera` 57.0.5 em `BarcodeScannerModal`, aberto por `BookCreate`, com câmera traseira, permissão sob demanda e leitura somente de `ean13`.

@@ -1,5 +1,7 @@
 # Plano 004 — Autenticação própria e onboarding em etapas
 
+> **Estado atual:** a autenticação própria está implementada. As referências a Clerk neste plano tratam da migração e da remoção da integração antiga; Clerk não é dependência nem opção de autenticação do produto atual. O aceite de produção e os serviços externos pendentes estão descritos no status abaixo.
+
 - Status: IMPLEMENTADO — RETRY DE CADASTRO PENDENTE IMPLEMENTADO; ACEITE DE PRODUÇÃO PENDENTE DE SERVIÇOS EXTERNOS/LGPD
 - Tipo: MOBILE / API / BANCO / SEGURANÇA
 - Prioridade: ALTA

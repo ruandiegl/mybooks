@@ -6,7 +6,7 @@ A API usa JavaScript ESM, Express 5, Zod e Prisma. O ponto de composição HTTP 
 
 1. request ID e log estruturado;
 2. Helmet, CORS e limite JSON de 1 MB;
-3. Clerk middleware quando configurado;
+3. middleware de autenticação própria e sessão revogável;
 4. rate limit em `/api/v1`;
 5. autenticação e hidratação do usuário local;
 6. rota/controller/service/repository;
@@ -24,6 +24,15 @@ Sucesso usa `{ "data": ... }`. Erros usam `{ "error": { "code", "message", "fiel
 - paginação usa `limit`, `cursor` e `pageInfo`;
 - integração externa deve ter timeout e mapear falha para `AppError`;
 - controller não contém regra de match, ISBN ou armazenamento.
+
+
+A rota de Curtidas mantém o contrato já registrado em docs/05-contrato-api.md: a API retorna nextCursor e hasMore; o app adapta esses campos ao pageInfo usado nas outras listas paginadas.
+
+## Premium de teste
+
+O módulo `premium` centraliza a regra de trial de 30 × 24 horas, elegibilidade por conta verificada, registro de apresentação e ativação idempotente. `GET /premium/status` inclui `serverNow` para o cliente esconder benefícios exatamente no término com base em uma referência do servidor; a API continua sendo a autoridade de acesso. Curtidas recebidas com identidades passam pelo gate no service antes da consulta ao repositório.
+
+`POST /interactions` com `LIKE` usa lock PostgreSQL por User. Depois de obter o lock, lê o relógio do servidor, calcula a data civil de São Paulo, aplica o limite 15 para conta gratuita e grava a quota e a interação na mesma transação. `PASS` não consome nem apaga uso. O registro diário não tem FK para Book, então remover livro não libera vaga.
 
 ## Consulta de ISBN
 

@@ -4,7 +4,7 @@ Este diretório é a fonte de verdade das guidelines, decisões técnicas e cont
 
 ## Estado do MVP
 
-A fundação do MVP está implementada: aplicativo Expo/React Native, API Express modular, Prisma/PostgreSQL via Docker, autenticação Clerk, consulta ISBN pela BrasilAPI, upload direto para Cloudflare R2, e-mail transacional por Resend, matches e chat Socket.IO. O ambiente local Docker já está configurado; credenciais externas e aceite em dispositivo ainda dependem do ambiente de teste.
+A fundação do MVP está implementada: aplicativo Expo/React Native com exportação PWA, API Express modular, Prisma/PostgreSQL via Docker, autenticação própria com sessões revogáveis, consulta ISBN pela BrasilAPI, upload direto para Cloudflare R2, e-mail transacional por Resend, matches, chat Socket.IO, tela de Curtidas e acesso Premium de teste por 30 dias. O Premium não cobra, não coleta cartão e não renova. O aceite em dispositivos físicos, HTTPS/proxy público e credenciais externas ainda dependem do ambiente de demonstração.
 
 ## Índice
 
@@ -16,7 +16,7 @@ A fundação do MVP está implementada: aplicativo Expo/React Native, API Expres
 | [04 — Backend](./04-backend-api.md) | Estrutura modular, validação, erros e segurança HTTP |
 | [05 — Contrato API](./05-contrato-api.md) | Endpoints HTTP e envelopes de resposta |
 | [06 — Banco](./06-banco-de-dados.md) | Modelos Prisma, relações e migrações |
-| [07 — Autenticação e segurança](./07-autenticacao-seguranca.md) | Clerk, autorização, segredos e upload seguro |
+| [07 — Autenticação e segurança](./07-autenticacao-seguranca.md) | Sessões próprias, autorização, segredos e upload seguro |
 | [08 — Chat em tempo real](./08-tempo-real-chat.md) | Eventos Socket.IO, salas e idempotência |
 | [09 — Design system](./09-design-system-components.md) | Tokens e componentes reutilizáveis no estilo shadcn |
 | [10 — Docker e ambientes](./10-docker-ambientes.md) | Execução local e variáveis de ambiente |
@@ -44,4 +44,4 @@ A fundação do MVP está implementada: aplicativo Expo/React Native, API Expres
 
 Comece por [Visão geral](./01-visao-geral.md) e [Arquitetura](./02-arquitetura.md). Para colocar o projeto em execução, siga [Docker e ambientes](./10-docker-ambientes.md) e [Execução do MVP](./14-execucao-do-mvp.md).
 
-_Última revisão: 09/09/2026._
+_Última revisão: 24/09/2026._

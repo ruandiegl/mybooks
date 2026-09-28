@@ -2,6 +2,7 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 
 export type MainTabParamList = {
   Discover: undefined;
+  Likes: undefined;
   Library: undefined;
   Messages: undefined;
   Profile: undefined;

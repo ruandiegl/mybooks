@@ -2,6 +2,7 @@ import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { ActivityIndicator, View } from 'react-native';
 import { useSession } from '../providers/SessionProvider';
 import { theme } from '../styles/theme';
+import { PremiumOfferProvider } from '../features/premium/PremiumOfferProvider';
 import { AppRoutes } from './app.routes';
 import AuthRoutes from './authRoutes';
 
@@ -30,8 +31,10 @@ export function Routes() {
   }
 
   return (
-    <NavigationContainer theme={navigationTheme}>
-      {isSignedIn ? <AppRoutes /> : <AuthRoutes />}
-    </NavigationContainer>
+    <PremiumOfferProvider>
+      <NavigationContainer theme={navigationTheme}>
+        {isSignedIn ? <AppRoutes /> : <AuthRoutes />}
+      </NavigationContainer>
+    </PremiumOfferProvider>
   );
 }
