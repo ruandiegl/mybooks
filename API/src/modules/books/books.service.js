@@ -11,11 +11,11 @@ import {
 } from './books.schemas.js';
 import { serializeBook } from './books.serializer.js';
 
-function withPagination(rows, limit) {
+async function withPagination(rows, limit) {
   const hasNextPage = rows.length > limit;
   const items = hasNextPage ? rows.slice(0, limit) : rows;
   return {
-    items: items.map(serializeBook),
+    items: await Promise.all(items.map(serializeBook)),
     pageInfo: {
       hasNextPage,
       nextCursor: hasNextPage ? items.at(-1)?.id ?? null : null

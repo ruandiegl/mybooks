@@ -34,6 +34,10 @@ describe('booksRepository.listDiscovery', () => {
       availability: 'AVAILABLE',
       interactions: { none: { actorId: ownerId } }
     });
+    expect(mocks.findMany.mock.calls[0][0].include.images.orderBy).toEqual([
+      { sortOrder: 'asc' },
+      { id: 'asc' }
+    ]);
   });
 
   it('reabre livros recusados quando a fila inédita termina em desenvolvimento', async () => {
