@@ -17,7 +17,9 @@ Base: `/api/v1`. `/health` e as rotas públicas abaixo não exigem bearer. Todo 
 | POST | `/auth/reset-password` | troca senha e revoga todas as sessões |
 | GET | `/auth/me` | usuário da sessão atual |
 
-`register` recebe somente `email`, `password`, `cpf` e `phone`. Se já existir um cadastro pendente não verificado com o mesmo e-mail, a chamada reutiliza imediatamente esse cadastro, atualiza senha/CPF/celular, invalida o código anterior e envia uma nova confirmação; se o novo CPF já pertencer a outra conta, ou se o e-mail já estiver verificado, a API retorna erro genérico. `verify-email` recebe `email` e código de 6 dígitos. Respostas de sessão incluem `accessToken`, `refreshToken`, `expiresAt` e `user`. Códigos, hashes, CPF protegido e metadados internos nunca são retornados.
+`register` recebe somente `email`, `password`, `cpf` e `phone`. Se já existir um cadastro pendente não verificado com o mesmo e-mail, a chamada reutiliza imediatamente esse cadastro, atualiza senha/CPF/celular, invalida o código anterior e envia uma nova confirmação; se o novo CPF já pertencer a outra conta, ou se o e-mail já estiver verificado, a API retorna erro genérico. `verify-email` recebe `email` e código de 6 dígitos. No cliente nativo, respostas de sessão incluem `accessToken`, `refreshToken`, `expiresAt` e `user`. Na PWA, a origem HTTPS precisa ser exatamente a origem permitida pela API; enviando `X-Session-Transport: cookie`, a API guarda refresh em cookie HttpOnly/Secure/SameSite=Strict e omite `refreshToken` do JSON. A PWA mantém o access token só em memória. Códigos, hashes, CPF protegido e metadados internos nunca são retornados.
+
+Para a PWA, publique `/api` no mesmo origin HTTPS por reverse proxy; HTTP de LAN/Internet é bloqueado antes do envio de credenciais. HTTP efêmero em memória é aceito somente com a página e a API em loopback no desenvolvimento. Refresh de cookie é serializado entre abas com Web Locks. As rotas de cookie exigem `Origin` HTTPS listado em `CLIENT_ORIGINS`; logout limpa o cookie e revoga a sessão antes de o app encerrar a sessão local.
 
 Cada grupo tem limite configurável e headers `RateLimit`; ao exceder, responde `429` com `RATE_LIMITED`. Login usa mensagem genérica para conta ausente/senha errada; recuperação e reenvio não confirmam existência.
 
@@ -32,7 +34,38 @@ Cada grupo tem limite configurável e headers `RateLimit`; ao exceder, responde 
 | POST | `/me/avatar/complete` | validar e vincular avatar |
 | DELETE | `/me/avatar` | remover avatar atual |
 
-O restante do domínio mantém `/books`, `/discover`, `/interactions`, `/matches`, `/conversations` e as rotas de imagens de livros. Todas as respostas usam `{ data }`; erros usam `{ error: { code, message, requestId, fields? } }`.
+O restante do domínio mantém `/books`, `/discover`, `/interactions`, `/matches`, `/likes`, `/conversations` e as rotas de imagens de livros. Todas as respostas usam `{ data }`; erros usam `{ error: { code, message, requestId, fields? } }`.
+
+## Curtidas
+
+| Método | Caminho | Função |
+| --- | --- | --- |
+| GET | `/likes/received` | curtidas recebidas nos livros do usuário, com paginação por cursor |
+| GET | `/likes/sent` | curtidas enviadas pelo usuário, com paginação por cursor |
+| GET | `/likes/received/count` | contagem de curtidas pendentes (não respondidas) para badge |
+| GET | `/likes/received/books` | livros do usuário que possuem curtidas (para filtro) |
+
+Query params para listagens: `cursor` (uuid, opcional), `limit` (1–50, padrão 20), `sort` (`desc`/`asc`, padrão `desc`), `bookId` (uuid, opcional, somente em `/likes/received`).
+
+Respostas de listagem seguem o padrão paginado: `{ data: { items: [...], nextCursor: string | null, hasMore: boolean } }`. Cada item de curtida recebida inclui `id`, `actor` (id, name, avatarUrl, city), `book` (id, title, coverUrl) e `likedAt`. Cada item de curtida enviada inclui `id`, `book` (id, title, coverUrl), `owner` (id, name, avatarUrl, city) e `likedAt`. A contagem retorna `{ data: { count: number } }`.
+
+`/likes/received` e `/likes/received/books` retornam `403 PREMIUM_REQUIRED` antes de consultar dados de identidade quando não há trial ativo. `/likes/received/count` permanece público à conta autenticada e contém somente um número agregado; `/likes/sent` permanece acessível no plano gratuito. O período é verificado no servidor usando `startedAt <= agora < endsAt`.
+
+As ações de curtir de volta, dispensar e remover curtida reutilizam o endpoint existente `POST /interactions` com `action: "LIKE"` ou `"PASS"` via upsert. Não há endpoint DELETE separado.
+A API também retorna actorBook em cada curtida recebida: o primeiro livro disponível de quem enviou a curtida, resumido em id, título e capa, ou null. Curtir de volta e dispensar precisam apontar para esse livro do outro usuário, nunca para o livro do próprio usuário que recebeu a curtida. O app omite as ações quando actorBook é null.
+
+## Premium gratuito de demonstração
+
+| Método | Caminho | Função |
+| --- | --- | --- |
+| GET | `/premium/status` | retorna `serverNow`, elegibilidade, `trialState` (`NOT_STARTED`, `ACTIVE`, `EXPIRED`), timestamps UTC, modo de convite e benefícios |
+| POST | `/premium/offer/prompted` | registra de modo idempotente que a oferta foi apresentada, sem iniciar o trial |
+| POST | `/premium/trial/activate` | ativa, uma única vez, os 30 dias após aceite explícito; repetição devolve o estado já persistido |
+
+Todas as rotas exigem conta autenticada. A ativação exige e-mail verificado e a identidade vem da sessão. `endsAt = startedAt + 30 × 24 horas`, com intervalo ativo exclusivo em `endsAt`. Status, activation e curtidas não criam pagamento, cartão, checkout ou renovação. Os três cards futuros não têm preço nem ação.
+
+Cada `POST /interactions` com `action: "LIKE"` conta um livro distinto por usuário e data civil `America/Sao_Paulo`. Plano gratuito permite 15; o 16º retorna `403 DAILY_LIKE_LIMIT_REACHED`. PASS não conta e não devolve vaga. Quota e Interaction são gravadas na mesma transação depois do lock da conta; likes Premium também são registrados para não liberar novas vagas após expirar no mesmo dia.
+
 
 ## Livros e fotos
 

@@ -9,12 +9,16 @@ import { apiRouter } from './routes/index.js';
 import { errorHandler, notFoundHandler } from './shared/http/errorHandler.js';
 import { requestContext } from './shared/http/requestContext.js';
 import { metrics } from './shared/observability/metrics.js';
+import { AppError } from './shared/errors/AppError.js';
 
 function corsOrigin(origin, callback) {
   if (!origin || env.CLIENT_ORIGINS.includes(origin)) {
     return callback(null, true);
   }
-  return callback(new Error('Origem não autorizada.'));
+  return callback(new AppError('Origem não autorizada.', {
+    statusCode: 403,
+    code: 'WEB_ORIGIN_NOT_ALLOWED'
+  }));
 }
 
 export function sanitizeRequestPath(originalUrl) {

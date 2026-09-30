@@ -1,5 +1,7 @@
 # Plano 001 — Criação do MVP do MyBooks
 
+> **Registro histórico:** este plano descreve a proposta original do MVP. A escolha inicial pelo Clerk foi substituída pela autenticação própria, já implementada e registrada no plano 004 e na documentação atual. As menções a Clerk abaixo preservam o histórico e não são instruções para a implementação vigente.
+
 - Status: IMPLEMENTADO — ACEITE PONTA A PONTA PENDENTE DE AMBIENTE
 - Tipo: MOBILE
 - Prioridade: ALTA

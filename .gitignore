@@ -1,2 +1,7 @@
 # Environment variables at the repository root are local secrets.
 /.env
+
+# Assets from the separate Celebre project are kept locally but not versioned here.
+/output/destaques-instagram/
+/output/folders/
+/output/reels/

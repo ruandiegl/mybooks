@@ -9,8 +9,9 @@ import React, {
   useRef,
   useState
 } from 'react';
-import { authApi } from '../features/auth/authApi';
+import { authApi, usesCookieSession } from '../features/auth/authApi';
 import { clearTokens, loadTokens, saveTokens } from '../features/auth/authStorage';
+import { signOutSession } from '../features/auth/sessionActions';
 import { configureApiSession } from '../services/api';
 import type { AuthSessionResponse, AuthTokens, User } from '../types/api';
 
@@ -30,7 +31,7 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 function sessionTokens(response: AuthSessionResponse): AuthTokens {
   const expiresAt = Date.parse(response.expiresAt);
   if (!Number.isFinite(expiresAt)) throw new Error('Expiração de sessão inválida.');
-  return { accessToken: response.accessToken, refreshToken: response.refreshToken, expiresAt };
+  return { accessToken: response.accessToken, refreshToken: response.refreshToken ?? null, expiresAt };
 }
 
 export function SessionProvider({ children }: React.PropsWithChildren) {
@@ -60,10 +61,10 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
 
   const refreshSession = useCallback(async () => {
     const current = tokensRef.current;
-    if (!current?.refreshToken) return false;
+    if (!current?.refreshToken && !usesCookieSession) return false;
 
     try {
-      await establishSession(await authApi.refresh(current.refreshToken));
+      await establishSession(await authApi.refresh(current?.refreshToken ?? null));
       return true;
     } catch {
       await clearSession();
@@ -81,11 +82,13 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
   }, []);
 
   const signOut = useCallback(async () => {
-    const refreshToken = tokensRef.current?.refreshToken;
-    await clearSession();
-    if (refreshToken) {
-      try { await authApi.logout(refreshToken); } catch { /* logout local continua válido offline */ }
-    }
+    const refreshToken = tokensRef.current?.refreshToken ?? null;
+    await signOutSession({
+      refreshToken,
+      cookieSession: usesCookieSession,
+      revoke: authApi.logout,
+      clearLocalSession: clearSession
+    });
   }, [clearSession]);
 
   useLayoutEffect(() => {
@@ -98,7 +101,12 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
     const hydrate = async () => {
       try {
         const stored = await loadTokens();
-        if (!stored || !active) return;
+        if (!active) return;
+        if (!stored) {
+          if (!usesCookieSession || !await refreshSession()) return;
+          await refreshUser();
+          return;
+        }
         tokensRef.current = stored;
         setTokens(stored);
 

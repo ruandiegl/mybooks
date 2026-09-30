@@ -16,6 +16,8 @@ import { StateView } from '../../components/StateView';
 import { TextField } from '../../components/TextField';
 import { TopBar } from '../../components/TopBar';
 import { maskBrazilianPhone } from '../../features/auth/inputMasks';
+import { PremiumStatusCard, usePremiumOffer } from '../../features/premium/PremiumOfferProvider';
+import { usePremiumStatus } from '../../features/premium/usePremiumStatus';
 import { useSession } from '../../providers/SessionProvider';
 import { api, apiErrorMessage } from '../../services/api';
 import { theme } from '../../styles/theme';
@@ -28,6 +30,8 @@ type Props = { navigation: Navigation };
 
 export function Profile({ navigation }: Props) {
   const session = useSession();
+  const premiumOffer = usePremiumOffer();
+  const premiumQuery = usePremiumStatus(session.user?.id, session.isSignedIn);
   const insets = useSafeAreaInsets();
   const { width, fontScale } = useWindowDimensions();
   const stackedIdentity = width < 360 || fontScale > 1.3;
@@ -151,6 +155,16 @@ export function Profile({ navigation }: Props) {
         </View>
         {profile?.bio ? <Text numberOfLines={3} style={styles.bio}>{profile.bio}</Text> : null}
       </View>
+      <PremiumStatusCard
+        status={premiumQuery.data}
+        loading={premiumQuery.isLoading}
+        unavailable={premiumQuery.isError}
+        verified={Boolean(profile?.emailVerifiedAt)}
+        onPress={() => {
+          if (premiumQuery.isError) void premiumQuery.refetch();
+          premiumOffer.openOffer();
+        }}
+      />
       {metrics.length === 3 ? <View style={styles.metrics}><ProfileMetricRow metrics={metrics} /></View> : null}
       <ProfileTabs value={activeTab} onChange={setActiveTab} />
     </View>
@@ -216,7 +230,11 @@ export function Profile({ navigation }: Props) {
         <View style={styles.accountSection}>
           <Text accessibilityRole="header" style={styles.sectionTitle}>Conta</Text>
           <Badge label="Conta protegida" variant="violet" />
-          <AppButton label="Sair da conta" variant="ghost" icon="logout" style={styles.signOut} onPress={() => session.signOut()} />
+          <AppButton label="Sair da conta" variant="ghost" icon="logout" style={styles.signOut} onPress={() => {
+            void session.signOut().catch((error) => {
+              Alert.alert('Não foi possível sair', apiErrorMessage(error, 'Não foi possível revogar a sessão. Confira a conexão e tente novamente.'));
+            });
+          }} />
         </View>
       </ScrollView>}
       <Modal visible={editing} animationType="slide" onRequestClose={closeEditor}>

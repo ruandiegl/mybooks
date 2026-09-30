@@ -26,13 +26,13 @@ export type AuthCodeType = 'EMAIL_VERIFY' | 'PASSWORD_RESET';
 
 export type AuthTokens = {
   accessToken: string;
-  refreshToken: string;
+  refreshToken: string | null;
   expiresAt: number;
 };
 
 export type AuthSessionResponse = {
   accessToken: string;
-  refreshToken: string;
+  refreshToken?: string | null;
   expiresAt: string;
   user: User;
 };
