@@ -82,10 +82,12 @@ export const storageService = {
       new PutObjectCommand({
         Bucket: env.R2_BUCKET,
         Key: storageKey,
-        ContentType: mimeType,
-        ContentLength: size
+        ContentType: mimeType
       }),
-      { expiresIn: env.R2_PRESIGN_EXPIRES_IN }
+      {
+        expiresIn: env.R2_PRESIGN_EXPIRES_IN,
+        signableHeaders: new Set(['content-type'])
+      }
     );
 
     return {
@@ -106,10 +108,12 @@ export const storageService = {
       new PutObjectCommand({
         Bucket: env.R2_BUCKET,
         Key: storageKey,
-        ContentType: mimeType,
-        ContentLength: size
+        ContentType: mimeType
       }),
-      { expiresIn: env.R2_PRESIGN_EXPIRES_IN }
+      {
+        expiresIn: env.R2_PRESIGN_EXPIRES_IN,
+        signableHeaders: new Set(['content-type'])
+      }
     );
     return {
       uploadUrl,
