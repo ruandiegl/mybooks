@@ -20,7 +20,12 @@ import {
   removeBookPhoto,
   type BookPhotoDraft
 } from '../../features/books/bookPhotos';
-import { deleteBookPhoto, saveBookPhotoOrder, uploadBookPhoto } from '../../features/books/bookPhotoUpload';
+import {
+  bookPhotoPartialSaveMessage,
+  deleteBookPhoto,
+  saveBookPhotoOrder,
+  uploadBookPhoto
+} from '../../features/books/bookPhotoUpload';
 import { api, apiErrorMessage } from '../../services/api';
 import type { ApiEnvelope, Book } from '../../types/api';
 import type { RootStackParamList } from '../../types/navigation';
@@ -162,13 +167,18 @@ export function BookEdit({ route, navigation }: Props) {
       const readLatestBook = async () => (
         await api.get<ApiEnvelope<Book>>('/api/v1/books/' + route.params.bookId)
       ).data.data;
-      const partialResult = async () => {
+      const partialResult = async (failure?: unknown) => {
         persistDraft();
         const latest = await readLatestBook().catch(() => query.data as Book);
         const latestIds = new Set(latest.images.map((image) => image.id));
         const reconciled = working.filter((photo) => !photo.imageId || latestIds.has(photo.imageId));
         queryClient.setQueryData<PhotoDraftCache>(photoDraftKey, { mode: 'replace', photos: reconciled });
-        return { book: latest, photos: reconciled, partial: true };
+        return {
+          book: latest,
+          photos: reconciled,
+          partial: true as const,
+          failureMessage: bookPhotoPartialSaveMessage(failure)
+        };
       };
 
       for (const [index, photo] of working.entries()) {
@@ -177,8 +187,8 @@ export function BookEdit({ route, navigation }: Props) {
           const image = await uploadBookPhoto(route.params.bookId, photo);
           working[index] = { ...photo, imageId: image.id, uri: image.url ?? photo.uri };
           persistDraft();
-        } catch {
-          return partialResult();
+        } catch (error) {
+          return partialResult(error);
         }
       }
 
@@ -191,18 +201,18 @@ export function BookEdit({ route, navigation }: Props) {
           route.params.bookId,
           working.map((photo) => photo.imageId as string)
         );
-        return { book, photos: working, partial: false };
-      } catch {
-        return partialResult();
+        return { book, photos: working, partial: false as const, failureMessage: undefined };
+      } catch (error) {
+        return partialResult(error);
       }
     },
-    onSuccess: ({ book, photos: savedPhotos, partial }) => {
+    onSuccess: ({ book, photos: savedPhotos, partial, failureMessage }) => {
       queryClient.setQueryData(['book', book.id], book);
       if (partial) {
         photosAreDirty.current = true;
         queryClient.setQueryData<PhotoDraftCache>(photoDraftKey, { mode: 'replace', photos: savedPhotos });
         setPhotos(savedPhotos);
-        Alert.alert('Fotos salvas parcialmente', 'Algumas alterações ainda não foram concluídas. Confira a conexão e tente salvar novamente.');
+        Alert.alert('Fotos salvas parcialmente', failureMessage);
         return;
       }
       photosAreDirty.current = false;
