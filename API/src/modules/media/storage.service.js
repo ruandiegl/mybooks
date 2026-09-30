@@ -146,7 +146,7 @@ export const storageService = {
   },
 
   async getPresignedGetUrl(storageKey) {
-    const expiresIn = env.R2_PRESIGN_EXPIRES_IN;
+    const expiresIn = env.R2_GET_URL_EXPIRES_IN;
     const url = await getSignedUrl(
       getClient(),
       new GetObjectCommand({ Bucket: env.R2_BUCKET, Key: storageKey }),

@@ -8,7 +8,8 @@
 - BrasilAPI para ISBN com validação local de dígito;
 - leitura nativa de EAN-13 de livro pela câmera, com permissão sob demanda, preenchimento automático para revisão e fallback manual;
 - selo ISBN calculado no servidor;
-- presign/complete/delete de capas no Cloudflare R2;
+- uploads de até três fotos por livro com ordem/capa persistidas, URLs GET assinadas e limpeza de objetos no Cloudflare R2;
+- seleção, reordenação, remoção e retry de fotos em `BookCreate`/`BookEdit`, com galeria em `BookDetails`;
 - Resend com e-mail de boas-vindas idempotente;
 - descoberta, match mútuo, histórico e Socket.IO;
 - biblioteca com busca, ordenação, refresh e paginação por cursor;
@@ -23,7 +24,7 @@ Em 31/08/2026: TypeScript do app passou; Expo Doctor passou 18/18 verificações
 
 A BrasilAPI pública respondeu `200` em `/api/isbn/v1/9788545702870`, confirmando a base URL e o formato usados pelo adapter. R2 e Resend não foram exercitados com contas reais porque não há credenciais fornecidas.
 
-Na validação do scanner, o app teve 7 arquivos e 32 testes aprovados, typecheck aprovado, Expo Doctor 21/21 e export Android concluído. Na API, o lint passou sem erros; 23 arquivos e 161 testes foram aprovados, com 1 arquivo e 1 teste ignorados. O schema Prisma foi validado e o Prisma Client 6.19.3 foi gerado. O teste físico Android/iOS permanece como aceite externo.
+Na validação da galeria, o app teve 9 arquivos e 39 testes aprovados, typecheck aprovado e export Web/Android concluído. Na API, o lint passou sem erros; 27 arquivos e 177 testes foram aprovados, com 1 arquivo/teste ignorado. O schema Prisma foi validado e o Prisma Client 6.19.3 foi gerado. A migração não foi aplicada e o R2 real não foi exercitado porque não há conexão de banco nem credenciais R2 disponíveis no checkout isolado. O teste físico Android/iOS permanece como aceite externo.
 
 Consulte a [matriz de validação](./15-matriz-validacao-mvp.md) para os comandos, resultados e limites da evidência.
 
@@ -34,7 +35,7 @@ Consulte a [matriz de validação](./15-matriz-validacao-mvp.md) para os comando
 3. criar e verificar duas contas nativas distintas e cadastrar livros de ambas;
 4. criar interesses reversos e confirmar match/conversa;
 5. configurar Resend e testar cadastro, confirmação, login, logout e recuperação de acesso;
-6. configurar R2 e validar upload/visualização/exclusão de capa;
+6. configurar bucket R2 privado e validar três fotos, HEAD/copy, GET assinado/expiração, reordenação, capa e exclusão;
 7. configurar domínio Resend e validar a mensagem de boas-vindas;
 8. executar o app em Android e iOS físicos e revisar teclado, safe area e reconexão do chat;
 9. validar a câmera com permissão negada/bloqueada, baixa luz, código danificado, offline, `404`, `503` e `429`, confirmando que o cadastro manual continua disponível.

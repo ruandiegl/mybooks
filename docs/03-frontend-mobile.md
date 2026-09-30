@@ -20,7 +20,9 @@ Toda tela deve tratar loading, erro, vazio e retry, respeitar safe area/teclado,
 
 ## Imagens
 
-O app escolhe JPEG/PNG/WebP de até 8 MB, pede `presign`, envia com PUT e chama `complete`. Cancelamento da galeria não altera o estado. Uma URL arbitrária nunca é enviada como avatar.
+`BookCreate` e `BookEdit` aceitam até três fotos JPEG/PNG/WebP de até 8 MiB cada. A faixa compartilhada de miniaturas mostra ordem, identifica a primeira como capa e oferece controles acessíveis para mover ou remover. O primeiro item é enviado como capa; no detalhe, as fotos aparecem em galeria horizontal.
+
+A seleção múltipla não usa recorte simultâneo; fotos HEIC ou sem tamanho conhecido recebem mensagem e não são enviadas. O app pede `presign`, envia bytes por PUT e chama `complete` sequencialmente. Se uma etapa falhar, preserva o rascunho em memória e permite retry em `BookEdit`; livros já confirmados não são enviados de novo. A ordem final é persistida pelo endpoint completo de reordenação. O app renova URLs privadas em intervalo inferior à expiração e ao retornar ao primeiro plano. Cancelar a galeria não altera o estado, e nenhuma URL arbitrária é enviada pelo app.
 
 ## Leitura de código de barras
 

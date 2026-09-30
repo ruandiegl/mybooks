@@ -6,7 +6,10 @@
 - configurar HTTPS, domínio, CORS e cadeia real de proxies antes de confiar em `trust proxy=1`;
 - provisionar PostgreSQL gerenciado, backup automático, teste de restore e monitoração;
 - configurar Resend com domínio verificado e monitorar bounces/entrega;
-- configurar R2 privado, CORS, credenciais mínimas e lifecycle de uploads abandonados;
+- executar `API/prisma/book-image-preflight.sql` no banco alvo e aplicar a migração só depois de resolver explicitamente livros com mais de três fotos ou capas conflitantes;
+- configurar R2 privado, CORS limitado às origens Web, credenciais mínimas, `R2_GET_URL_EXPIRES_IN` e lifecycle de 1 dia para `pending/books/`;
+- validar PUT, HEAD, copy, GET assinado, expiração e DELETE em bucket de teste; esta execução não tinha credenciais R2;
+- reconciliar objetos finais órfãos em `books/` quando a cópia do R2 tiver sucesso e o commit do banco falhar sem conseguir registrar a fila de limpeza;
 - criar processo de migração/recuperação para contas legadas antes de remover fisicamente `clerkUserId`;
 - realizar testes com dois usuários reais e em Android/iOS físico, incluindo acessibilidade;
 - aceitar o scanner em Android e iOS físicos com permissão negada/bloqueada, baixa luz, código danificado, offline, ISBN não encontrado (`404`), provedor indisponível (`503`) e limite excedido (`429`). O cadastro manual, inclusive de ISBN-10, deve permanecer funcional em todos esses casos.

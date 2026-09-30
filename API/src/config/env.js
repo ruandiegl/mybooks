@@ -37,6 +37,7 @@ const schema = z.object({
   R2_BUCKET: optionalString,
   R2_PUBLIC_URL: optionalUrl,
   R2_PRESIGN_EXPIRES_IN: z.coerce.number().int().min(30).max(3600).default(300),
+  R2_GET_URL_EXPIRES_IN: z.coerce.number().int().min(30).max(3600).default(300),
   RESEND_API_KEY: optionalString,
   RESEND_FROM_EMAIL: z.string().default('TrocaLivros <onboarding@resend.dev>'),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),

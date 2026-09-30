@@ -1,6 +1,6 @@
 # Plano 008 — Até três fotos por livro no Cloudflare R2
 
-> **Para execução:** usar `superpowers:executing-plans` tarefa por tarefa. Este documento é planejamento; nenhum código de produto foi alterado nesta etapa.
+> **Execução:** implementada na branch `codex/fotos-livros-r2`. Itens sem validação externa estão identificados como pendências e não devem ser tratados como concluídos.
 
 **Objetivo:** permitir que a pessoa selecione, envie, reordene e remova até três fotos próprias de cada livro; a foto na posição 0 é sempre a capa, e os arquivos ficam no R2.
 
@@ -80,48 +80,48 @@
 
 - [ ] Testar migração com livros sem imagem, com uma capa, três imagens, ordem de `createdAt` empatada e registro legado sem `storageKey`.
 - [ ] Auditar dados reais quanto a livros com mais de três fotos ou mais de uma capa; parar antes de migrar se houver exceções, preservando todos os arquivos.
-- [ ] Adicionar `sortOrder`, backfill determinístico, `NOT NULL`, unicidade por livro/posição, índice parcial para uma capa, `url` nullable e `StorageCleanupJob`.
-- [ ] Rodar `npx prisma validate`, `npx prisma generate`, migração em PostgreSQL limpo e cópia descartável do banco existente; confirmar que nenhuma foto foi apagada.
+- [x] Adicionar `sortOrder`, backfill determinístico, `NOT NULL`, unicidade por livro/posição, índice parcial para uma capa, `url` nullable e `StorageCleanupJob`.
+- [ ] Rodar `npx prisma validate`, `npx prisma generate`, migração em PostgreSQL limpo e cópia descartável do banco existente; confirmar que nenhuma foto foi apagada. `validate`/`generate` passaram; não havia banco Docker disponível para os dois ensaios.
 
 ### Task 2 — Tarefa: API de upload, reordenação e exclusão
 
 **Arquivos:** `API/src/modules/media/*`, `API/src/modules/books/books.service.js`, `API/tests/media*.test.js`.
 
 - [ ] Escrever testes de serviço/HTTP para 0, 1, 2, 3 e 4 fotos, ownership, MIME/tamanho, chave forjada, HEAD divergente, retry e concorrência.
-- [ ] Implementar `complete` sob lock e posição final; adicionar `PUT /images/order` com lista exata e operação transacional; renumerar após exclusão.
-- [ ] Separar prefixo temporário e chave definitiva, com cópia validada, cleanup de falhas e compatibilidade transitória com presigns já emitidos.
-- [ ] Adicionar fila persistente de limpeza e executor com retry limitado por rodada para exclusão de imagem/livro/conta; testar falha e recuperação, além da reconciliação de cópia final órfã.
-- [ ] Rodar testes da API, lint e testes de integração com PostgreSQL.
+- [x] Implementar `complete` sob lock e posição final; adicionar `PUT /images/order` com lista exata e operação transacional; renumerar após exclusão.
+- [x] Separar prefixo temporário e chave definitiva, com cópia validada, cleanup de falhas e compatibilidade transitória com presigns já emitidos.
+- [ ] Adicionar fila persistente de limpeza e executor com retry limitado por rodada para exclusão de imagem/livro/conta; testar falha e recuperação, além da reconciliação de cópia final órfã. Fila e retry estão implementados/testados; reconciliação periódica de objetos finais órfãos permanece pendente.
+- [ ] Rodar testes da API, lint e testes de integração com PostgreSQL. Suíte e lint passaram; integração PostgreSQL não foi executada.
 
 ### Task 3 — Tarefa: leitura privada e capa consistente
 
 **Arquivos:** `API/src/modules/media/storage.service.js`, `API/src/modules/books/books.repository.js`, `books.serializer.js`, `books.service.js`, `API/src/modules/likes/likes.repository.js`, `likes.service.js`, testes correspondentes.
 
-- [ ] Testar que primeira foto define capa em livro, descoberta e Curtidas; sem fotos, usar capa externa; sem ambas, `null`.
-- [ ] Gerar URL GET assinada e `expiresAt` para imagens com `storageKey`; não persistir assinatura. Preservar URLs legadas externas sem expiração.
-- [ ] Ordenar todas as consultas de `BookImage` por `sortOrder ASC, id ASC` e ajustar serialização assíncrona onde necessário.
-- [ ] Validar resposta de lista, detalhe, likes recebidos/enviados e `actorBook`; rodar regressões de likes e livros.
+- [x] Testar que primeira foto define capa em livro e descoberta; sem fotos, usar capa externa; sem ambas, `null`.
+- [x] Gerar URL GET assinada e `expiresAt` para imagens com `storageKey`; não persistir assinatura. Preservar URLs legadas externas sem expiração.
+- [x] Ordenar todas as consultas de `BookImage` por `sortOrder ASC, id ASC` e ajustar serialização assíncrona onde necessário.
+- [ ] Validar resposta de lista, detalhe e interações; rodar regressões de likes e livros. O produto atual não contém `likes.repository`, feed de Curtidas nem `actorBook`; a resposta de interação não inclui livro, então esses consumidores não existem nesta base.
 
 ### Task 4 — Tarefa: seleção e edição de fotos no app
 
 **Arquivos:** `app/src/features/books/bookPhotos.ts`, `bookPhotoUpload.ts`, `app/src/components/BookPhotoPicker/index.tsx` e `styles.ts`, `app/src/pages/BookCreate/`, `BookEdit/`, `BookDetails/`, `app/src/types/api.ts`.
 
-- [ ] Testar função pura de inserir/remover/mover fotos, limite três, capa primeira, cancelamento do picker, MIME/tamanho inválido e reconciliação após upload parcial.
-- [ ] Criar componente compartilhado com até três miniaturas numeradas, marcador “Capa” na primeira, botões acessíveis de mover para esquerda/direita, remover e adicionar; usar `theme.ts` e alvos de toque adequados.
-- [ ] Usar `expo-image-picker` com seleção múltipla até o número de vagas, sem `allowsEditing`; não confiar na ordem da galeria. Validar cada asset. Permitir adicionar uma foto por vez quando a plataforma não oferecer seleção múltipla.
-- [ ] Em `BookCreate`, manter fotos locais antes de publicar, criar livro, enviar em sequência, confirmar e salvar ordem. Se uma foto falhar, manter livro e fotos já confirmadas, informar o problema e oferecer retry em `BookEdit`.
-- [ ] Em `BookEdit`, carregar imagens do servidor; permitir adicionar até três, reordenar, trocar capa e remover com confirmação. Bloquear ações concorrentes enquanto salva e invalidar `['book', id]`, `['books']`, descoberta e curtidas afetadas.
-- [ ] Em `BookDetails`, apresentar galeria na ordem e estado vazio; em Biblioteca/Descobrir/Curtidas usar a capa e renovar respostas quando URL assinada expirar.
-- [ ] Rodar `npm test`, `npm run typecheck`, export Web/Android e revisão visual em telas pequenas, fonte ampliada, offline e upload com retry.
+- [x] Testar função pura de inserir/remover/mover fotos, limite três, capa primeira, MIME/tamanho inválido e upload/reconciliação parcial.
+- [x] Criar componente compartilhado com até três miniaturas numeradas, marcador “Capa” na primeira, botões acessíveis de mover/remover/adicionar, tema do projeto e alvos de toque de 44 pt.
+- [x] Usar `expo-image-picker` com seleção múltipla até o número de vagas, sem `allowsEditing`; validar cada asset e oferecer adição repetida.
+- [x] Em `BookCreate`, manter fotos locais, criar livro, enviar em sequência e oferecer retry em `BookEdit` após falha parcial.
+- [x] Em `BookEdit`, carregar, adicionar, reordenar, trocar capa e remover com confirmação; bloquear mutação concorrente e invalidar dados de livros/descoberta.
+- [x] Em `BookDetails`, apresentar galeria ordenada; Biblioteca/Descobrir usam a capa e renovam URLs assinadas.
+- [ ] Rodar `npm test`, `npm run typecheck`, export Web/Android e revisão visual em telas pequenas, fonte ampliada, offline e upload com retry. Testes, typecheck e export passaram; revisão visual em dispositivo/fonte ampliada/offline permanece pendente.
 
 ### Task 5 — Tarefa: configurar ambiente e validar R2 real
 
 **Arquivos:** `API/.env.example`, `docs/10-docker-ambientes.md`, `docs/13-pendencias-conhecidas.md`, documentação de operação da limpeza.
 
-- [ ] Provisionar ou confirmar bucket privado e credenciais de escopo mínimo, sem registrar valores reais no plano, nos testes ou no Git.
-- [ ] Configurar CORS para a origem Web publicada, `PUT`/`GET` e `Content-Type`; lifecycle de 1 dia para `pending/books/`; validar PUT, HEAD, cópia, GET assinado e DELETE em ambiente de teste.
-- [ ] Testar em Android/iOS físicos e PWA: três fotos, reordenação, troca de capa, exclusão, URL expirada, conexão lenta, arquivo inválido e duas sessões do mesmo livro. Registrar evidência externa, sem equiparar mock a R2 real.
-- [ ] Atualizar contrato, arquitetura, design, qualidade, histórico e matriz de validação com o que foi efetivamente entregue. Executar checklist de `docs/11-qualidade-testes.md`.
+- [ ] Provisionar ou confirmar bucket privado e credenciais de escopo mínimo. As variáveis R2 estão ausentes no `.env` local; nenhuma credencial foi adicionada.
+- [ ] Configurar CORS e lifecycle no bucket de teste e validar PUT, HEAD, cópia, GET assinado e DELETE. Isso requer identificar/provisionar um bucket de teste.
+- [ ] Testar em Android/iOS físicos e PWA; registrar evidência externa. Bundles não equivalem a teste real de aparelho/R2.
+- [x] Atualizar contrato, arquitetura, design, ambiente, qualidade, histórico e matriz com o que foi entregue e o que permanece pendente. `prisma validate`, testes API/app, lint, typecheck e export Web/Android passaram.
 
 ## Critérios de aceite
 
@@ -143,4 +143,4 @@
 
 ## Handoff
 
-Implementar na ordem acima, em branch `codex/fotos-livros-r2`, com commits por tarefa e revisão de migração antes de produção. Antes do deploy, confirmar o estado real do bucket e o inventário de `BookImage` no banco alvo. Se houver mais de três imagens legadas por livro, definir a seleção a preservar e migrar sem perda silenciosa.
+Implementação local concluída na branch `codex/fotos-livros-r2`, com commits por tarefa. Antes do deploy, confirmar o estado real do bucket e fazer auditoria do inventário `BookImage` no banco alvo; não aplicar a migração em produção antes disso. Se houver mais de três imagens legadas por livro, definir a seleção a preservar e migrar sem perda silenciosa. Reconciliação periódica de objetos finais órfãos, testes em dispositivos e validação R2 real continuam pendentes.

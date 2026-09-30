@@ -1,5 +1,14 @@
 # 16. Histórico de alterações
 
+## 30/09/2026 — Até três fotos por livro no R2
+
+- `BookImage` passou a ter ordem estável, capa única e migração com backfill determinístico e pré-condição que aborta sem excluir fotos quando encontra dados fora da regra.
+- A API assina PUT temporário no prefixo `pending/books/`, valida o objeto por HEAD, copia para `books/`, impõe o limite sob lock, reordena a lista completa e assina GET privado com expiração explícita.
+- Exclusões de fotos, livros e contas pendentes criam jobs persistentes para retry de limpeza R2. `R2_PUBLIC_URL` deixou de ser requisito para fotos de livros; GET usa `R2_GET_URL_EXPIRES_IN`.
+- O app aceita JPEG/PNG/WebP de até 8 MiB, com até três imagens, seleção sequencial, retry em `BookEdit`, capa na posição 0 e galeria em `BookDetails`.
+- Validação local: API 27 arquivos/177 testes aprovados, 1 ignorado; lint e Prisma validate/generate passaram. App 9 arquivos/39 testes, typecheck e export Web/Android passaram.
+- Migração, inventário do banco, R2 real, CORS/lifecycle no bucket e teste em dispositivos permanecem pendentes; não havia DATABASE_URL, Docker disponível ou credenciais R2 configuradas no checkout isolado.
+
 ## 11/09/2026 — Leitura de ISBN por câmera
 
 - O app Expo 57/React Native 0.86 passou a usar `expo-camera` 57.0.5 em `BarcodeScannerModal`, aberto por `BookCreate`, com câmera traseira, permissão sob demanda e leitura somente de `ean13`.

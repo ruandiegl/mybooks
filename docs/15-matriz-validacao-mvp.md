@@ -1,6 +1,6 @@
 # 15. Matriz de validação do MVP
 
-Data da execução atual: 11/09/2026.
+Data da execução atual: 30/09/2026.
 
 ## Evidências executadas
 
@@ -8,9 +8,10 @@ Data da execução atual: 11/09/2026.
 | --- | --- | --- |
 | API | recorte Vitest de ISBN/books | 25 aprovados |
 | API | suíte Vitest completa após o scanner | 23 arquivos e 161 testes aprovados; 1 arquivo e 1 teste ignorados |
+| API | fotos: limite, ownership, retry, ordem e URLs privadas | incluídos nos testes; suíte final 27 arquivos/177 testes aprovados, 1 ignorado |
 | API | integração nativa com PostgreSQL | 1/1 aprovado com `RUN_AUTH_INTEGRATION=true` |
 | API | ESLint | aprovado sem erros |
-| App | suíte Vitest | 7 arquivos e 32 testes aprovados |
+| App | suíte Vitest | 9 arquivos e 39 testes aprovados |
 | App | TypeScript estrito | aprovado |
 | Prisma | validate/generate após o scanner | schema válido e Prisma Client 6.19.3 gerado |
 | Compose | migração + seed | 6 migrações aplicadas; 4 usuários, 12 livros, 2 matches e 2 conversas |
@@ -22,9 +23,12 @@ Data da execução atual: 11/09/2026.
 | Perfil/avatar | campos permitidos, URL arbitrária e ownership da chave | cobertos por testes de service |
 | Expo | Doctor | 21/21 verificações aprovadas |
 | Android | export Hermes | 1.063 módulos; diretório temporário removido |
+| Expo | export Web + Android desta tarefa | bundles gerados com sucesso |
+| PostgreSQL | migração de ordem e limite de fotos | não aplicada: banco alvo indisponível; consulta de preflight adicionada |
+| Cloudflare R2 | PUT/HEAD/copy/GET assinado/DELETE e lifecycle | não testado: credenciais e bucket ausentes no `.env` local |
 | Dependências | `npm audit --omit=dev` | API: 4 altas no grafo Prisma sem fix compatível; app: 36 moderadas transitivas sem correção disponível |
 
-Os testes Resend/R2 e em dispositivo permanecem externos; a evidência acima não os substitui.
+Os testes Resend/R2 e em dispositivo permanecem externos; a evidência acima não os substitui. O source de build confirma apenas o bundle, não o comportamento da galeria nem a conectividade com o bucket privado.
 
 O export Android confirma empacotamento, não o comportamento da câmera. O aceite externo precisa ser repetido em Android e iOS físicos e cobrir permissão negada/bloqueada, baixa luz, código danificado, offline, `404`, `503` e `429`, sempre verificando o fallback manual. Não há aceite de scanner na Web nem de leitura física direta de ISBN-10.
 
@@ -39,6 +43,7 @@ O export Android confirma empacotamento, não o comportamento da câmera. O acei
 7. ler um EAN-13 `978`/`979` válido, revisar os dados preenchidos e concluir o cadastro manualmente;
 8. confirmar que QR, URL, texto, EAN de produto e checksum inválido não chamam a API;
 9. repetir com dois usuários para match, conversa e sessão Socket.IO.
+10. em bucket de teste, enviar três fotos, trocar a capa, fechar/reabrir o app, reordenar/excluir e validar URL GET expirada em Android/iOS/Web.
 
 ## Bloqueios externos para aceite de produção
 

@@ -49,7 +49,7 @@ describe('mediaService', () => {
   it('confirma upload somente para a chave exata autorizada', async () => {
     const storageKey = `pending/books/${ownerId}/${bookId}/${imageId}.jpg`;
 
-    await mediaService.complete(ownerId, bookId, { ...base, storageKey });
+    const result = await mediaService.complete(ownerId, bookId, { ...base, storageKey });
 
     expect(mocks.storageService.assertUploaded).toHaveBeenCalledWith(storageKey, expect.objectContaining(base));
     expect(mocks.mediaRepository.complete).toHaveBeenCalledWith(expect.objectContaining({
@@ -57,6 +57,15 @@ describe('mediaService', () => {
       imageId,
       storageKey: `books/${ownerId}/${bookId}/${imageId}.jpg`
     }));
+    expect(result).toMatchObject({
+      id: imageId,
+      url: 'https://r2.example/get',
+      sortOrder: 0,
+      isCover: true,
+      expiresAt: '2026-10-01T00:00:00.000Z'
+    });
+    expect(result).not.toHaveProperty('storageKey');
+    expect(result).not.toHaveProperty('bookId');
   });
 
   it('tenta limpar o objeto quando a gravação dos metadados falha', async () => {

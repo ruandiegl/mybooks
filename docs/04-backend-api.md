@@ -25,6 +25,14 @@ Sucesso usa `{ "data": ... }`. Erros usam `{ "error": { "code", "message", "fiel
 - integração externa deve ter timeout e mapear falha para `AppError`;
 - controller não contém regra de match, ISBN ou armazenamento.
 
+## Fotos de livros e limpeza R2
+
+`POST /books/:bookId/images/presign` recebe MIME e tamanho e retorna um PUT curto para `pending/books/<owner>/<book>/<imageId>.<ext>`. `POST /complete` verifica ownership pela sessão, executa HEAD, promove o objeto para `books/...` e cria a imagem sob lock da linha do livro. O repositório atribui a próxima posição e rejeita a quarta imagem com `IMAGE_LIMIT_REACHED`.
+
+`PUT /books/:bookId/images/order` recebe todos os IDs atuais, já na ordem final. A transação move posições para uma faixa temporária, grava as posições finais e atualiza a capa. `DELETE /books/:bookId/images/:imageId` remove o vínculo, renumera as posições e enfileira a chave R2 na mesma transação. Exclusões de livro e expiração de conta pendente também registram limpeza. O worker tenta até 20 itens por rodada, a cada 60 s, com backoff exponencial limitado a 24 h.
+
+O bucket de imagens de livros é privado. Serializadores assinam GET em tempo de resposta e incluem `expiresAt`; nunca persistem a URL assinada. A leitura de URLs externas legadas é mantida durante a transição. A cópia temporária/final não participa da transação PostgreSQL; falhas de persistência tentam limpar a chave final e uploads `pending/` têm lifecycle como proteção adicional.
+
 ## Consulta de ISBN
 
 `GET /api/v1/isbn/:isbn` é privado. O parâmetro passa por schema Zod e validação de checksum antes da integração; a resposta da BrasilAPI também passa por schema com tipos e limites antes de entrar no cache. O service mantém timeout e cache de 10 minutos limitado a 500 entradas, removendo expiradas e a mais antiga quando necessário. Um rate limit específico usa janela `ISBN_RATE_LIMIT_WINDOW_MS=60000` e teto `ISBN_LOOKUP_LIMIT=30`, com chave do usuário autenticado e IP como fallback.

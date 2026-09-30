@@ -30,6 +30,16 @@ function imageError(code, message, statusCode) {
   return new AppError(message, { code, statusCode });
 }
 
+function serializeImage(image, url, expiresAt = null) {
+  return {
+    id: image.id,
+    url,
+    sortOrder: image.sortOrder,
+    isCover: image.isCover,
+    expiresAt
+  };
+}
+
 async function requireOwnedBook(bookId, ownerId) {
   const book = await booksRepository.findOwnedById(bookId, ownerId);
   if (!book) {
@@ -69,9 +79,9 @@ export const mediaService = {
       if (existing.bookId !== bookId || existing.storageKey !== storageKey) {
         throw imageError('IMAGE_UPLOAD_MISMATCH', 'Esse envio já foi associado a outra imagem.', 409);
       }
-      if (!existing.storageKey) return existing;
+      if (!existing.storageKey) return serializeImage(existing, existing.url ?? null);
       const signed = await storageService.getPresignedGetUrl(existing.storageKey);
-      return { ...existing, url: signed.url, expiresAt: signed.expiresAt };
+      return serializeImage(existing, signed.url, signed.expiresAt);
     }
 
     await storageService.assertUploaded(data.storageKey, data);
@@ -104,9 +114,9 @@ export const mediaService = {
     }
 
     if (key.isPending) await storageService.delete(data.storageKey).catch(() => undefined);
-    if (!image.storageKey) return image;
+    if (!image.storageKey) return serializeImage(image, image.url ?? null);
     const signed = await storageService.getPresignedGetUrl(image.storageKey);
-    return { ...image, url: signed.url, expiresAt: signed.expiresAt };
+    return serializeImage(image, signed.url, signed.expiresAt);
   },
 
   async reorder(ownerId, bookId, input) {

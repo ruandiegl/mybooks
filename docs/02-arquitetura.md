@@ -20,6 +20,8 @@ Na criação de livro, o scanner nativo reconhece apenas EAN-13 e faz a primeira
 
 A câmera é uma entrada local e efêmera. Nenhum frame ou foto atravessa a fronteira do app, e o fluxo manual continua sendo a alternativa para Web, indisponibilidade da câmera e ISBN-10.
 
-Uploads usam autorização curta e chave derivada no servidor. Capas ficam em `books/<user>/<book>/<uuid>`; avatares, em `avatars/<user>/<uuid>`. O servidor confirma tipo e tamanho antes de vincular a URL.
+Fotos de livro usam autorização curta para um objeto temporário em `pending/books/<user>/<book>/<uuid>`. A API confirma tipo e tamanho com HEAD, copia para `books/<user>/<book>/<uuid>` e só então vincula a imagem ao livro sob lock transacional. `sortOrder = 0` é a capa; o limite de três e a lista completa de reordenação são verificados no servidor. Uploads abandonados expiram pelo lifecycle do prefixo temporário.
+
+O bucket de fotos de livros é privado. As respostas de livro assinam GET por prazo curto e informam `expiresAt`; a assinatura não é gravada no PostgreSQL. O app renova os dados periodicamente e ao voltar ao primeiro plano. URLs externas legadas permanecem como fallback e a capa ISBN só aparece quando não há foto própria. Avatares continuam no fluxo legado de `avatars/<user>/<uuid>` e podem usar `R2_PUBLIC_URL`.
 
 `clerkUserId` permanece nullable apenas como coluna histórica durante a janela de migração. Não é usado pelo runtime, autorização, seed ou payload público.

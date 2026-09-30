@@ -12,7 +12,9 @@ O cadastro não verificado permanece pendente por 24 horas. Repetir o cadastro c
 
 Helmet, CORS restrito, corpo máximo de 1 MB, request ID e erros sanitizados ficam ativos. Logs não incluem Authorization, senha, refresh, código, CPF ou telefone completo. Ownership sempre deriva da sessão.
 
-Uploads aceitam JPEG, PNG ou WebP até 8 MB, URL pré-assinada curta, chave por usuário e confirmação por HEAD. Configure lifecycle do bucket para objetos não confirmados.
+Fotos de livros aceitam JPEG, PNG ou WebP até 8 MiB cada, com no máximo três por livro. A API deriva owner e chave, emite PUT pré-assinado para `pending/books/<owner>/<book>/...`, valida tipo/tamanho por HEAD e só então copia para `books/...`. Reordenação, confirmação e exclusão verificam ownership e usam lock transacional; a foto 0 é a capa. Não aceite `userId`, chaves ou URLs arbitrárias do cliente.
+
+O bucket de livros é privado. GET é pré-assinado no endpoint S3 do R2 e possui expiração curta declarada na resposta; não persista a assinatura nem a compartilhe em logs. Configure lifecycle de 1 dia para `pending/books/`, CORS apenas para origens Web necessárias e uma credencial de escopo mínimo. Exclusões falhas ficam na fila persistente de limpeza com retry. `R2_PUBLIC_URL` permanece opcional para avatares legados, não para fotos de livros.
 
 A consulta de ISBN é autenticada e possui proteção própria contra abuso: 30 consultas por janela de 60 segundos, identificadas pelo usuário da sessão e por IP como fallback. No fluxo de câmera, formato, prefixo de livro e checksum são filtrados no app para evitar tráfego desnecessário, mas a API não confia nessa validação e verifica o parâmetro novamente com Zod e checksum.
 

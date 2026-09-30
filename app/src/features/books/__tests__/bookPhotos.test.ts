@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   appendBookPhotos,
   createBookPhoto,
+  getSignedBookImageRefreshDelay,
   moveBookPhoto,
   removeBookPhoto
 } from '../bookPhotos';
@@ -37,5 +38,12 @@ describe('book photo drafts', () => {
   it('removes only the selected photo and leaves the remaining order intact', () => {
     const result = removeBookPhoto([photo('one'), photo('two'), photo('three')], 0);
     expect(result.map(({ id }) => id)).toEqual(['two', 'three']);
+  });
+
+  it('renews signed images before their declared expiry and avoids polling public-only books', () => {
+    expect(getSignedBookImageRefreshDelay([], 0)).toBe(false);
+    expect(getSignedBookImageRefreshDelay([{ coverUrlExpiresAt: null, images: [{ expiresAt: null }] }], 0)).toBe(false);
+    expect(getSignedBookImageRefreshDelay([{ coverUrlExpiresAt: '1970-01-01T00:01:40.000Z' }], 0)).toBe(80_000);
+    expect(getSignedBookImageRefreshDelay([{ images: [{ expiresAt: '1969-12-31T23:59:00.000Z' }] }], 0)).toBe(5_000);
   });
 });

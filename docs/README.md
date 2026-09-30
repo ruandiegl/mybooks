@@ -4,7 +4,7 @@ Este diretório é a fonte de verdade das guidelines, decisões técnicas e cont
 
 ## Estado do MVP
 
-A fundação do MVP está implementada: aplicativo Expo/React Native, API Express modular, Prisma/PostgreSQL via Docker, autenticação Clerk, consulta ISBN pela BrasilAPI, upload direto para Cloudflare R2, e-mail transacional por Resend, matches e chat Socket.IO. O ambiente local Docker já está configurado; credenciais externas e aceite em dispositivo ainda dependem do ambiente de teste.
+A fundação do MVP está implementada: aplicativo Expo/React Native, API Express modular, Prisma/PostgreSQL, autenticação nativa, consulta ISBN pela BrasilAPI, uploads privados de fotos de livros no Cloudflare R2, e-mail transacional por Resend, matches e chat Socket.IO. A funcionalidade de até três fotos foi implementada, mas a migração do banco, credenciais/validação real R2 e aceite em dispositivos ainda dependem do ambiente de teste.
 
 ## Índice
 
@@ -44,4 +44,4 @@ A fundação do MVP está implementada: aplicativo Expo/React Native, API Expres
 
 Comece por [Visão geral](./01-visao-geral.md) e [Arquitetura](./02-arquitetura.md). Para colocar o projeto em execução, siga [Docker e ambientes](./10-docker-ambientes.md) e [Execução do MVP](./14-execucao-do-mvp.md).
 
-_Última revisão: 09/09/2026._
+_Última revisão: 30/09/2026._

@@ -12,9 +12,9 @@ import { TextField } from '../../components/TextField';
 import { normalizeIsbnInput } from '../../features/books/isbnForm';
 import {
   appendBookPhotos,
-  BOOK_IMAGE_URL_REFRESH_MS,
   BookPhotoError,
   createBookPhoto,
+  getSignedBookImageRefreshDelay,
   MAX_BOOK_PHOTOS,
   moveBookPhoto,
   removeBookPhoto,
@@ -43,7 +43,7 @@ export function BookEdit({ route, navigation }: Props) {
   const query = useQuery({
     queryKey: ['book', route.params.bookId],
     queryFn: async () => (await api.get<ApiEnvelope<Book>>('/api/v1/books/' + route.params.bookId)).data.data,
-    refetchInterval: BOOK_IMAGE_URL_REFRESH_MS
+    refetchInterval: (currentQuery) => getSignedBookImageRefreshDelay(currentQuery.state.data ? [currentQuery.state.data] : [])
   });
 
   useEffect(() => {

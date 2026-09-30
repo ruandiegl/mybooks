@@ -34,6 +34,19 @@ Cada grupo tem limite configurável e headers `RateLimit`; ao exceder, responde 
 
 O restante do domínio mantém `/books`, `/discover`, `/interactions`, `/matches`, `/conversations` e as rotas de imagens de livros. Todas as respostas usam `{ data }`; erros usam `{ error: { code, message, requestId, fields? } }`.
 
+## Livros e fotos
+
+| Método | Caminho | Função |
+| --- | --- | --- |
+| GET/POST | `/books` | listar livros próprios / criar livro |
+| GET/PATCH/DELETE | `/books/:bookId` | consultar, editar ou excluir livro próprio |
+| POST | `/books/:bookId/images/presign` | autorizar PUT temporário; body `{ mimeType, size }` |
+| POST | `/books/:bookId/images/complete` | validar HEAD e vincular a foto |
+| PUT | `/books/:bookId/images/order` | persistir a lista completa `{ imageIds: [...] }` |
+| DELETE | `/books/:bookId/images/:imageId` | remover foto e promover a primeira restante |
+
+São aceitos 0–3 arquivos JPEG/PNG/WebP de até 8 MiB por livro. `sortOrder = 0` é sempre a capa; o backend deriva owner e chave R2 da sessão e do livro. Uploads novos usam `pending/books/...`, depois são copiados para `books/...`. Fotos privadas recebem `url` GET assinada e `expiresAt` nas respostas; links externos legados têm `expiresAt: null`. `IMAGE_LIMIT_REACHED` é `409`, `IMAGE_ORDER_INVALID` é `422`, e erros de validação de arquivo mantêm códigos `IMAGE_TYPE_INVALID`, `IMAGE_SIZE_INVALID` e `IMAGE_UPLOAD_MISMATCH`.
+
 ## ISBN e livros
 
 | Método | Caminho | Função |

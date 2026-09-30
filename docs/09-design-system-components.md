@@ -16,6 +16,8 @@ A família oficial é Be Vietnam Pro. Títulos usam peso 700/800; corpo usa 400;
 
 `BarcodeScannerModal` é a superfície nativa de leitura em `BookCreate`. O modal mantém enquadramento legível, ação explícita para fechar e acesso visível ao cadastro manual. A permissão é pedida sob demanda; estados negado e bloqueado devem explicar o próximo passo sem impedir digitação, e leituras inválidas não substituem o ISBN atual nem disparam carregamento remoto.
 
+`BookPhotoPicker` é compartilhado entre `BookCreate` e `BookEdit`. Usa superfície `#FFF8F7`, ação principal `#B90041`, violeta `#7145BA` apenas como apoio e Be Vietnam Pro. As miniaturas numeradas representam uma ordem real; a primeira recebe o selo “Capa”. Mover, remover e adicionar são ações com rótulos acessíveis e alvos de toque de pelo menos 44 pt. No detalhe, a galeria mantém a capa em primeiro lugar e deixa as próprias fotos dominarem a composição.
+
 ## Regras shadcn no mobile
 
 O projeto segue princípios de composição, variantes e tokens do shadcn, implementados com primitives React Native. Não há DOM, Tailwind web ou Radix nas telas nativas. Estados de hover não substituem pressed, focus, disabled, loading, erro e acessibilidade mobile.

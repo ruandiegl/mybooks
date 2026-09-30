@@ -9,7 +9,11 @@ O `compose.yaml` inicia PostgreSQL 16 e API; o container aplica `prisma migrate 
 
 A seed é proibida quando `NODE_ENV=production`. Em desenvolvimento, `npx prisma db seed` cria quatro contas nativas verificadas e dados de demonstração; a senha local documentada no código da seed é apenas de teste e deve ser trocada ao compartilhar o ambiente.
 
-R2 é opcional localmente (`STORAGE_MODE=development` retorna 503 para upload). Para testar imagens, configure credenciais mínimas, bucket privado, CORS e `R2_PUBLIC_URL`. Para e-mail real, configure Resend e domínio remetente. Em dispositivo físico, use o IP LAN da máquina em `EXPO_PUBLIC_API_BASE_URL`/`EXPO_PUBLIC_SOCKET_URL`.
+R2 é opcional localmente (`STORAGE_MODE=development` retorna 503 para upload). Para fotos de livros, use um bucket privado e uma credencial de escopo mínimo. Configure `R2_PRESIGN_EXPIRES_IN` para PUT e `R2_GET_URL_EXPIRES_IN` para GET assinado (30–3600 s; ambos 300 s por padrão). `R2_PUBLIC_URL` não é necessário para fotos de livros e só permanece no fluxo legado de avatares.
+
+No bucket de teste, habilite CORS somente para as origens Web aprovadas, permitindo `PUT`, `GET` e os headers necessários, incluindo `Content-Type`. Configure lifecycle para expirar `pending/books/` após 1 dia. O backend faz HEAD, cópia e DELETE pelo endpoint S3, portanto essas operações não dependem de CORS. Nunca registre valores do `.env` nem faça validação de upload em um bucket de produção sem identificar antes o destino e a autorização.
+
+Antes de aplicar a migração em banco alvo, execute `API/prisma/book-image-preflight.sql` em uma cópia/backup e resolva exceções sem perda de fotos. Para teste R2, use um bucket de teste e valide PUT, HEAD, copy, GET assinado e DELETE; mock ou bundle não é evidência de acesso real. Para e-mail real, configure Resend e domínio remetente. Em dispositivo físico, use o IP LAN da máquina em `EXPO_PUBLIC_API_BASE_URL`/`EXPO_PUBLIC_SOCKET_URL`.
 
 A consulta ISBN usa `ISBN_RATE_LIMIT_WINDOW_MS=60000` e `ISBN_LOOKUP_LIMIT=30`; registre apenas esses nomes e valores de configuração, nunca credenciais ou conteúdo real de `.env`. No app, o plugin de `expo-camera` declara a mensagem de permissão em português, `microphonePermission=false` e `recordAudioAndroid=false`. Mudanças nessa configuração nativa exigem novo development build; o scanner não é requisito da execução Web.
 

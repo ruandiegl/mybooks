@@ -7,7 +7,7 @@ import { Avatar } from '../../components/Avatar';
 import { Badge } from '../../components/Badge';
 import { IsbnBadge } from '../../components/IsbnBadge';
 import { StateView } from '../../components/StateView';
-import { BOOK_IMAGE_URL_REFRESH_MS } from '../../features/books/bookPhotos';
+import { getSignedBookImageRefreshDelay } from '../../features/books/bookPhotos';
 import { api } from '../../services/api';
 import type { ApiEnvelope, Book, User } from '../../types/api';
 import type { RootStackParamList } from '../../types/navigation';
@@ -20,7 +20,7 @@ export function BookDetails({ route, navigation }: Props) {
   const query = useQuery({
     queryKey: ['book', route.params.bookId],
     queryFn: async () => (await api.get<ApiEnvelope<Book>>('/api/v1/books/' + route.params.bookId)).data.data,
-    refetchInterval: BOOK_IMAGE_URL_REFRESH_MS
+    refetchInterval: (currentQuery) => getSignedBookImageRefreshDelay(currentQuery.state.data ? [currentQuery.state.data] : [])
   });
   const me = useQuery({ queryKey: ['me'], queryFn: async () => (await api.get<ApiEnvelope<User>>('/api/v1/me')).data.data });
   if (query.isLoading) return <View style={styles.page}><StateView loading title="Abrindo o livro" /></View>;
