@@ -6,9 +6,10 @@ import {
   BeVietnamPro_800ExtraBold,
   useFonts
 } from '@expo-google-fonts/be-vietnam-pro';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, View } from 'react-native';
+import { useEffect } from 'react';
+import { ActivityIndicator, AppState, Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SessionProvider } from './src/providers/SessionProvider';
 import { Routes } from './src/routes';
@@ -31,6 +32,15 @@ export default function App() {
     BeVietnamPro_700Bold,
     BeVietnamPro_800ExtraBold
   });
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    focusManager.setFocused(AppState.currentState === 'active');
+    const subscription = AppState.addEventListener('change', (state) => {
+      focusManager.setFocused(state === 'active');
+    });
+    return () => subscription.remove();
+  }, []);
 
   if (!fontsLoaded) {
     return (

@@ -56,8 +56,10 @@ export type ResetPasswordInput = { email: string; code: string; password: string
 
 export type BookImage = {
   id: string;
-  url: string;
+  url: string | null;
+  sortOrder: number;
   isCover: boolean;
+  expiresAt: string | null;
 };
 
 export type Book = {
@@ -75,6 +77,7 @@ export type Book = {
   isbnProvider?: string | null;
   availability: 'AVAILABLE' | 'RESERVED' | 'EXCHANGED';
   coverUrl?: string | null;
+  coverUrlExpiresAt?: string | null;
   images: BookImage[];
   owner?: Pick<User, 'id' | 'name' | 'avatarUrl' | 'city'> | null;
   createdAt: string;

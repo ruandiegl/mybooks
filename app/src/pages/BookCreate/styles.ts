@@ -9,10 +9,6 @@ export const styles = StyleSheet.create({
   isbnActions: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
   isbnAction: { flexGrow: 1, minWidth: 132 },
   section: { color: theme.colors.foreground, fontFamily: theme.typography.bold, fontSize: 17, marginTop: theme.spacing.sm },
-  imageButton: { minHeight: 130, borderWidth: 1, borderStyle: 'dashed', borderColor: theme.colors.outline, borderRadius: theme.radius.lg, alignItems: 'center', justifyContent: 'center', gap: theme.spacing.xs, overflow: 'hidden', backgroundColor: theme.colors.surface },
-  imagePressed: { opacity: 0.78 },
-  image: { width: '100%', height: 220 },
-  imageLabel: { color: theme.colors.primary, fontFamily: theme.typography.semibold },
   row: { flexDirection: 'row', gap: theme.spacing.sm },
   half: { flex: 1 }
 });

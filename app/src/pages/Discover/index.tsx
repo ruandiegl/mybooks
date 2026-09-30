@@ -8,6 +8,7 @@ import { Card } from '../../components/Card';
 import { IsbnBadge } from '../../components/IsbnBadge';
 import { StateView } from '../../components/StateView';
 import { TopBar } from '../../components/TopBar';
+import { BOOK_IMAGE_URL_REFRESH_MS } from '../../features/books/bookPhotos';
 import { api, apiErrorMessage } from '../../services/api';
 import { theme } from '../../styles/theme';
 import type { ApiEnvelope, Book, Match, Paginated } from '../../types/api';
@@ -27,7 +28,8 @@ export function Discover() {
     queryKey,
     initialPageParam: '',
     queryFn: async ({ pageParam }) => (await api.get<ApiEnvelope<Paginated<Book>>>('/api/v1/discover', { params: { limit: 20, cursor: pageParam || undefined } })).data.data,
-    getNextPageParam: (lastPage) => lastPage.pageInfo.hasNextPage ? lastPage.pageInfo.nextCursor || undefined : undefined
+    getNextPageParam: (lastPage) => lastPage.pageInfo.hasNextPage ? lastPage.pageInfo.nextCursor || undefined : undefined,
+    refetchInterval: BOOK_IMAGE_URL_REFRESH_MS
   });
   const books = query.data?.pages.flatMap((page) => page.items) || [];
   const book = books[0];

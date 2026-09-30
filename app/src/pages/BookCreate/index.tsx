@@ -1,11 +1,12 @@
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import * as Crypto from 'expo-crypto';
 import * as ImagePicker from 'expo-image-picker';
 import { useRef, useState } from 'react';
-import { Alert, Image, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 import { AppButton } from '../../components/AppButton';
 import { BarcodeScannerModal } from '../../components/BarcodeScannerModal';
+import { BookPhotoPicker } from '../../components/BookPhotoPicker';
 import { Card } from '../../components/Card';
 import { IsbnBadge } from '../../components/IsbnBadge';
 import { TextField } from '../../components/TextField';
@@ -18,6 +19,16 @@ import {
   type BookDraft,
   type EditableBookField
 } from '../../features/books/isbnForm';
+import {
+  appendBookPhotos,
+  BookPhotoError,
+  createBookPhoto,
+  MAX_BOOK_PHOTOS,
+  moveBookPhoto,
+  removeBookPhoto,
+  type BookPhotoDraft
+} from '../../features/books/bookPhotos';
+import { uploadBookPhoto } from '../../features/books/bookPhotoUpload';
 import { api, apiErrorMessage } from '../../services/api';
 import { theme } from '../../styles/theme';
 import type { ApiEnvelope, Book, IsbnLookup } from '../../types/api';
@@ -25,18 +36,14 @@ import type { RootStackParamList } from '../../types/navigation';
 import { styles } from './styles';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BookCreate'>;
-type PickedImage = { uri: string; mimeType: 'image/jpeg' | 'image/png' | 'image/webp'; size: number };
-type Presign = { imageId: string; uploadUrl: string; storageKey: string; headers: Record<string, string> };
 
 const initialForm: BookDraft = { isbn: '', title: '', authors: '', publisher: '', synopsis: '', year: '', pageCount: '', subjects: '' };
 const splitList = (value: string) => value.split(',').map((item) => item.trim()).filter(Boolean);
-const isAllowedImageType = (value?: string): value is PickedImage['mimeType'] => value === 'image/jpeg' || value === 'image/png' || value === 'image/webp';
-
 export function BookCreate({ navigation }: Props) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState(initialForm);
   const [lookup, setLookup] = useState<IsbnLookup | null>(null);
-  const [image, setImage] = useState<PickedImage | null>(null);
+  const [photos, setPhotos] = useState<BookPhotoDraft[]>([]);
   const [scannerVisible, setScannerVisible] = useState(false);
   const dirtyFields = useRef(new Set<EditableBookField>());
   const currentIsbn = useRef('');
@@ -102,22 +109,44 @@ export function BookCreate({ navigation }: Props) {
     setScannerVisible(true);
   }
 
-  async function pickImage() {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [2, 3], quality: 0.82 });
+  async function pickImages() {
+    const remaining = MAX_BOOK_PHOTOS - photos.length;
+    if (remaining <= 0) return;
+    let result: ImagePicker.ImagePickerResult;
+    try {
+      result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        selectionLimit: remaining,
+        quality: 0.82
+      });
+    } catch {
+      Alert.alert('Não foi possível abrir as fotos', 'Confira a permissão da galeria e tente novamente.');
+      return;
+    }
     if (result.canceled) return;
-    const asset = result.assets[0];
-    if (!asset.fileSize) return Alert.alert('Imagem inválida', 'Não foi possível identificar o tamanho da imagem.');
-    if (!isAllowedImageType(asset.mimeType)) return Alert.alert('Formato não aceito', 'Escolha uma imagem JPEG, PNG ou WebP.');
-    if (asset.fileSize > 8 * 1024 * 1024) return Alert.alert('Imagem muito grande', 'Escolha uma imagem de até 8 MB.');
-    setImage({ uri: asset.uri, mimeType: asset.mimeType, size: asset.fileSize });
-  }
-
-  async function uploadCover(bookId: string, picked: PickedImage) {
-    const presign = (await api.post<ApiEnvelope<Presign>>('/api/v1/books/' + bookId + '/images/presign', { mimeType: picked.mimeType, size: picked.size })).data.data;
-    const blob = await (await fetch(picked.uri)).blob();
-    const upload = await fetch(presign.uploadUrl, { method: 'PUT', headers: presign.headers, body: blob });
-    if (!upload.ok) throw new Error('Falha no envio da imagem.');
-    await api.post('/api/v1/books/' + bookId + '/images/complete', { imageId: presign.imageId, storageKey: presign.storageKey, mimeType: picked.mimeType, size: picked.size, isCover: true });
+    const validPhotos: BookPhotoDraft[] = [];
+    let firstValidationError: unknown;
+    for (const asset of result.assets) {
+      try {
+        validPhotos.push(createBookPhoto(asset, Crypto.randomUUID()));
+      } catch (error) {
+        firstValidationError ??= error;
+      }
+    }
+    try {
+      setPhotos((current) => appendBookPhotos(current, validPhotos.slice(0, remaining)));
+    } catch (error) {
+      Alert.alert('Limite de fotos', apiErrorMessage(error, error instanceof Error ? error.message : undefined));
+      return;
+    }
+    if (firstValidationError) {
+      const message = firstValidationError instanceof BookPhotoError
+        ? firstValidationError.message
+        : 'Uma das imagens não pôde ser usada.';
+      Alert.alert('Foto não adicionada', message);
+    }
+    if (validPhotos.length > remaining) Alert.alert('Limite de fotos', 'Um livro pode ter até três fotos.');
   }
 
   const createMutation = useMutation({
@@ -134,19 +163,31 @@ export function BookCreate({ navigation }: Props) {
         isbn: form.isbn.trim() || null
       };
       const book = (await api.post<ApiEnvelope<Book>>('/api/v1/books', payload)).data.data;
-      let coverFailed = false;
-      if (image) {
-        try { await uploadCover(book.id, image); } catch { coverFailed = true; }
+      let photosPending: BookPhotoDraft[] = [];
+      for (const [index, photo] of photos.entries()) {
+        try {
+          await uploadBookPhoto(book.id, photo);
+        } catch {
+          photosPending = photos.slice(index);
+          break;
+        }
       }
-      return { book, coverFailed };
+      return { book, photosPending };
     },
-    onSuccess: ({ book, coverFailed }) => {
+    onSuccess: ({ book, photosPending }) => {
       void queryClient.invalidateQueries({ queryKey: ['books'] });
-      Alert.alert(
-        coverFailed ? 'Livro salvo sem a capa' : 'Livro publicado',
-        coverFailed ? 'Os dados foram salvos, mas a capa não foi enviada. Você poderá tentar novamente na edição.' : 'Ele já está disponível na sua biblioteca.',
-        [{ text: 'Ver livro', onPress: () => navigation.replace('BookDetails', { bookId: book.id }) }]
-      );
+      void queryClient.invalidateQueries({ queryKey: ['discover'] });
+      if (photosPending.length) {
+        queryClient.setQueryData(['book-photos-draft', book.id], { mode: 'append', photos: photosPending });
+        Alert.alert('Livro publicado; fotos pendentes', 'O livro já está na sua biblioteca. Algumas fotos não foram enviadas; você pode tentar novamente na edição.', [
+          { text: 'Ver livro', onPress: () => navigation.replace('BookDetails', { bookId: book.id }) },
+          { text: 'Editar fotos', onPress: () => navigation.replace('BookEdit', { bookId: book.id }) }
+        ]);
+        return;
+      }
+      Alert.alert('Livro publicado', 'Ele já está disponível na sua biblioteca.', [
+        { text: 'Ver livro', onPress: () => navigation.replace('BookDetails', { bookId: book.id }) }
+      ]);
     },
     onError: (error) => Alert.alert('Não foi possível publicar', apiErrorMessage(error, error instanceof Error ? error.message : undefined))
   });
@@ -179,10 +220,13 @@ export function BookCreate({ navigation }: Props) {
           </View>
           <TextField label="Temas" value={form.subjects} onChangeText={(value) => set('subjects', value)} placeholder="Romance, Brasil, Ficção" />
           <TextField label="Sinopse" value={form.synopsis} onChangeText={(value) => set('synopsis', value)} multiline />
-          <Text style={styles.section}>Capa</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel={image ? 'Trocar imagem da capa' : 'Escolher imagem da capa'} onPress={pickImage} style={({ pressed }) => [styles.imageButton, pressed && styles.imagePressed]}>
-            {image ? <Image source={{ uri: image.uri }} accessibilityLabel="Prévia da capa selecionada" style={styles.image} resizeMode="cover" /> : <><MaterialIcons name="add-photo-alternate" size={34} color={theme.colors.primary} /><Text style={styles.imageLabel}>Escolher imagem da capa</Text></>}
-          </Pressable>
+          <BookPhotoPicker
+            photos={photos}
+            onAdd={() => void pickImages()}
+            onMove={(from, to) => setPhotos((current) => moveBookPhoto(current, from, to))}
+            onRemove={(index) => setPhotos((current) => removeBookPhoto(current, index))}
+            disabled={createMutation.isPending}
+          />
           <AppButton label="Publicar livro" icon="arrow-forward" loading={createMutation.isPending} onPress={() => createMutation.mutate()} />
         </ScrollView>
       </KeyboardAvoidingView>
