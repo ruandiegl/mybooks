@@ -91,6 +91,19 @@ export const booksRepository = {
   },
 
   delete(id) {
-    return prisma.book.delete({ where: { id } });
+    return prisma.$transaction(async (tx) => {
+      const images = await tx.bookImage.findMany({
+        where: { bookId: id, storageKey: { not: null } },
+        select: { storageKey: true }
+      });
+      for (const image of images) {
+        await tx.storageCleanupJob.upsert({
+          where: { storageKey: image.storageKey },
+          create: { storageKey: image.storageKey },
+          update: { nextAttemptAt: new Date() }
+        });
+      }
+      return tx.book.delete({ where: { id } });
+    });
   }
 };

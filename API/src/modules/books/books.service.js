@@ -1,6 +1,6 @@
 import { AppError } from '../../shared/errors/AppError.js';
 import { isbnService } from '../isbn/isbn.service.js';
-import { storageService } from '../media/storage.service.js';
+import { storageCleanupService } from '../media/storageCleanup.service.js';
 import { booksRepository } from './books.repository.js';
 import {
   bookIdSchema,
@@ -132,11 +132,9 @@ export const booksService = {
         code: 'BOOK_NOT_FOUND'
       });
     }
-    await Promise.all(
-      (existing.images ?? [])
-        .filter((image) => image.storageKey)
-        .map((image) => storageService.delete(image.storageKey))
-    );
     await booksRepository.delete(bookId);
+    for (const image of existing.images ?? []) {
+      if (image.storageKey) await storageCleanupService.process(image.storageKey);
+    }
   }
 };

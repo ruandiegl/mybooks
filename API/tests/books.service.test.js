@@ -4,12 +4,12 @@ import { AppError } from '../src/shared/errors/AppError.js';
 const mocks = vi.hoisted(() => ({
   booksRepository: { create: vi.fn(), findOwnedById: vi.fn(), update: vi.fn(), delete: vi.fn() },
   isbnService: { validate: vi.fn(), lookup: vi.fn() },
-  storageService: { delete: vi.fn() }
+  storageCleanupService: { process: vi.fn() }
 }));
 
 vi.mock('../src/modules/books/books.repository.js', () => ({ booksRepository: mocks.booksRepository }));
 vi.mock('../src/modules/isbn/isbn.service.js', () => ({ isbnService: mocks.isbnService }));
-vi.mock('../src/modules/media/storage.service.js', () => ({ storageService: mocks.storageService }));
+vi.mock('../src/modules/media/storageCleanup.service.js', () => ({ storageCleanupService: mocks.storageCleanupService }));
 
 const { booksService } = await import('../src/modules/books/books.service.js');
 
@@ -73,7 +73,7 @@ describe('booksService', () => {
     expect(mocks.booksRepository.update).not.toHaveBeenCalled();
   });
 
-  it('remove objetos do storage antes de excluir o livro', async () => {
+  it('enfileira a limpeza do storage junto com a exclusão e tenta processá-la após o commit', async () => {
     mocks.booksRepository.findOwnedById.mockResolvedValue({
       id: bookId,
       ownerId,
@@ -82,8 +82,8 @@ describe('booksService', () => {
 
     await booksService.delete(ownerId, bookId);
 
-    expect(mocks.storageService.delete).toHaveBeenCalledOnce();
-    expect(mocks.storageService.delete).toHaveBeenCalledWith('books/owner/book/cover.jpg');
+    expect(mocks.storageCleanupService.process).toHaveBeenCalledOnce();
+    expect(mocks.storageCleanupService.process).toHaveBeenCalledWith('books/owner/book/cover.jpg');
     expect(mocks.booksRepository.delete).toHaveBeenCalledWith(bookId);
   });
 });

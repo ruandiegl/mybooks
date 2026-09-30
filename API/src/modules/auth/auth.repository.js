@@ -20,6 +20,21 @@ const registrationCandidateSelect = {
   pendingRegistrationExpiresAt: true
 };
 
+async function enqueueBookImageCleanup(tx, userIds) {
+  if (!userIds.length) return;
+  const images = await tx.bookImage.findMany({
+    where: { book: { ownerId: { in: userIds } }, storageKey: { not: null } },
+    select: { storageKey: true }
+  });
+  for (const storageKey of new Set(images.map((image) => image.storageKey))) {
+    await tx.storageCleanupJob.upsert({
+      where: { storageKey },
+      create: { storageKey },
+      update: { nextAttemptAt: new Date() }
+    });
+  }
+}
+
 const latestCode = (client, userId, type) => client.authCode.findFirst({
   where: { userId, type },
   orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
@@ -95,14 +110,17 @@ export const authRepository = {
   },
 
   deleteExpiredPendingAccounts(now) {
-    return prisma.user.deleteMany({
-      where: {
+    return prisma.$transaction(async (tx) => {
+      const where = {
         email: { not: null },
         passwordHash: { not: null },
         emailVerifiedAt: null,
         isActive: false,
         pendingRegistrationExpiresAt: { lte: now }
-      }
+      };
+      const users = await tx.user.findMany({ where, select: { id: true } });
+      await enqueueBookImageCleanup(tx, users.map((user) => user.id));
+      return tx.user.deleteMany({ where });
     });
   },
 
@@ -141,7 +159,10 @@ export const authRepository = {
         return { status: 'REFRESHED', user: updated };
       }
 
-      if (pendingByEmail && canRefreshPending) await client.user.delete({ where: { id: pendingByEmail.id } });
+      if (pendingByEmail && canRefreshPending) {
+        await enqueueBookImageCleanup(client, [pendingByEmail.id]);
+        await client.user.delete({ where: { id: pendingByEmail.id } });
+      }
 
       if (candidates.length > 0) return { status: 'CONFLICT' };
 

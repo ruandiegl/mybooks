@@ -1,5 +1,7 @@
 import {
+  CopyObjectCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
   S3Client
@@ -20,7 +22,6 @@ function assertConfigured() {
     || !env.R2_ACCESS_KEY_ID
     || !env.R2_SECRET_ACCESS_KEY
     || !env.R2_BUCKET
-    || !env.R2_PUBLIC_URL
   ) {
     throw new AppError('O armazenamento de imagens ainda não foi configurado neste ambiente.', {
       statusCode: 503,
@@ -71,6 +72,7 @@ export const storageService = {
   async createPresignedUpload({ ownerId, bookId, imageId, mimeType, size }) {
     assertImage({ mimeType, size });
     const storageKey = [
+      'pending',
       'books',
       ownerId,
       bookId,
@@ -133,8 +135,37 @@ export const storageService = {
     }
   },
 
+  async copy({ sourceKey, destinationKey }) {
+    const encodedSource = `${env.R2_BUCKET}/${sourceKey.split('/').map(encodeURIComponent).join('/')}`;
+    await getClient().send(new CopyObjectCommand({
+      Bucket: env.R2_BUCKET,
+      Key: destinationKey,
+      CopySource: encodedSource,
+      MetadataDirective: 'COPY'
+    }));
+  },
+
+  async getPresignedGetUrl(storageKey) {
+    const expiresIn = env.R2_PRESIGN_EXPIRES_IN;
+    const url = await getSignedUrl(
+      getClient(),
+      new GetObjectCommand({ Bucket: env.R2_BUCKET, Key: storageKey }),
+      { expiresIn }
+    );
+    return {
+      url,
+      expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString()
+    };
+  },
+
   getPublicUrl(storageKey) {
     assertConfigured();
+    if (!env.R2_PUBLIC_URL) {
+      throw new AppError('A URL pública para avatares não está configurada.', {
+        statusCode: 503,
+        code: 'STORAGE_NOT_CONFIGURED'
+      });
+    }
     return env.R2_PUBLIC_URL.replace(/\/$/, '') + '/' + storageKey;
   },
 

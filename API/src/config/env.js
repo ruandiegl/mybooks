@@ -104,10 +104,9 @@ if (
     || !parsed.data.R2_ACCESS_KEY_ID
     || !parsed.data.R2_SECRET_ACCESS_KEY
     || !parsed.data.R2_BUCKET
-    || !parsed.data.R2_PUBLIC_URL
   )
 ) {
-  throw new Error('As credenciais, o bucket e R2_PUBLIC_URL são obrigatórios quando STORAGE_MODE=r2.');
+  throw new Error('As credenciais e o bucket são obrigatórios quando STORAGE_MODE=r2.');
 }
 
 export const env = {

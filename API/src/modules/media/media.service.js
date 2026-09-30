@@ -2,15 +2,17 @@ import { randomUUID } from 'node:crypto';
 import { AppError } from '../../shared/errors/AppError.js';
 import { booksRepository } from '../books/books.repository.js';
 import { mediaRepository } from './media.repository.js';
-import { completeUploadSchema, presignSchema } from './media.schemas.js';
+import { completeUploadSchema, imageOrderSchema, presignSchema } from './media.schemas.js';
 import { storageService } from './storage.service.js';
+import { storageCleanupService } from './storageCleanup.service.js';
 
 function assertStorageKey(storageKey, ownerId, bookId, imageId) {
   const segments = storageKey.split('/');
-  const [scope, keyOwnerId, keyBookId, filename] = segments;
+  const isPending = segments[0] === 'pending';
+  const [scope, keyOwnerId, keyBookId, filename] = isPending ? segments.slice(1) : segments;
   const exactImage = filename?.match(/^([0-9a-f-]{36})\.(jpg|png|webp)$/i)?.[1];
   if (
-    segments.length !== 4
+    segments.length !== (isPending ? 5 : 4)
     || scope !== 'books'
     || keyOwnerId !== ownerId
     || keyBookId !== bookId
@@ -21,6 +23,11 @@ function assertStorageKey(storageKey, ownerId, bookId, imageId) {
       code: 'IMAGE_KEY_FORBIDDEN'
     });
   }
+  return { isPending, filename };
+}
+
+function imageError(code, message, statusCode) {
+  return new AppError(message, { code, statusCode });
 }
 
 async function requireOwnedBook(bookId, ownerId) {
@@ -51,23 +58,73 @@ export const mediaService = {
   async complete(ownerId, bookId, input) {
     await requireOwnedBook(bookId, ownerId);
     const data = completeUploadSchema.parse(input);
-    assertStorageKey(data.storageKey, ownerId, bookId, data.imageId);
+    storageService.assertImage(data);
+    const key = assertStorageKey(data.storageKey, ownerId, bookId, data.imageId);
+
+    const storageKey = key.isPending
+      ? `books/${ownerId}/${bookId}/${key.filename}`
+      : data.storageKey;
+    const existing = await mediaRepository.findById(data.imageId);
+    if (existing) {
+      if (existing.bookId !== bookId || existing.storageKey !== storageKey) {
+        throw imageError('IMAGE_UPLOAD_MISMATCH', 'Esse envio já foi associado a outra imagem.', 409);
+      }
+      if (!existing.storageKey) return existing;
+      const signed = await storageService.getPresignedGetUrl(existing.storageKey);
+      return { ...existing, url: signed.url, expiresAt: signed.expiresAt };
+    }
+
     await storageService.assertUploaded(data.storageKey, data);
 
+    let image;
     try {
-      return await mediaRepository.create({
+      if (key.isPending) {
+        await storageService.copy({ sourceKey: data.storageKey, destinationKey: storageKey });
+      }
+
+      image = await mediaRepository.complete({
         ...data,
         bookId,
-        url: storageService.getPublicUrl(data.storageKey)
+        ownerId,
+        storageKey,
+        url: null,
+        isCover: false
       });
     } catch (error) {
-      try {
-        await storageService.delete(data.storageKey);
-      } catch {
-        // O lifecycle do bucket é a segunda camada para objetos não vinculados.
+      if (storageKey !== data.storageKey) {
+        try {
+          await mediaRepository.enqueueCleanup(storageKey);
+          await storageCleanupService.process(storageKey);
+        } catch {
+          // O lifecycle limpa temporários; a reconciliação cobre objetos finais sem vínculo.
+        }
       }
+      if (key.isPending) await storageService.delete(data.storageKey).catch(() => undefined);
       throw error;
     }
+
+    if (key.isPending) await storageService.delete(data.storageKey).catch(() => undefined);
+    if (!image.storageKey) return image;
+    const signed = await storageService.getPresignedGetUrl(image.storageKey);
+    return { ...image, url: signed.url, expiresAt: signed.expiresAt };
+  },
+
+  async reorder(ownerId, bookId, input) {
+    await requireOwnedBook(bookId, ownerId);
+    if (Array.isArray(input?.imageIds) && input.imageIds.length > 3) {
+      throw imageError('IMAGE_ORDER_INVALID', 'Um livro pode ter até três fotos.', 422);
+    }
+    const { imageIds } = imageOrderSchema.parse(input);
+    if (new Set(imageIds).size !== imageIds.length) {
+      throw imageError('IMAGE_ORDER_INVALID', 'A ordem das fotos contém itens repetidos.', 422);
+    }
+
+    const images = await mediaRepository.reorder({ ownerId, bookId, imageIds });
+    return Promise.all(images.map(async (image) => {
+      if (!image.storageKey) return image;
+      const signed = await storageService.getPresignedGetUrl(image.storageKey);
+      return { ...image, url: signed.url, expiresAt: signed.expiresAt };
+    }));
   },
 
   async delete(ownerId, bookId, imageId) {
@@ -80,7 +137,7 @@ export const mediaService = {
       });
     }
 
-    await storageService.delete(image.storageKey);
-    await mediaRepository.delete(imageId);
+    const removed = await mediaRepository.remove({ ownerId, bookId, imageId });
+    if (removed?.storageKey) await storageCleanupService.process(removed.storageKey);
   }
 };
