@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   booksRepository: { findOwnedById: vi.fn() },
-  mediaRepository: { create: vi.fn(), findById: vi.fn(), delete: vi.fn() },
+  mediaRepository: { create: vi.fn(), findById: vi.fn(), delete: vi.fn(), reorder: vi.fn() },
   storageService: { assertUploaded: vi.fn(), getPublicUrl: vi.fn(), delete: vi.fn(), createPresignedUpload: vi.fn() }
 }));
 
@@ -22,6 +22,7 @@ describe('mediaService', () => {
     mocks.booksRepository.findOwnedById.mockResolvedValue({ id: bookId, ownerId });
     mocks.storageService.getPublicUrl.mockReturnValue('https://cdn.example/cover.jpg');
     mocks.mediaRepository.create.mockImplementation(async (data) => data);
+    mocks.mediaRepository.reorder.mockResolvedValue(true);
   });
 
   it('rejeita chave que apenas imita o prefixo do livro', async () => {
@@ -46,5 +47,27 @@ describe('mediaService', () => {
 
     await expect(mediaService.complete(ownerId, bookId, { ...base, storageKey })).rejects.toThrow('Banco indisponível');
     expect(mocks.storageService.delete).toHaveBeenCalledWith(storageKey);
+  });
+
+  it('persiste a ordem e devolve o livro atualizado', async () => {
+    const result = await mediaService.reorder(ownerId, bookId, { imageIds: [imageId] });
+
+    expect(mocks.mediaRepository.reorder).toHaveBeenCalledWith(bookId, [imageId]);
+    expect(result).toMatchObject({ id: bookId, images: [] });
+  });
+
+  it('rejeita IDs de imagem duplicados antes de persistir', async () => {
+    await expect(mediaService.reorder(ownerId, bookId, {
+      imageIds: [imageId, imageId]
+    })).rejects.toMatchObject({ name: 'ZodError' });
+
+    expect(mocks.mediaRepository.reorder).not.toHaveBeenCalled();
+  });
+
+  it('recusa uma lista que não corresponde às imagens atuais do livro', async () => {
+    mocks.mediaRepository.reorder.mockResolvedValue(false);
+
+    await expect(mediaService.reorder(ownerId, bookId, { imageIds: [imageId] }))
+      .rejects.toMatchObject({ code: 'IMAGE_ORDER_CONFLICT', statusCode: 409 });
   });
 });

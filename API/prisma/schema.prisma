@@ -120,10 +120,12 @@ model BookImage {
   mimeType   String?
   size       Int?
   isCover    Boolean  @default(false)
+  sortOrder  Int      @default(0) @map("sort_order")
   bookId     String   @map("book_id")
   book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
 
+  @@index([bookId, sortOrder])
   @@map("BookImage")
 }
 

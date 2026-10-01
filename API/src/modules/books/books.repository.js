@@ -3,7 +3,7 @@ import { env } from '../../config/env.js';
 
 const includeBook = {
   images: {
-    orderBy: [{ isCover: 'desc' }, { createdAt: 'asc' }]
+    orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }]
   },
   owner: {
     select: {

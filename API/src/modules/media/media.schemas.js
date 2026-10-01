@@ -12,3 +12,10 @@ export const completeUploadSchema = z.object({
   size: z.number().int().positive().max(8 * 1024 * 1024),
   isCover: z.boolean().default(false)
 });
+
+export const reorderImagesSchema = z.object({
+  imageIds: z.array(z.string().uuid()).max(3).refine(
+    (imageIds) => new Set(imageIds).size === imageIds.length,
+    'Cada imagem deve aparecer apenas uma vez.'
+  )
+});

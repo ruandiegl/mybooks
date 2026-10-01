@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { AppError } from '../../shared/errors/AppError.js';
 import { booksRepository } from '../books/books.repository.js';
+import { serializeBook } from '../books/books.serializer.js';
 import { mediaRepository } from './media.repository.js';
-import { completeUploadSchema, presignSchema } from './media.schemas.js';
+import { completeUploadSchema, presignSchema, reorderImagesSchema } from './media.schemas.js';
 import { storageService } from './storage.service.js';
 
 function assertStorageKey(storageKey, ownerId, bookId, imageId) {
@@ -68,6 +69,22 @@ export const mediaService = {
       }
       throw error;
     }
+  },
+
+  async reorder(ownerId, bookId, input) {
+    await requireOwnedBook(bookId, ownerId);
+    const { imageIds } = reorderImagesSchema.parse(input);
+    const reordered = await mediaRepository.reorder(bookId, imageIds);
+
+    if (!reordered) {
+      throw new AppError('A lista de fotos mudou. Atualize o livro e tente novamente.', {
+        statusCode: 409,
+        code: 'IMAGE_ORDER_CONFLICT'
+      });
+    }
+
+    const book = await booksRepository.findOwnedById(bookId, ownerId);
+    return serializeBook(book);
   },
 
   async delete(ownerId, bookId, imageId) {

@@ -10,6 +10,11 @@ export async function completeImage(req, res) {
   return res.status(201).json({ data: result });
 }
 
+export async function reorderImages(req, res) {
+  const result = await mediaService.reorder(req.currentUser.id, req.params.bookId, req.body);
+  return res.status(200).json({ data: result });
+}
+
 export async function deleteImage(req, res) {
   await mediaService.delete(req.currentUser.id, req.params.bookId, req.params.imageId);
   return res.status(204).send();
