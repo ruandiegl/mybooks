@@ -17,7 +17,7 @@ vi.mock('../src/config/env.js', () => ({ env }));
 const { storageService } = await import('../src/modules/media/storage.service.js');
 
 describe('storageService presigned R2 uploads', () => {
-  it('signs the book image content type without binding the URL to Content-Length', async () => {
+  it('keeps book image metadata headers out of the URL signature', async () => {
     const upload = await storageService.createPresignedUpload({
       ownerId: 'owner-id',
       bookId: 'book-id',
@@ -26,11 +26,11 @@ describe('storageService presigned R2 uploads', () => {
       size: 1234
     });
 
-    expect(new URL(upload.uploadUrl).searchParams.get('X-Amz-SignedHeaders')).toBe('content-type;host');
+    expect(new URL(upload.uploadUrl).searchParams.get('X-Amz-SignedHeaders')).toBe('host');
     expect(upload.headers).toEqual({ 'Content-Type': 'image/jpeg' });
   });
 
-  it('signs the avatar content type without binding the URL to Content-Length', async () => {
+  it('keeps avatar metadata headers out of the URL signature', async () => {
     const upload = await storageService.createPresignedAvatarUpload({
       ownerId: 'owner-id',
       imageId: 'image-id',
@@ -38,7 +38,7 @@ describe('storageService presigned R2 uploads', () => {
       size: 1234
     });
 
-    expect(new URL(upload.uploadUrl).searchParams.get('X-Amz-SignedHeaders')).toBe('content-type;host');
+    expect(new URL(upload.uploadUrl).searchParams.get('X-Amz-SignedHeaders')).toBe('host');
     expect(upload.headers).toEqual({ 'Content-Type': 'image/jpeg' });
   });
 });

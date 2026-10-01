@@ -84,10 +84,7 @@ export const storageService = {
         Key: storageKey,
         ContentType: mimeType
       }),
-      {
-        expiresIn: env.R2_PRESIGN_EXPIRES_IN,
-        signableHeaders: new Set(['content-type'])
-      }
+      { expiresIn: env.R2_PRESIGN_EXPIRES_IN }
     );
 
     return {
@@ -110,10 +107,7 @@ export const storageService = {
         Key: storageKey,
         ContentType: mimeType
       }),
-      {
-        expiresIn: env.R2_PRESIGN_EXPIRES_IN,
-        signableHeaders: new Set(['content-type'])
-      }
+      { expiresIn: env.R2_PRESIGN_EXPIRES_IN }
     );
     return {
       uploadUrl,
