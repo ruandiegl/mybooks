@@ -21,6 +21,9 @@
 		reverse_proxy {$API_UPSTREAM} {
 			header_up X-Forwarded-For {client_ip}
 			header_up X-Forwarded-Host {host}
+			# Railway terminates TLS and overwrites this header at its HTTPS edge.
+			# Preserve it instead of reporting the edge-to-Caddy HTTP connection.
+			header_up X-Forwarded-Proto {http.request.header.X-Forwarded-Proto}
 		}
 	}
 
