@@ -31,7 +31,11 @@ export const likesRepository = {
               select: {
                 id: true,
                 title: true,
-                images: { take: 1, orderBy: { createdAt: 'asc' }, select: { url: true } }
+                images: {
+                  take: 1,
+                  orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+                  select: { url: true }
+                }
               }
             }
           }
@@ -42,7 +46,7 @@ export const likesRepository = {
             title: true,
             images: {
               take: 1,
-              orderBy: { createdAt: 'asc' }
+              orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }]
             }
           }
         }
@@ -71,7 +75,7 @@ export const likesRepository = {
             },
             images: {
               take: 1,
-              orderBy: { createdAt: 'asc' }
+              orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }]
             }
           }
         }
