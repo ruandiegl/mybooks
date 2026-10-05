@@ -3,108 +3,40 @@ import { theme } from '../../styles/theme';
 
 export const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    aspectRatio: 3 / 4,
-    borderRadius: theme.radius.md,
-    overflow: 'hidden',
-    backgroundColor: theme.colors.surfaceMuted,
-    margin: theme.spacing.xs,
-  },
-  background: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  fallbackBackground: {
-    backgroundColor: theme.colors.surfaceMuted,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imageStyle: {
-    borderRadius: theme.radius.md,
-  },
-  fallbackTitle: {
-    fontFamily: theme.typography.semibold,
-    fontSize: 16,
-    color: theme.colors.mutedForeground,
-    textAlign: 'center',
-    padding: theme.spacing.md,
-    position: 'absolute',
+    padding: 0, borderRadius: theme.radius.md, overflow: 'hidden', marginBottom: theme.spacing.sm
   },
   topRow: {
-    padding: theme.spacing.sm,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    padding: theme.spacing.xs, flexDirection: 'row', gap: theme.spacing.xs,
+    alignItems: 'center', borderBottomWidth: 1, borderBottomColor: theme.colors.outline
   },
-  userSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    paddingRight: theme.spacing.sm,
-    paddingLeft: 2,
-    paddingVertical: 2,
-    borderRadius: theme.radius.pill,
-    flex: 1,
+  userSection: { flex: 1, gap: theme.spacing.xxs },
+  userName: { fontFamily: theme.typography.bold, fontSize: 13, lineHeight: 17, color: theme.colors.foreground },
+  userCaption: { fontFamily: theme.typography.medium, fontSize: 12, color: theme.colors.primary },
+  cover: { width: '100%', backgroundColor: theme.colors.surfaceMuted },
+  infoContainer: { padding: theme.spacing.xs, gap: theme.spacing.xxs, flexDirection: 'row', alignItems: 'center' },
+  bookTitle: { flex: 1, minHeight: 40, fontFamily: theme.typography.bold, fontSize: 15, lineHeight: 20, letterSpacing: -0.3, color: theme.colors.foreground },
+  relatedBook: {
+    minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xxs,
+    padding: theme.spacing.xs, borderTopWidth: 1, borderTopColor: theme.colors.outline,
+    backgroundColor: theme.colors.surfaceMuted
   },
-  userName: {
-    fontFamily: theme.typography.medium,
-    fontSize: 12,
-    color: theme.colors.white,
-    marginLeft: theme.spacing.xs,
-    flex: 1,
-  },
-  gradient: {
-    padding: theme.spacing.sm,
-    paddingTop: theme.spacing.xl,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-  },
-  infoContainer: {
-    flex: 1,
-    marginRight: theme.spacing.xs,
-  },
-  bookTitle: {
-    fontFamily: theme.typography.semibold,
-    fontSize: 14,
-    color: theme.colors.white,
-    marginBottom: theme.spacing.xxs,
-  },
-  cityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  userCity: {
-    fontFamily: theme.typography.regular,
-    fontSize: 11,
-    color: theme.colors.surfaceMuted,
-    marginLeft: 2,
-  },
+  relatedBookInfo: { flex: 1 },
+  relatedBookCaption: { fontFamily: theme.typography.regular, fontSize: 12, color: theme.colors.mutedForeground },
+  relatedBookTitle: { fontFamily: theme.typography.semibold, fontSize: 12, color: theme.colors.foreground },
   actionsContainer: {
-    flexDirection: 'row',
-    gap: theme.spacing.xs,
-  },
-  unavailableActions: {
-    color: theme.colors.white,
-    fontFamily: theme.typography.medium,
-    fontSize: 9,
-    maxWidth: 76,
-    textAlign: 'center',
+    flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.xs, padding: theme.spacing.xxs, marginTop: 'auto',
+    borderTopWidth: 1, borderTopColor: theme.colors.outline
   },
   actionButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
+    flex: 1, minWidth: 48, minHeight: 48, paddingHorizontal: theme.spacing.xxs, paddingVertical: theme.spacing.xs,
+    borderRadius: theme.radius.sm, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: theme.spacing.xxs
   },
-  dismissButton: {
-    backgroundColor: theme.colors.surface,
-  },
-  likeButton: {
-    backgroundColor: theme.colors.primary,
-  },
-  unlikeButton: {
-    backgroundColor: theme.colors.surface,
-  },
+  actionLabel: { flexShrink: 1, fontFamily: theme.typography.semibold, fontSize: 12, color: theme.colors.foreground, textAlign: 'center' },
+  dismissButton: { backgroundColor: theme.colors.surfaceMuted, borderWidth: 1, borderColor: theme.colors.outline },
+  likeButton: { backgroundColor: theme.colors.primary },
+  unlikeButton: { backgroundColor: theme.colors.surfaceMuted },
+  unlikeLabel: { color: theme.colors.danger },
+  unavailableActions: { flex: 1, minHeight: 48, padding: theme.spacing.xxs, fontFamily: theme.typography.regular, fontSize: 12, lineHeight: 18, color: theme.colors.mutedForeground, textAlign: 'center' },
+  disabled: { opacity: 0.48 },
+  pressed: { opacity: 0.76 }
 });

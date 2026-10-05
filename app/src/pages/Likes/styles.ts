@@ -3,16 +3,18 @@ import { theme } from '../../styles/theme';
 
 export const styles = StyleSheet.create({
   toggleContainer: {
-    paddingHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.md,
   },
   filtersRow: {
     flexDirection: 'row',
-    paddingHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.md,
     gap: theme.spacing.sm,
+    flexWrap: 'wrap',
   },
   filterChip: {
+    minHeight: 48,
+    maxWidth: '100%',
+    justifyContent: 'center',
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.sm,
     backgroundColor: theme.colors.surfaceMuted,
@@ -31,14 +33,17 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   listContent: {
-    paddingHorizontal: theme.spacing.xs, // Using xs because LikeCard has xs margin (total md)
     paddingBottom: theme.spacing.xl,
+  },
+  gridRow: {
+    width: '100%',
+    maxWidth: 560,
+    alignSelf: 'center',
+    justifyContent: 'space-between',
+    gap: theme.spacing.sm,
   },
   listEmpty: {
     flex: 1,
-  },
-  columnWrapper: {
-    justifyContent: 'flex-start',
   },
   footerLoader: {
     marginVertical: theme.spacing.lg,

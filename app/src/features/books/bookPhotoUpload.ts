@@ -2,7 +2,7 @@ import { File, UploadType } from 'expo-file-system';
 import { Platform } from 'react-native';
 import { api } from '../../services/api';
 import type { ApiEnvelope, Book, BookImage } from '../../types/api';
-import { BookPhotoError, type BookPhotoDraft } from './bookPhotos';
+import { BookPhotoError, MAX_BOOK_PHOTO_SIZE, type BookPhotoDraft } from './bookPhotos';
 
 type PresignedUpload = {
   imageId: string;
@@ -13,6 +13,19 @@ type PresignedUpload = {
 };
 
 const imagesEndpoint = (bookId: string) => `/api/v1/books/${encodeURIComponent(bookId)}/images`;
+const safeStorageErrorCodes = new Set([
+  'AccessDenied',
+  'InvalidAccessKeyId',
+  'NoSuchBucket',
+  'RequestExpired',
+  'RequestTimeTooSkewed',
+  'SignatureDoesNotMatch'
+]);
+
+function safeStorageErrorCode(body: string) {
+  const code = body.match(/<Code>\s*([^<\s]+)\s*<\/Code>/i)?.[1];
+  return code && safeStorageErrorCodes.has(code) ? code : undefined;
+}
 
 export class BookPhotoUploadError extends Error {
   constructor(message: string, public readonly code: string, public readonly status?: number) {
@@ -27,32 +40,53 @@ export function bookPhotoPartialSaveMessage(error: unknown) {
 }
 
 export async function uploadBookPhoto(bookId: string, photo: BookPhotoDraft): Promise<BookImage> {
-  if (!photo.mimeType || !photo.size) {
-    throw new BookPhotoError('Escolha novamente a foto que não pôde ser enviada.', 'IMAGE_SIZE_INVALID');
+  if (!photo.mimeType) {
+    throw new BookPhotoError('Escolha novamente a foto que não pôde ser enviada.', 'IMAGE_TYPE_INVALID');
+  }
+
+  let localFile: File | undefined;
+  let blob: Blob | undefined;
+  let uploadSize = photo.size;
+  try {
+    if (Platform.OS === 'web') {
+      blob = await (await fetch(photo.uri)).blob();
+      uploadSize = blob.size;
+    } else {
+      localFile = new File(photo.uri);
+      uploadSize = localFile.size;
+    }
+  } catch {
+    throw new BookPhotoUploadError(
+      'Não foi possível ler a foto selecionada. Escolha-a novamente.',
+      'BOOK_PHOTO_FILE_UNREADABLE'
+    );
+  }
+  if (!Number.isInteger(uploadSize) || !uploadSize || uploadSize > MAX_BOOK_PHOTO_SIZE) {
+    throw new BookPhotoError('Cada foto precisa ter entre 1 byte e 8 MB.', 'IMAGE_SIZE_INVALID');
   }
 
   const presign = (await api.post<ApiEnvelope<PresignedUpload>>(
     `${imagesEndpoint(bookId)}/presign`,
-    { mimeType: photo.mimeType, size: photo.size }
+    { mimeType: photo.mimeType, size: uploadSize }
   )).data.data;
   let status: number;
+  let responseBody = '';
   try {
     if (Platform.OS === 'web') {
-      const blob = await (await fetch(photo.uri)).blob();
-      if (blob.size === 0) throw new BookPhotoError('A foto está vazia. Escolha outra imagem.', 'IMAGE_SIZE_INVALID');
       const response = await fetch(presign.uploadUrl, {
         method: 'PUT',
         headers: presign.headers,
-        body: blob
+        body: blob as Blob
       });
       status = response.status;
     } else {
-      const response = await new File(photo.uri).upload(presign.uploadUrl, {
+      const response = await localFile!.upload(presign.uploadUrl, {
         httpMethod: 'PUT',
         uploadType: UploadType.BINARY_CONTENT,
-        headers: presign.headers
+        headers: { ...presign.headers, 'Content-Length': String(uploadSize) }
       });
       status = response.status;
+      responseBody = response.body;
     }
   } catch (error) {
     if (error instanceof BookPhotoError) throw error;
@@ -62,8 +96,9 @@ export async function uploadBookPhoto(bookId: string, photo: BookPhotoDraft): Pr
     );
   }
   if (status < 200 || status >= 300) {
+    const providerCode = safeStorageErrorCode(responseBody);
     throw new BookPhotoUploadError(
-      `O armazenamento recusou a foto (HTTP ${status}).`,
+      `O armazenamento recusou a foto (HTTP ${status}${providerCode ? `: ${providerCode}` : ''}).`,
       'BOOK_PHOTO_UPLOAD_REJECTED',
       status
     );
@@ -74,7 +109,7 @@ export async function uploadBookPhoto(bookId: string, photo: BookPhotoDraft): Pr
       imageId: presign.imageId,
       storageKey: presign.storageKey,
       mimeType: photo.mimeType,
-      size: photo.size
+      size: uploadSize
     })).data.data;
   } catch {
     throw new BookPhotoUploadError(

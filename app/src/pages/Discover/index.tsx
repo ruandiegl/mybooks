@@ -1,26 +1,32 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useInfiniteQuery, useMutation, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import * as Crypto from 'expo-crypto';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, Alert, Animated, Image, PanResponder, Pressable, Text, useWindowDimensions, View } from 'react-native';
+import { AccessibilityInfo, Alert, Animated, PanResponder, Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { AppScreen } from '../../components/AppScreen';
+import { Avatar } from '../../components/Avatar';
+import { BookPhoto } from '../../components/BookPhoto';
 import { Card } from '../../components/Card';
 import { IsbnBadge } from '../../components/IsbnBadge';
 import { StateView } from '../../components/StateView';
 import { TopBar } from '../../components/TopBar';
 import { getSignedBookImageRefreshDelay } from '../../features/books/bookPhotos';
+import { getBookGalleryPhotos } from '../../features/books/bookPresentation';
 import { api, apiErrorMessage } from '../../services/api';
 import { theme } from '../../styles/theme';
 import type { ApiEnvelope, Book, Match, Paginated } from '../../types/api';
+import type { RootStackParamList } from '../../types/navigation';
 import { styles } from './styles';
 
 type InteractionResult = { interaction: { id: string }; match?: Match | null };
 
 export function Discover() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const queryClient = useQueryClient();
   const { width, height } = useWindowDimensions();
   const landscape = width > height;
-  const coverHeight = landscape ? Math.max(150, Math.min(250, height - 190)) : Math.min(width * 1.12, 490);
   const pan = useRef(new Animated.ValueXY()).current;
   const [reduceMotion, setReduceMotion] = useState(false);
   const queryKey = ['books', 'discover'] as const;
@@ -33,6 +39,7 @@ export function Discover() {
   });
   const books = query.data?.pages.flatMap((page) => page.items) || [];
   const book = books[0];
+  const photos = book ? getBookGalleryPhotos(book) : [];
 
   useEffect(() => {
     void AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
@@ -66,35 +73,57 @@ export function Discover() {
   }, [books.length, query.hasNextPage, query.isFetchingNextPage, query.fetchNextPage]);
 
   const panResponder = useMemo(() => PanResponder.create({
-    onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dx) > 8 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
+    onMoveShouldSetPanResponder: (_, gesture) => !mutation.isPending && Math.abs(gesture.dx) > 12 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.5,
     onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], { useNativeDriver: false }),
     onPanResponderRelease: (_, gesture) => {
       if (mutation.isPending) return;
       if (gesture.dx > 82) mutation.mutate('LIKE');
       else if (gesture.dx < -82) mutation.mutate('PASS');
       else resetCard();
-    }
+    },
+    onPanResponderTerminate: resetCard
   }), [mutation, pan, reduceMotion]);
   const cardStyle = { transform: [{ translateX: pan.x }, { translateY: pan.y }, { rotate: pan.x.interpolate({ inputRange: [-180, 0, 180], outputRange: ['-7deg', '0deg', '7deg'] }) }] };
 
   return (
     <AppScreen>
       <TopBar eyebrow="Trocas possíveis" title="Descobrir" />
-      <View style={styles.body}>
+      <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
         {query.isLoading ? <StateView loading title="Buscando novas histórias" /> : query.isError ? <StateView title="A descoberta falhou" icon="cloud-off" actionLabel="Tentar novamente" onAction={() => query.refetch()} /> : !book ? <StateView title="Você chegou ao fim por agora" description="Novos livros aparecem aqui quando outros leitores publicam." icon="done-all" actionLabel="Atualizar" onAction={() => query.refetch()} /> : <>
           <View style={styles.deck}>
-            <Animated.View style={[styles.gesture, cardStyle]} {...panResponder.panHandlers}>
-              <Card style={[styles.card, landscape && styles.cardLandscape]}>
-                <View style={[styles.cover, landscape && styles.coverLandscape, { height: coverHeight }]}>
-                  {book.coverUrl ? <Image source={{ uri: book.coverUrl }} accessibilityLabel={'Capa de ' + book.title} style={styles.image} /> : <View style={styles.fallback}><Text style={styles.fallbackText}>{book.title}</Text></View>}
-                  {book.hasIsbnBadge ? <View style={styles.badge}><IsbnBadge /></View> : null}
-                </View>
-                <View style={[styles.details, landscape && styles.detailsLandscape]}>
-                  <Text style={styles.title}>{book.title}</Text>
-                  <Text style={styles.author}>{book.authors.join(', ') || 'Autor não informado'}</Text>
-                  <Text style={styles.owner}>{book.owner?.name || 'Leitor TrocaLivros'}{book.owner?.city ? ' · ' + book.owner.city : ''}</Text>
-                </View>
-              </Card>
+            <Animated.View style={[styles.gesture, landscape && styles.gestureLandscape, cardStyle]} {...panResponder.panHandlers}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Ver ${book.title}, de ${book.authors.join(', ') || 'autor não informado'}. Livro de ${book.owner?.name || 'Leitor TrocaLivros'}`}
+                accessibilityHint="Abre todas as fotos e informações do livro, sem curtir nem dispensar."
+                accessibilityState={{ disabled: mutation.isPending }}
+                disabled={mutation.isPending}
+                onPress={() => navigation.navigate('BookDetails', { bookId: book.id })}
+                style={({ pressed }) => [styles.cardPressable, pressed && styles.cardPressed]}
+              >
+                <Card style={styles.card}>
+                  <View style={styles.ownerRow}>
+                    <Avatar name={book.owner?.name || 'Leitor TrocaLivros'} url={book.owner?.avatarUrl} size={44} />
+                    <View style={styles.ownerInfo}>
+                      <Text style={styles.ownerName} numberOfLines={1}>{book.owner?.name || 'Leitor TrocaLivros'}</Text>
+                      <Text style={styles.ownerCity} numberOfLines={1}>{book.owner?.city || 'Livro em circulação'}</Text>
+                    </View>
+                    <MaterialIcons name="chevron-right" size={24} color={theme.colors.primary} accessible={false} />
+                  </View>
+                  <View style={[styles.cardContent, landscape && styles.cardLandscape]}>
+                    <View style={[styles.cover, landscape && styles.coverLandscape]}>
+                      <BookPhoto key={book.id + (photos[0]?.url ?? '') + query.dataUpdatedAt} url={photos[0]?.url} hasPhoto={Boolean(photos[0])} title={book.title} label={`Capa de ${book.title}`} />
+                      {book.hasIsbnBadge ? <View style={styles.badge}><IsbnBadge /></View> : null}
+                      {photos.length > 1 ? <View style={styles.photoCount}><MaterialIcons name="photo-library" size={16} color={theme.colors.foreground} accessible={false} /><Text style={styles.photoCountText}>{photos.length} fotos</Text></View> : null}
+                    </View>
+                    <View style={[styles.details, landscape && styles.detailsLandscape]}>
+                      <Text style={styles.title} numberOfLines={2}>{book.title}</Text>
+                      <Text style={styles.author} numberOfLines={2}>{book.authors.join(', ') || 'Autor não informado'}</Text>
+                      <View style={styles.viewHint}><Text style={styles.viewHintText}>Ver livro e fotos</Text><MaterialIcons name="arrow-forward" size={18} color={theme.colors.primary} accessible={false} /></View>
+                    </View>
+                  </View>
+                </Card>
+              </Pressable>
             </Animated.View>
           </View>
           <View style={styles.actions}>
@@ -102,7 +131,7 @@ export function Discover() {
             <Pressable accessibilityRole="button" accessibilityLabel="Gostei do livro" accessibilityState={{ disabled: mutation.isPending }} disabled={mutation.isPending} style={({ pressed }) => [styles.action, styles.like, mutation.isPending && styles.disabled, pressed && !mutation.isPending && styles.likePressed]} onPress={() => mutation.mutate('LIKE')}><MaterialIcons name="favorite" size={29} color={theme.colors.white} /></Pressable>
           </View>
         </>}
-      </View>
+      </ScrollView>
     </AppScreen>
   );
 }

@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   put: vi.fn(),
   delete: vi.fn(),
   fileUpload: vi.fn(),
+  fileSize: 5,
   fileUri: null as string | null,
   uploadUrl: null as string | null,
   uploadOptions: null as Record<string, unknown> | null
@@ -14,6 +15,10 @@ vi.mock('expo-file-system', () => ({
   File: class {
     constructor(uri: string) {
       mocks.fileUri = uri;
+    }
+
+    get size() {
+      return mocks.fileSize;
     }
 
     upload(url: string, options: Record<string, unknown>) {
@@ -38,6 +43,7 @@ let fetchMock: ReturnType<typeof vi.fn>;
 describe('book photo upload contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.fileSize = 5;
     mocks.post
       .mockResolvedValueOnce({ data: { data: {
         imageId: '30000000-0000-4000-8000-000000000003',
@@ -80,7 +86,7 @@ describe('book photo upload contract', () => {
     expect(mocks.uploadOptions).toEqual({
       httpMethod: 'PUT',
       uploadType: 0,
-      headers: { 'Content-Type': 'image/jpeg' }
+      headers: { 'Content-Type': 'image/jpeg', 'Content-Length': '5' }
     });
     expect(fetchMock).not.toHaveBeenCalled();
     expect(mocks.post).toHaveBeenNthCalledWith(2, '/api/v1/books/book%2Fone/images/complete', {
@@ -90,6 +96,30 @@ describe('book photo upload contract', () => {
       size: 5
     });
     expect(image).toMatchObject({ id: '30000000-0000-4000-8000-000000000003', sortOrder: 0, isCover: true });
+  });
+
+  it('uses the local file size for presign, PUT, and completion', async () => {
+    mocks.fileSize = 5;
+
+    await uploadBookPhoto('book', {
+      id: 'local', uri: 'file://cover.jpg', mimeType: 'image/jpeg', size: 73
+    });
+
+    expect(mocks.post).toHaveBeenNthCalledWith(1, '/api/v1/books/book/images/presign', {
+      mimeType: 'image/jpeg',
+      size: 5
+    });
+    expect(mocks.uploadOptions).toEqual({
+      httpMethod: 'PUT',
+      uploadType: 0,
+      headers: { 'Content-Type': 'image/jpeg', 'Content-Length': '5' }
+    });
+    expect(mocks.post).toHaveBeenNthCalledWith(2, '/api/v1/books/book/images/complete', {
+      imageId: '30000000-0000-4000-8000-000000000003',
+      storageKey: 'pending/books/owner/book/image.jpg',
+      mimeType: 'image/jpeg',
+      size: 5
+    });
   });
 
   it('não confirma quando o PUT falha', async () => {
@@ -103,6 +133,26 @@ describe('book photo upload contract', () => {
       status: 403
     });
     expect(mocks.post).toHaveBeenCalledOnce();
+  });
+
+  it('mostra somente o código seguro devolvido pelo armazenamento', async () => {
+    mocks.fileUpload.mockResolvedValue({
+      status: 403,
+      body: '<Error><Code>SignatureDoesNotMatch</Code><Message>private signature data</Message></Error>',
+      headers: {}
+    });
+
+    const error = await uploadBookPhoto('book', {
+      id: 'local', uri: 'file://cover.jpg', mimeType: 'image/jpeg', size: 5
+    }).then(() => null, (failure: Error) => failure);
+
+    expect(error).toMatchObject({
+      name: 'BookPhotoUploadError',
+      code: 'BOOK_PHOTO_UPLOAD_REJECTED',
+      status: 403,
+      message: 'O armazenamento recusou a foto (HTTP 403: SignatureDoesNotMatch).'
+    });
+    expect(error?.message).not.toContain('private signature data');
   });
 
   it('preserves the safe storage status in the partial-save message', () => {

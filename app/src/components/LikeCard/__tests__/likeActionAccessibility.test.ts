@@ -5,7 +5,7 @@ describe('getLikeActionAccessibility', () => {
   it('provides accessible labels for received-like actions', () => {
     const accessibility = getLikeActionAccessibility('Ana', 'A Vida Invisível');
     expect(accessibility.dismiss).toEqual({
-      accessibilityRole: 'button', accessibilityLabel: 'Dispensar curtida em A Vida Invisível de Ana'
+      accessibilityRole: 'button', accessibilityLabel: 'Dispensar curtida de Ana no seu livro A Vida Invisível'
     });
     expect(accessibility.likeBack).toEqual({
       accessibilityRole: 'button', accessibilityLabel: 'Curtir de volta o livro de Ana'

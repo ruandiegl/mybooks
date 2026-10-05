@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   appendBookPhotos,
   createBookPhoto,
+  getBookCoverUrl,
   getSignedBookImageRefreshDelay,
   moveBookPhoto,
   removeBookPhoto
@@ -10,6 +11,16 @@ import {
 const photo = (id: string) => ({ id, uri: `file://${id}.jpg`, mimeType: 'image/jpeg' as const, size: 1024 });
 
 describe('book photo drafts', () => {
+  it('uses the saved cover photo when the book summary has no coverUrl', () => {
+    expect(getBookCoverUrl({
+      coverUrl: null,
+      images: [
+        { url: 'https://cdn.example/book-cover.jpg', isCover: true },
+        { url: 'https://cdn.example/book-detail.jpg', isCover: false }
+      ]
+    })).toBe('https://cdn.example/book-cover.jpg');
+  });
+
   it('validates supported formats and per-photo size', () => {
     expect(createBookPhoto({ uri: 'file://cover.jpg', mimeType: 'image/jpeg', fileSize: 1024 }, 'one'))
       .toMatchObject({ id: 'one', uri: 'file://cover.jpg', mimeType: 'image/jpeg', size: 1024 });

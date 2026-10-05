@@ -20,13 +20,21 @@ Após confirmação, os guards derivam `auth → profile → books → app`. Per
 
 ## Navegação principal
 
-O app autenticado exibe 5 abas na barra inferior: **Descobrir**, **Curtidas**, **Biblioteca**, **Mensagens** e **Perfil**. No Android/Web, a tab bar usa `@react-navigation/bottom-tabs` com ícones MaterialIcons. No iOS, usa `@bottom-tabs/react-navigation` com SF Symbols nativos (`sparkles`, `heart.fill`, `books.vertical`, `bubble.left.and.bubble.right`, `person.crop.circle`) e efeito de translucidez.
+O app autenticado exibe 5 abas na barra inferior: **Descobrir**, **Biblioteca**, **Curtidas**, **Mensagens** e **Perfil**, com Curtidas na posição central. No Android/Web, a tab bar usa `@react-navigation/bottom-tabs` com ícones MaterialIcons. No iOS, usa `@bottom-tabs/react-navigation` com SF Symbols nativos (`sparkles`, `books.vertical`, `heart.fill`, `bubble.left.and.bubble.right`, `person.crop.circle`) e efeito de translucidez.
 
 Telas acessíveis via push/modal a partir das tabs: `BookCreate` (modal), `BookDetails`, `BookEdit` (modal), `Matches` e `Chat`.
 
+## Descobrir e visualização do livro
+
+O card do Descobrir ocupa o espaço disponível, com avatar/nome/cidade do dono no topo, capa inteira (`contain`), título e autores. Tocar no card abre `BookDetails`, sem gerar curtida ou dispensa. Os gestos horizontais e os botões de curtir/dispensar permanecem; rolagem vertical permite acessar o conteúdo em telas pequenas, paisagem ou com fontes ampliadas.
+
+`BookDetails` apresenta galeria na ordem salva (primeira foto = capa), contador, miniaturas e botões anterior/próxima como alternativas ao swipe. Inclui dono, disponibilidade, título/subtítulo, autores, sinopse, editora, ano, páginas, ISBN e assuntos. Não anuncia condição física ou outros dados que a API ainda não fornece. URLs privadas mantêm renovação automática; há recarga manual e fallback para fotos ausentes/com falha. Capas externas legadas também aparecem na galeria.
+
+O seed local adiciona uma foto de capa a cada livro demonstrativo com galeria vazia, sem substituir fotos enviadas. Para os 12 livros já existentes no Railway, `API/prisma/seed-book-photos.sql` faz apenas esse preenchimento, de forma repetível e sem alterar usuários, livros ou curtidas. São fixtures externas já servidas pela API; uploads reais continuam no R2. Não execute o seed completo em produção.
+
 ## Curtidas
 
-A aba Curtidas exibe um grid de 2 colunas com as curtidas recebidas (quem curtiu os livros do usuário). Cada card mostra a capa do livro curtido como fundo, avatar e nome do ator no topo, e botões de curtir de volta e dispensar quando há um livro disponível de quem enviou a curtida. Um toggle alterna para "Minhas curtidas" (livros que o usuário curtiu), onde é possível remover a curtida com confirmação. Falhas ao consultar qualquer uma das listas mostram uma mensagem com ação de tentar novamente em vez de apresentar a lista como vazia.
+A aba Curtidas usa uma grade de duas colunas nas curtidas recebidas e em "Minhas curtidas" (2×2 para quatro itens, com rolagem para os demais). Os cards compactos mantêm avatar e nome no topo, capa inteira e título; o toque abre `BookDetails` com todas as fotos e os dados da edição. Nas recebidas, o texto "Curtiu seu livro" identifica que a capa principal é do livro do usuário que recebeu a curtida. Quando há um livro disponível de quem enviou a curtida, um atalho separado "Para troca" permite visualizar esse livro; os botões com ícones de curtir de volta e dispensar continuam respondendo ao livro dessa pessoa e têm rótulos acessíveis. Em "Minhas curtidas", a cidade aparece no topo quando informada, e "Remover" solicita confirmação. As ações têm áreas de toque de pelo menos 48 e são controles separados da área que abre os detalhes, evitando navegação acidental. Um item isolado na última linha mantém a largura de uma coluna. Falhas ao consultar qualquer uma das listas mostram uma mensagem com ação de tentar novamente em vez de apresentar a lista como vazia.
 
 O acesso gratuito de 30 dias libera a lista e a identidade das curtidas recebidas e likes ilimitados. Sem Premium, o app mantém a contagem agregada de curtidas pendentes e a lista de curtidas enviadas; o limite é de 15 livros curtidos por dia local. A oferta depende de aceite explícito e pode ser aberta pelo perfil; os cards semanal, mensal e anual apenas dizem “Em breve”. O app esconde identidades no prazo exato calculado a partir do relógio do servidor, limpa o cache correspondente e consulta novamente ao voltar ao primeiro plano.
 

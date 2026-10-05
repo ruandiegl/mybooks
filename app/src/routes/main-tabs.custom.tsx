@@ -52,8 +52,8 @@ export function MainTabs() {
       })}
     >
       <Tab.Screen name="Discover" component={Discover} options={{ title: 'Descobrir' }} />
-      <Tab.Screen name="Likes" component={Likes} options={{ title: 'Curtidas', tabBarBadge: likesCount > 0 ? likesCount : undefined }} />
       <Tab.Screen name="Library" component={Library} options={{ title: 'Biblioteca' }} />
+      <Tab.Screen name="Likes" component={Likes} options={{ title: 'Curtidas', tabBarBadge: likesCount > 0 ? likesCount : undefined }} />
       <Tab.Screen name="Messages" component={Messages} options={{ title: 'Mensagens' }} />
       <Tab.Screen name="Profile" component={Profile} options={{ title: 'Perfil' }} />
     </Tab.Navigator>
