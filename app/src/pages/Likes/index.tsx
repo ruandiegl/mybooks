@@ -21,10 +21,12 @@ import { usePremiumStatus } from '../../features/premium/usePremiumStatus';
 import { useSession } from '../../providers/SessionProvider';
 import { styles } from './styles';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
-import type { MainTabParamList } from '../../types/navigation';
+import type { CompositeScreenProps } from '@react-navigation/native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { MainTabParamList, RootStackParamList } from '../../types/navigation';
 import { getLikesViewState } from './likesViewState';
 
-type Props = BottomTabScreenProps<MainTabParamList, 'Likes'>;
+type Props = CompositeScreenProps<BottomTabScreenProps<MainTabParamList, 'Likes'>, NativeStackScreenProps<RootStackParamList, 'Main'>>;
 
 type TabType = 'received' | 'sent';
 type SortType = 'desc' | 'asc';
@@ -196,6 +198,9 @@ export function Likes({ navigation }: Props) {
         bookCoverUrl={item.book.coverUrl}
         likedAt={item.likedAt}
         disabled={interactionMutation.isPending}
+        onPress={() => navigation.navigate('BookDetails', { bookId: item.book.id })}
+        relatedBookTitle={actorBook?.title}
+        onOpenRelatedBook={actorBook ? () => navigation.navigate('BookDetails', { bookId: actorBook.id }) : undefined}
         onLikeBack={actorBook
           ? () => interactionMutation.mutate({ targetBookId: actorBook.id, action: 'LIKE' })
           : undefined}
@@ -216,6 +221,7 @@ export function Likes({ navigation }: Props) {
       bookCoverUrl={item.book.coverUrl}
       likedAt={item.likedAt}
       disabled={interactionMutation.isPending}
+      onPress={() => navigation.navigate('BookDetails', { bookId: item.book.id })}
       onUnlike={() => handleUnlike(item.book.id)}
     />
   );
@@ -283,12 +289,13 @@ export function Likes({ navigation }: Props) {
         <StateView title="Não foi possível carregar suas curtidas" description="Confira a conexão e tente novamente." icon="cloud-off" actionLabel="Tentar novamente" onAction={() => refetchSent()} />
       ) : likesViewState === 'received' ? (
         <FlatList<ReceivedLike>
+          key="received-grid-2"
           data={receivedItems}
           keyExtractor={(item) => item.id}
           renderItem={renderReceivedItem}
           numColumns={2}
+          columnWrapperStyle={styles.gridRow}
           contentContainerStyle={[styles.listContent, receivedItems.length === 0 && styles.listEmpty]}
-          columnWrapperStyle={receivedItems.length >= 2 ? styles.columnWrapper : undefined}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
           onEndReached={() => { if (hasNextReceived) fetchNextReceived(); }}
@@ -298,12 +305,13 @@ export function Likes({ navigation }: Props) {
         />
       ) : (
         <FlatList<SentLike>
+          key="sent-grid-2"
           data={sentItems}
           keyExtractor={(item) => item.id}
           renderItem={renderSentItem}
           numColumns={2}
+          columnWrapperStyle={styles.gridRow}
           contentContainerStyle={[styles.listContent, sentItems.length === 0 && styles.listEmpty]}
-          columnWrapperStyle={sentItems.length >= 2 ? styles.columnWrapper : undefined}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
           onEndReached={() => { if (hasNextSent) fetchNextSent(); }}

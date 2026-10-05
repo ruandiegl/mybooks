@@ -48,20 +48,20 @@ export function MainTabs() {
         }}
       />
       <Tab.Screen
+        name="Library"
+        component={Library}
+        options={{
+          title: 'Biblioteca',
+          tabBarIcon: () => ({ sfSymbol: 'books.vertical' })
+        }}
+      />
+      <Tab.Screen
         name="Likes"
         component={Likes}
         options={{
           title: 'Curtidas',
           tabBarIcon: () => ({ sfSymbol: 'heart.fill' }),
           tabBarBadge: likesCount > 0 ? likesCount.toString() : undefined
-        }}
-      />
-      <Tab.Screen
-        name="Library"
-        component={Library}
-        options={{
-          title: 'Biblioteca',
-          tabBarIcon: () => ({ sfSymbol: 'books.vertical' })
         }}
       />
       <Tab.Screen

@@ -420,6 +420,22 @@ async function seed() {
       create: { id: book.id, ...data },
       update: data
     });
+
+    // Photo fixtures only fill empty galleries; never replace uploaded/R2 photos.
+    const existingPhoto = await prisma.bookImage.findFirst({ where: { bookId: book.id }, select: { id: true } });
+    if (!existingPhoto && data.coverExternalUrl) {
+      await prisma.bookImage.createMany({
+        data: [{
+          id: book.id.replace(/^30000000/, '80000000'),
+          bookId: book.id,
+          url: data.coverExternalUrl,
+          mimeType: 'image/jpeg',
+          isCover: true,
+          sortOrder: 0
+        }],
+        skipDuplicates: true
+      });
+    }
   }
 
   const localUser = usersBySeedKey.get('dev-mybooks-user');

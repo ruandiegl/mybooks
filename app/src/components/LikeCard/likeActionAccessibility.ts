@@ -10,7 +10,7 @@ export function getLikeActionAccessibility(userName: string, bookTitle: string) 
   });
 
   return {
-    dismiss: button(`Dispensar curtida em ${bookTitle} de ${userName}`),
+    dismiss: button(`Dispensar curtida de ${userName} no seu livro ${bookTitle}`),
     likeBack: button(`Curtir de volta o livro de ${userName}`),
     unlike: button(`Remover curtida enviada para ${userName}`)
   };

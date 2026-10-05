@@ -8,6 +8,18 @@ export type SignedBookImageSource = {
   images?: Array<{ expiresAt?: string | null }> | null;
 };
 
+type BookCoverSource = {
+  coverUrl?: string | null;
+  images?: Array<{ url?: string | null; isCover?: boolean }> | null;
+};
+
+export function getBookCoverUrl(book: BookCoverSource): string | null {
+  return book.images?.find((image) => image.isCover)?.url
+    || book.images?.[0]?.url
+    || book.coverUrl
+    || null;
+}
+
 export function getSignedBookImageRefreshDelay(
   books: Array<SignedBookImageSource | null | undefined>,
   now = Date.now()
