@@ -9,7 +9,7 @@ type Props={avatar?:AvatarDescriptor;name:string;busy:boolean;error?:string;onCh
 export function AvatarPicker({avatar,name,busy,error,onChoose,onRemove,onOpenSettings}:Props){
  return <View style={styles.wrapper}>
   <Pressable accessibilityRole="button" accessibilityLabel="Escolher ou alterar foto de perfil" accessibilityState={{disabled:busy,busy}} disabled={busy} onPress={onChoose} style={({pressed})=>[styles.avatar,pressed&&styles.pressed]}>
-   <Avatar name={name} url={avatar?.avatarUrl} size={104}/>
+   <Avatar name={name} url={avatar?.avatarUrl} version={avatar?.avatarVersion} size={104}/>
    <View style={styles.edit}><MaterialIcons name="photo-camera" size={16} color={theme.colors.white} accessible={false}/></View>
   </Pressable>
   <Text style={styles.help}>{busy?'Aguarde a foto terminar de salvar…':'Toque para escolher uma foto e ajustar o círculo.'}</Text>

@@ -149,3 +149,5 @@ Após a conciliação documental, a integração de código preservou as funcion
 05/10/2026 — plano 009 implementado em codex/foto-perfil-usuario-r2: galeria/crop circular, PNG local/JPEG final, grants/CAS/cleanup, DTOs privados renováveis e perfil/onboarding. Código em revisão; main, Railway e R2 não modificados/publicados nesta execução.
 
 Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).
+
+05/10/2026 — revisão independente do plano 009 e fix pass: hooks de Matches, recorte Web atualizado por controles, baseline de pinch/resize, coordenação texto/foto, renovação no perfil/onboarding, liberação de Blob atrasado e proteção de conta/versão/cache. Suítes finais: API 258 passaram (7 condicionais pulados), app 141; lint/tipos/Prisma e exports Web/Android/PWA passaram. Uma melhoria menor de cobertura do relógio ficou documentada; integração e produção não executadas.

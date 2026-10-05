@@ -46,3 +46,5 @@ Migração em PostgreSQL limpo, entrega Resend, R2, dois usuários no Socket.IO 
 Testes reais de grants: DATABASE_URL e AVATAR_TEST_DATABASE_URL apontam para banco descartável no loopback, já migrado; executar npm test -- tests/avatar.repository.integration.test.js em API/. O teste rejeita host não-loopback e limpa só suas fixtures. Suites/builds locais não aprovam R2 ou aparelhos físicos.
 
 Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).
+
+A revisão do plano 009 acrescentou testes com componentes/hooks realmente montados (RTL/jsdom), incluindo transições assíncronas, cropper real, clocks, sessão e liberação de seleção atrasada. As dependências são dev; o normalizador e o PostgreSQL têm testes separados. Evidência final: API 258 passaram/7 condicionais pulados e app 141 passaram; aceites físicos/R2 permanecem separados.

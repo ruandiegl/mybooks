@@ -161,8 +161,8 @@ export function Profile({ navigation }: Props) {
       } />
       <View style={styles.identity}>
         <View style={[styles.identityRow, stackedIdentity && styles.identityStacked]}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Alterar foto de perfil" disabled={avatarEditor.busy} onPress={avatarEditor.choose}>
-            <Avatar name={profile?.name || 'Leitor TrocaLivros'} url={profile?.avatarUrl} version={profile?.avatarVersion} onImageError={() => { void session.refreshUser().catch(() => undefined); }} size={72} />
+          <Pressable accessibilityRole="button" accessibilityLabel="Alterar foto de perfil" disabled={avatarEditor.busy || saveMutation.isPending} onPress={avatarEditor.choose}>
+            <Avatar name={profile?.name || 'Leitor TrocaLivros'} url={profile?.avatarUrl} version={profile?.avatarVersion} onImageError={session.refreshAvatar} size={72} />
           </Pressable>
           <View style={[styles.identityCopy, stackedIdentity && styles.identityCopyStacked]}>
             <Text accessibilityRole="header" style={styles.name}>{profile?.name}</Text>
@@ -266,7 +266,7 @@ export function Profile({ navigation }: Props) {
               <View style={styles.modalHeaderSpacer} />
             </View>
             <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.modalScroll}>
-              <View style={styles.editorIdentity}><AvatarPicker name={[firstName, lastName].filter(Boolean).join(' ')} avatar={avatarDescriptorOf(profile)} busy={avatarEditor.busy} error={avatarEditor.error} onChoose={avatarEditor.choose} onRemove={avatarEditor.remove} onOpenSettings={avatarEditor.permissionBlocked ? avatarEditor.openSettings : undefined} /></View>
+              <View style={styles.editorIdentity}><AvatarPicker name={[firstName, lastName].filter(Boolean).join(' ')} avatar={avatarDescriptorOf(profile)} busy={avatarEditor.busy || saveMutation.isPending} error={avatarEditor.error} onChoose={avatarEditor.choose} onRemove={avatarEditor.remove} onOpenSettings={avatarEditor.permissionBlocked ? avatarEditor.openSettings : undefined} /></View>
               <TextField label="Nome" value={firstName} maxLength={50} onChangeText={(value) => { setFirstName(value); if (nameError) setNameError(undefined); }} error={nameError} autoCapitalize="words" />
               <TextField label="Sobrenome" value={lastName} maxLength={80} onChangeText={setLastName} autoCapitalize="words" />
               <TextField label="Cidade" value={city} maxLength={100} onChangeText={setCity} placeholder="Ex.: São Paulo" />

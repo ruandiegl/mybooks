@@ -172,4 +172,4 @@ Integração PostgreSQL deve usar a fixture/flag dedicada dos testes novos, banc
 
 ## Handoff
 
-Implementação de código das tarefas 1–6 em branch isolada, com evidências locais em [execução](./plan-009-foto-perfil-usuario-r2-execucao.md). A revisão final e os aceites externos da tarefa 7 ainda não autorizam publicação. Os checkboxes que envolvem R2 privado, Docker ou aparelhos físicos permanecem pendentes; a migração de produção e a troca das branches Railway não foram executadas.
+Implementação de código das tarefas 1–6 em branch isolada, com evidências locais em [execução](./plan-009-foto-perfil-usuario-r2-execucao.md). A revisão independente e o fix pass local estão concluídos; os aceites externos da tarefa 7 ainda não autorizam publicação. Os checkboxes que envolvem R2 privado, Docker ou aparelhos físicos permanecem pendentes; a migração de produção e a troca das branches Railway não foram executadas.

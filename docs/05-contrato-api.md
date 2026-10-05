@@ -101,3 +101,5 @@ Os status esperados de falha são `404` para ISBN não encontrado, `422` para pa
 Avatar v2: presign recebe {mimeType:"image/png",size,width:512,height:512,protocolVersion:2}; complete recebe {imageId}. Resposta AvatarDescriptor = {avatarUrl,avatarUrlExpiresAt,avatarVersion}; URL/expiração podem ser null. DELETE segue 204 legado; Prefer:return=representation retorna 200 com envelope data e Preference-Applied. Resumos de usuários incluem expiração/versão, sem avatarStorageKey. Capas de Curtidas incluem coverUrlExpiresAt.
 
 Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).
+
+O cliente novo envia `X-Avatar-Owner` nos comandos de avatar, apenas para conferir a conta capturada no início da ação. Divergência da sessão retorna `409 AVATAR_SESSION_CHANGED` antes da mutação; o header nunca autoriza outro usuário nem é repassado ao PUT R2. Clientes legados sem header permanecem compatíveis.

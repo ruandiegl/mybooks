@@ -121,6 +121,8 @@ Arredondar e limitar o retângulo final inteiro à fonte antes de exportar. Não
 
 `AvatarDescriptor = { avatarUrl: string|null; avatarUrlExpiresAt: string|null; avatarVersion: number }`. A ausência de avatar retorna URL/expiração `null`. Um URL externo legado pode ter expiração `null`.
 
+Os três comandos API do cliente novo enviam `X-Avatar-Owner` com o ID capturado no início da ação. É apenas uma asserção de contexto: a identidade segue sendo a sessão autenticada. Divergência retorna `409 AVATAR_SESSION_CHANGED` antes de mutar; ausência preserva compatibilidade legada. O header não é enviado ao R2.
+
 PUT usa o endpoint S3 do R2 e validade configurada (300 s padrão), sem assinar `ContentLength`; tamanho autorizado fica no grant e é comparado no HEAD. O cliente mede o arquivo final, mantém `Content-Type` idêntico e não altera a URL assinada. No nativo usa envio binário por URI de arquivo; na Web, Blob e nenhum header manual `Content-Length`. A configuração de checksum do AWS SDK deve ser exercitada com a versão instalada/R2, sem transportar a implementação pública antiga por inteiro.
 
 ### Confirmação e consistência
@@ -149,7 +151,7 @@ Avatares legados continuam visíveis sem migração destrutiva. Backfill só con
 
 ### Erros e proteção
 
-Manter os envelopes existentes e `401` de sessão. Usar `422 IMAGE_TYPE_INVALID`, `IMAGE_SIZE_INVALID`, `IMAGE_UPLOAD_MISMATCH`, `AVATAR_CROP_INVALID`; `403 AVATAR_KEY_FORBIDDEN`; `409 AVATAR_UPLOAD_SUPERSEDED`/`AVATAR_UPLOAD_IN_PROGRESS`; `410 AVATAR_UPLOAD_EXPIRED`; `503 STORAGE_NOT_CONFIGURED`/`AVATAR_PROCESSING_BUSY`; `429 RATE_LIMITED`. Erros R2 são sanitizados e não incluem URL assinada, XML completo ou credenciais.
+Manter os envelopes existentes e `401` de sessão. Usar `422 IMAGE_TYPE_INVALID`, `IMAGE_SIZE_INVALID`, `IMAGE_UPLOAD_MISMATCH`, `AVATAR_CROP_INVALID`; `403 AVATAR_KEY_FORBIDDEN`; `409 AVATAR_UPLOAD_SUPERSEDED`/`AVATAR_UPLOAD_IN_PROGRESS`/`AVATAR_SESSION_CHANGED`; `410 AVATAR_UPLOAD_EXPIRED`; `503 STORAGE_NOT_CONFIGURED`/`AVATAR_PROCESSING_BUSY`; `429 RATE_LIMITED`. Erros R2 são sanitizados e não incluem URL assinada, XML completo ou credenciais.
 
 Limite inicial de presign: 10 por 60 s por conta; complete: 20 por 60 s por conta; manter limite geral/IP. Normalização admite no máximo duas operações simultâneas por processo, com timeout e input limitado; excesso retorna erro recuperável. O store compartilhado para rate limits em múltiplas réplicas continua dependência de infraestrutura registrada em docs/13.
 
@@ -159,7 +161,7 @@ Limite inicial de presign: 10 por 60 s por conta; complete: 20 por 60 s por cont
 - Criar serializer de avatar compartilhado e allowlists para perfil próprio e resumo público. Aplicar a auth/login/verify/refresh/me, users/me, books/discover/owner, likes/actor/owner, matches/otherUser e chat/conversations/messages/sender, incluindo eventos Socket.IO.
 - Um cache **por resposta** pode reutilizar assinatura de usuários repetidos. Falha transitória de assinatura fornece avatar `null` com fallback e retry da consulta; não deve derrubar login ou remover a chave persistida.
 - Após troca/remoção, atualizar descritor e `SessionProvider`, invalidar `['me']`, `['books']`, `['book']`, `['likes']`, `['matches']`, `['conversations']` e consultas de mensagens definidas no hook de chat. Recarregar apenas consultas ativas e preservar rascunhos de texto.
-- As consultas visíveis renovam antes da menor expiração de fotos/avatares, com margem de 30 s, e ao voltar ao primeiro plano/foco. URL já vencida dispara uma renovação deduplicada e depois backoff; evitar timers a cada milissegundo e uma requisição por Avatar.
+- As consultas visíveis renovam antes da menor expiração de fotos/avatares, com margem de até 30 s (20% do prazo restante quando menor), e ao voltar ao primeiro plano/foco. Intervalo saudável mínimo de 5 s; falha ou erro repetido de imagem recebe backoff de 30 s. URL já vencida dispara renovação deduplicada; evitar timers a cada milissegundo e uma requisição por Avatar.
 - `Avatar` mantém iniciais em imagem ausente/com falha, reinicia a tentativa quando URL/versão mudam e solicita no máximo uma renovação por falha da mesma URL. Fotos R2 ficam fora do service worker e de qualquer cache persistente do aplicativo.
 - A atualização em outra conta ocorre no próximo refresh da consulta; não adicionar broadcast global de perfil. APIs e caches continuam respeitando Premium e membership de chat.
 

@@ -20,7 +20,7 @@ export function AvatarEditor(props:AvatarEditorProps) {
   const t=clampAvatarTransform(source,diameter,next);transform.current=t;position.setValue({x:t.offsetX,y:t.offsetY});zoom.setValue(t.zoom);
   if(announce)setShown(t);
  }
- useEffect(()=>{update(reframeAvatarTransform(source,previousDiameter.current,diameter,transform.current),true);previousDiameter.current=diameter;},[diameter,source]);
+ useEffect(()=>{start.current=null;update(reframeAvatarTransform(source,previousDiameter.current,diameter,transform.current),true);previousDiameter.current=diameter;},[diameter,source]);
  const responder=useMemo(()=> {
   const sample=(event:GestureResponderEvent)=>{
    const touches=event.nativeEvent.touches;

@@ -14,7 +14,6 @@ import { exportAvatarCrop } from './exportAvatarCrop';
 import type { AvatarSource,PreparedAvatar,AvatarCropRect } from './avatarTypes';
 type Phase='idle'|'selecting'|'preparing'|'editing'|'exporting'|'uploading'|'confirming'|'error';
 const labels:Partial<Record<Phase,string>>={preparing:'Preparando foto…',exporting:'Preparando recorte…',uploading:'Enviando foto…',confirming:'Confirmando foto…'};
-const uploader=createAvatarUploader({presign:avatarApi.presign,put:putPreparedImage,complete:avatarApi.complete});
 export function useAvatarEditor(userId:string|undefined,onUploaded:(avatar:AvatarDescriptor)=>void){
  const queryClient=useQueryClient(),owner=useRef(userId),callback=useRef(onUploaded);
  owner.current=userId;callback.current=onUploaded;
@@ -36,9 +35,11 @@ export function useAvatarEditor(userId:string|undefined,onUploaded:(avatar:Avata
   try{
    const result=await ImagePicker.launchImageLibraryAsync({mediaTypes:['images'],allowsEditing:false,allowsMultipleSelection:false,quality:1,base64:false,exif:false,
     ...(Platform.OS==='ios'?{preferredAssetRepresentationMode:ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,shouldDownloadFromNetwork:true}:{})});
+   asset=result.canceled?undefined:result.assets[0];
    if(!current(ticket,id))return;
    if(result.canceled){setPhase(sourceRef.current?'editing':'idle');return;}
-   asset=result.assets[0];setPhase('preparing');
+   setPhase('preparing');
+   if(!asset)throw new Error('Escolha uma foto e tente novamente.');
    const next=await prepareAvatarSource(asset);
    if(!current(ticket,id)){releaseAvatarResource(next);return;}
    release();resources.current.set(next.uri,next);sourceRef.current=next;setSource(next);setPreviewUri(undefined);setPhase('editing');
@@ -62,6 +63,7 @@ export function useAvatarEditor(userId:string|undefined,onUploaded:(avatar:Avata
     if(!current(ticket,id)){releaseAvatarResource(photo);return;}
     resources.current.set(photo.uri,photo);prepared.current=photo;savedRect.current=key;setPreviewUri(photo.uri);
    }
+   const uploader=createAvatarUploader({presign:photo=>avatarApi.presign(photo,id),put:putPreparedImage,complete:imageId=>avatarApi.complete(imageId,id)});
    const result=await uploader(prepared.current,uploadState.current,setPhase,()=>current(ticket,id));
    if(!current(ticket,id))return;
    callback.current(result);invalidate();release();setSource(undefined);setPreviewUri(undefined);setPhase('idle');
@@ -78,7 +80,7 @@ export function useAvatarEditor(userId:string|undefined,onUploaded:(avatar:Avata
  async function removeNow(){
   if(lock.current||!owner.current)return;
   lock.current=true;const ticket=epoch.current,id=owner.current;setError(undefined);setPhase('confirming');
-  try{await runAvatarRemoval(()=>current(ticket,id),avatarApi.remove,result=>{callback.current(result);invalidate();setPhase('idle');});}
+  try{await runAvatarRemoval(()=>current(ticket,id),()=>avatarApi.remove(id),result=>{callback.current(result);invalidate();setPhase('idle');});}
   catch(cause){if(current(ticket,id)){setError(apiErrorMessage(cause,'Não foi possível remover a foto. Tente novamente.'));setPhase('error');}}
   finally{if(current(ticket,id))lock.current=false;}
  }

@@ -1,7 +1,7 @@
 # Execução — plano 009: foto de perfil no R2
 
 Data: 05/10/2026. Branch isolada: `codex/foto-perfil-usuario-r2`, base `6eb3300`.
-Implementação em revisão; **não publicada** e não incorporada à main nesta tarefa.
+Implementação local validada e correções da revisão concluídas; **não publicada** e não incorporada à main nesta tarefa.
 
 ## Entrega de código
 
@@ -19,16 +19,18 @@ DELETE mantém resposta vazia 204 para clientes antigos.
 Novo cliente envia `Prefer: return=representation`; recebe 200, `Preference-Applied: return=representation` e `{data: AvatarDescriptor}` com a versão realmente confirmada.
 Não é necessário inventar versão no cliente nem disputar uma segunda leitura.
 
+Os três comandos de avatar do novo app enviam `X-Avatar-Owner: <userId que iniciou a ação>`. Se a sessão autenticada for diferente, a API retorna `409 AVATAR_SESSION_CHANGED` antes de autorizar/gravar/remover. O header nunca determina o dono e não vai ao PUT do R2; sem ele, clientes legados continuam compatíveis.
+
 ## Evidências locais
 
 | Verificação | Resultado observado |
 | --- | --- |
 | API lint | passou |
-| API Vitest + PostgreSQL de avatar | 254 passaram; 7 testes condicionais preexistentes não executados |
+| API Vitest + PostgreSQL de avatar | 258 passaram; 7 testes condicionais preexistentes não executados |
 | Migração | nove migrações baseline, depois a aditiva em PostgreSQL 16.14 descartável; User/URL legada preservadas |
 | PostgreSQL: claims/CAS/remover/ownership/sweep | cinco testes passaram; grants terminais removidos em lotes de até 20 |
-| App Vitest | 126 passaram, incluindo regressões de resize/remoção |
-| App typecheck | passou após resize/remoção |
+| App Vitest | 141 passaram, incluindo sete arquivos de regressões de componentes/hooks montados |
+| App typecheck | passou após o fix pass |
 | Export Web e smoke PWA | passaram na revisão de código final |
 | Export Android/Hermes | passou na revisão de código final |
 | Expo Doctor | 20/21 verificações; patches preexistentes de expo, expo-camera e expo-image-picker desatualizados |
@@ -66,7 +68,6 @@ Rollback conserva migração, chave privada e serializer novo; voltar a código 
 
 ## Pendências de aceite
 
-- Revisão independente da branch e correções importantes.
 - R2 privado real, CORS/lifecycle e migração no alvo.
 - Docker Linux com sharp.
 - iPhone/Android físicos e Safari/PWA instalada: permissões, iCloud/HEIC, EXIF/espelhamento, fonte ampliada, pinch/gestos interrompidos, rede, retry, cancelamento, troca de conta e foco.
@@ -85,3 +86,40 @@ Rollback conserva migração, chave privada e serializer novo; voltar a código 
 - Não alterar bucket público nem atualizar todo SDK automaticamente: protege referências existentes e escopo; publicação permanece bloqueada até o preflight e autorização.
 
 Nenhuma foto pessoal, documento alheio, executável ou export gerado faz parte da entrega versionada.
+
+## Revisão independente e correções finais
+
+Archimedes revisou somente-leitura `6eb3300..1289713`: nenhum Critical e seis Important. Todos os seis foram reproduzidos e corrigidos em um único fix pass, sem nova delegação de revisão:
+
+| Finding | Regressão que falhou antes e passou depois |
+| --- | --- |
+| Hooks de Matches após retorno antecipado | `avatarMatches.component.test.tsx`: loading→sucesso e erro→retry com React/consulta montados |
+| Save Web usa crop antigo após mover/centralizar | `avatarEditor.component.test.tsx`: cropper instalado real e controles, sem zoom/gesture-end intermediário |
+| Resize durante pinch nativo reutiliza baseline antigo | `avatarNativeEditor.component.test.tsx`: editor real, responder/decoder como fronteiras de aparelho; área preservada |
+| PATCH de texto fecha foto escolhida enquanto salva | `avatarProfile.component.test.tsx`: escolher foto bloqueado durante submissão do texto |
+| Falhas de imagem no perfil fazem refresh sem limite | mesmo teste: seis chamadas viraram uma, mesmo recebendo URLs novas que falham |
+| Onboarding conserva assinatura vencida no estado local | mesmo teste: URL renovada sem apagar Nome não salvo |
+
+O vazamento de Blob após saída/troca de conta foi regraduado de Minor para Important, pelo risco de reter original e consumir memória; `avatarPickerLifecycle.component.test.tsx` demonstrou a retenção e a liberação após corrigir o retorno atrasado.
+
+Também foram corrigidos com RED→GREEN:
+
+- `avatar.owner.routes.test.js`: comandos rejeitados antes de mutação quando a conta da requisição não é a conta que iniciou a ação.
+- `avatarSession.component.test.tsx`: recibo antigo não substitui nova sessão, versão mais nova ou identidade do cache.
+- `avatarRenewal.component.test.tsx`: TTL de 30 s renova aos 24 s, só falhas recebem backoff de 30 s, retorno ao foreground recupera assinatura ausente de forma deduplicada.
+
+Testes montados usam RTL/DOM/jsdom como dependências **dev**. Elementos de galeria, autenticação, imagem nativa, navegação e HTTP são fronteiras controladas; a lógica do componente, hooks, consultas e cropper relevante é real. Não aprova aparelho ou R2 real.
+
+### Minor adiado
+
+O teste unitário antigo de retry após expiração substitui `deps.now` depois de criar o uploader, que já capturou a função. Ele prova ausência de PUT duplicado, mas não avança efetivamente aquele relógio. O complemento de cobertura com relógio mutável ficou adiado; não foi identificada falha funcional por esse finding.
+
+### Limites que o reviewer não aprovou
+
+Privacidade/CORS/lifecycle e PUT-timeouts/cleanup no R2 real; EXIF/HEIC/iCloud/gestos em aparelho; acessibilidade/foco/fonte ampliada/Safari instalado; Docker Linux; migração no alvo, auditoria, backup/restore e rollout; patches preexistentes do Expo. Permanecem pendências de liberação, não exceções tratadas como aprovação.
+
+## Decisões adicionais do fix pass
+
+- `X-Avatar-Owner` é uma asserção opcional, nunca identidade/autorização: o servidor sempre deriva o dono da sessão e rejeita divergência com 409. Protege o cliente novo de troca de credencial durante o envio; clientes antigos continuam sem a asserção.
+- Renovação usa margem de até 30 s (20% do prazo restante para TTL curto), mínimo de 5 s entre renovações saudáveis e 30 s para falha/erro repetido de imagem. Uma margem fixa de 30 s não funciona com TTL permitido de 30 s.
+- Dependências de teste montado acrescentam tamanho ao lockfile dev; jsdom 27.4.0 foi escolhido por compatibilidade com Node 20.19, ao contrário da versão 30.

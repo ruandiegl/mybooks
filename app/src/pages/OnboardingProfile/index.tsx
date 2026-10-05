@@ -21,9 +21,8 @@ export function OnboardingProfile() {
   const [lastName, setLastName] = useState(user?.lastName || '');
   const [bio, setBio] = useState(user?.bio || '');
   const [interests, setInterests] = useState(user?.interests.join(', ') || '');
-  const [avatar, setAvatar] = useState(avatarDescriptorOf(user));
+  const avatar = avatarDescriptorOf(user);
   const avatarEditor = useAvatarEditor(user?.id, (next) => {
-    setAvatar(next);
     if (user) updateAvatar(next, user.id);
   });
   const [busy, setBusy] = useState(false);

@@ -13,6 +13,7 @@ import { authApi } from '../features/auth/authApi';
 import { sessionTransport, type SessionResponse, type SessionSnapshot } from '../features/auth/authTransport';
 import { configureApiSession } from '../services/api';
 import { mergeAvatarVersion } from '../features/avatar/avatarRefresh';
+import { avatarDescriptorOf } from '../features/avatar/avatarTypes';
 import { useAvatarRefresh } from '../features/avatar/useAvatarRefresh';
 import type { AvatarDescriptor, User } from '../types/api';
 
@@ -24,6 +25,7 @@ type SessionContextValue = {
   establishSession: (response: SessionResponse) => Promise<void>;
   refreshSession: () => Promise<boolean>;
   refreshUser: () => Promise<User | null>;
+  refreshAvatar: () => void;
   updateAvatar: (avatar: AvatarDescriptor, userId: string) => void;
   signOut: () => Promise<void>;
 };
@@ -86,15 +88,15 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
 
   const updateAvatar = useCallback((avatar: AvatarDescriptor, userId: string) => {
     const current = userRef.current;
-    if (!current || current.id !== userId) return;
+    if (!current || current.id !== userId || sessionRef.current?.user?.id !== userId) return;
     const next = mergeAvatarVersion(current, { ...current, ...avatar });
     userRef.current = next;
     setUser(next);
     if (sessionRef.current) replaceSession({ ...sessionRef.current, user: next });
     void queryClient.cancelQueries({ queryKey: ['me'] });
-    queryClient.setQueryData<User>(['me'], old => mergeAvatarVersion(old, { ...(old ?? next), ...avatar }));
+    queryClient.setQueryData<User>(['me'], old => mergeAvatarVersion(old, { ...(old?.id === next.id ? old : next), ...avatarDescriptorOf(next) }));
   }, [queryClient, replaceSession]);
-  useAvatarRefresh(user, refreshUser, isLoaded && Boolean(session));
+  const refreshAvatar = useAvatarRefresh(user, refreshUser, isLoaded && Boolean(session));
 
   const signOut = useCallback(async () => {
     const current = sessionRef.current;
@@ -148,9 +150,10 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
     establishSession,
     refreshSession,
     refreshUser,
+    refreshAvatar,
     updateAvatar,
     signOut
-  }), [establishSession, getToken, isLoaded, refreshSession, refreshUser, updateAvatar, session, signOut, user]);
+  }), [establishSession, getToken, isLoaded, refreshSession, refreshUser, refreshAvatar, updateAvatar, session, signOut, user]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
