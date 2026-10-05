@@ -1,5 +1,6 @@
 import { prisma } from '../../shared/database/prisma.js';
 import { authUserSelect } from '../users/users.repository.js';
+import { finalAvatarKey, ownedLegacyAvatarKey } from '../media/avatar.keys.js';
 
 const codeSelect = {
   id: true,
@@ -26,7 +27,12 @@ async function enqueueBookImageCleanup(tx, userIds) {
     where: { book: { ownerId: { in: userIds } }, storageKey: { not: null } },
     select: { storageKey: true }
   });
-  for (const storageKey of new Set(images.map((image) => image.storageKey))) {
+  const users = await tx.user.findMany({ where: { id: { in: userIds } }, select: { id: true, avatarStorageKey: true, avatarUrl: true } });
+  const grants = await tx.avatarUpload.findMany({ where: { userId: { in: userIds } } });
+  const keys = [...images.map((image) => image.storageKey),
+    ...users.flatMap((user) => [user.avatarStorageKey, ownedLegacyAvatarKey(user)]),
+    ...grants.flatMap((grant) => [grant.storageKey, finalAvatarKey(grant.userId, grant.id)])].filter(Boolean);
+  for (const storageKey of new Set(keys)) {
     await tx.storageCleanupJob.upsert({
       where: { storageKey },
       create: { storageKey },

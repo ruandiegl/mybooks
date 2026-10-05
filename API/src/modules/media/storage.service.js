@@ -35,6 +35,8 @@ function getClient() {
   if (!client) {
     client = new S3Client({
       region: 'auto',
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
       endpoint: 'https://' + env.R2_ACCOUNT_ID + '.r2.cloudflarestorage.com',
       credentials: {
         accessKeyId: env.R2_ACCESS_KEY_ID,
@@ -84,10 +86,9 @@ export const storageService = {
       new PutObjectCommand({
         Bucket: env.R2_BUCKET,
         Key: storageKey,
-        ContentType: mimeType,
-        ContentLength: size
+        ContentType: mimeType
       }),
-      { expiresIn: env.R2_PRESIGN_EXPIRES_IN }
+      { expiresIn: env.R2_PRESIGN_EXPIRES_IN, signableHeaders: new Set(['content-type']) }
     );
 
     return {
@@ -102,16 +103,15 @@ export const storageService = {
 
   async createPresignedAvatarUpload({ ownerId, imageId, mimeType, size }) {
     assertImage({ mimeType, size });
-    const storageKey = ['avatars', ownerId, imageId + '.' + extensionFor(mimeType)].join('/');
+    const storageKey = ['pending', 'avatars', ownerId, imageId + '.' + extensionFor(mimeType)].join('/');
     const uploadUrl = await getSignedUrl(
       getClient(),
       new PutObjectCommand({
         Bucket: env.R2_BUCKET,
         Key: storageKey,
-        ContentType: mimeType,
-        ContentLength: size
+        ContentType: mimeType
       }),
-      { expiresIn: env.R2_PRESIGN_EXPIRES_IN }
+      { expiresIn: env.R2_PRESIGN_EXPIRES_IN, signableHeaders: new Set(['content-type']) }
     );
     return {
       uploadUrl,
@@ -143,6 +143,34 @@ export const storageService = {
       CopySource: encodedSource,
       MetadataDirective: 'COPY'
     }));
+  },
+
+  async readObjectLimited(storageKey, maxBytes) {
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), 10_000);
+    let body;
+    try {
+      const result = await getClient().send(new GetObjectCommand({ Bucket: env.R2_BUCKET, Key: storageKey }), { abortSignal: abort.signal });
+      body = result.Body;
+      if (!body || Number(result.ContentLength) > maxBytes) throw new AppError('Arquivo acima do limite.', { statusCode: 422, code: 'IMAGE_SIZE_INVALID' });
+      const chunks = [];
+      let length = 0;
+      for await (const chunk of body) {
+        length += chunk.length;
+        if (length > maxBytes) throw new AppError('Arquivo acima do limite.', { statusCode: 422, code: 'IMAGE_SIZE_INVALID' });
+        chunks.push(Buffer.from(chunk));
+      }
+      if (!length) throw new AppError('Arquivo vazio.', { statusCode: 422, code: 'IMAGE_SIZE_INVALID' });
+      return Buffer.concat(chunks);
+    } finally {
+      clearTimeout(timer);
+      body?.destroy?.();
+    }
+  },
+
+  async putImageBuffer(storageKey, buffer, mimeType) {
+    assertImage({ size: buffer.length, mimeType });
+    await getClient().send(new PutObjectCommand({ Bucket: env.R2_BUCKET, Key: storageKey, Body: buffer, ContentType: mimeType }), { abortSignal: AbortSignal.timeout(10_000) });
   },
 
   async getPresignedGetUrl(storageKey) {

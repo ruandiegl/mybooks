@@ -1,57 +1,43 @@
 import { randomUUID } from 'node:crypto';
+import { env } from '../../config/env.js';
 import { AppError } from '../../shared/errors/AppError.js';
-import { usersRepository } from '../users/users.repository.js';
-import { completeUploadSchema, presignSchema } from './media.schemas.js';
+import { avatarCompleteSchema, validateAvatarPresign } from './avatar.schemas.js';
+import { avatarRepository } from './avatar.repository.js';
+import { normalizeAvatar } from './avatarProcessing.service.js';
+import { serializeAvatar } from './avatar.serializer.js';
+import { finalAvatarKey } from './avatar.keys.js';
 import { storageService } from './storage.service.js';
 
-function assertAvatarKey(storageKey, userId, imageId) {
-  const segments = storageKey.split('/');
-  const exactImage = segments[2]?.match(/^([0-9a-f-]{36})\.(jpg|png|webp)$/i)?.[1];
-  if (segments.length !== 3 || segments[0] !== 'avatars' || segments[1] !== userId || exactImage !== imageId) {
-    throw new AppError('A chave do avatar não pertence a este usuário.', { statusCode: 403, code: 'AVATAR_KEY_FORBIDDEN' });
-  }
+export function createAvatarService({ repository = avatarRepository, storage = storageService, processor = normalizeAvatar, uuid = randomUUID, clock = () => new Date() } = {}) {
+  return {
+    async presign(userId, input) {
+      const data = validateAvatarPresign(input), imageId = uuid();
+      const presign = await storage.createPresignedAvatarUpload({ ownerId: userId, imageId, mimeType: data.mimeType, size: data.size });
+      const expiresAt = new Date(clock().getTime() + (presign.expiresIn ?? env.R2_PRESIGN_EXPIRES_IN) * 1000);
+      await repository.createGrant(userId, { id: imageId, storageKey: presign.storageKey, mimeType: data.mimeType, size: data.size, protocolVersion: data.protocolVersion, expiresAt });
+      return { imageId, ...presign, expiresAt: expiresAt.toISOString(), protocolVersion: data.protocolVersion };
+    },
+    async complete(userId, input) {
+      const data = avatarCompleteSchema.parse(input);
+      const claimed = await repository.claim(userId, data.imageId, clock());
+      if (claimed.alreadyCommitted) return serializeAvatar(claimed.user, new Map(), storage);
+      const grant = claimed.grant;
+      try {
+        if (data.storageKey !== undefined && data.storageKey !== grant.storageKey) throw new AppError('A chave não pertence ao envio autorizado.', { statusCode: 403, code: 'AVATAR_KEY_FORBIDDEN' });
+        if ((data.mimeType !== undefined && data.mimeType !== grant.mimeType) || (data.size !== undefined && data.size !== grant.size)) throw new AppError('O arquivo difere do envio autorizado.', { statusCode: 422, code: 'IMAGE_UPLOAD_MISMATCH' });
+        await storage.assertUploaded(grant.storageKey, grant);
+        const bytes = await storage.readObjectLimited(grant.storageKey, grant.size);
+        const normalized = await processor(bytes, grant);
+        await storage.putImageBuffer(finalAvatarKey(userId, grant.id), normalized.buffer, normalized.mimeType);
+        const user = await repository.commit(userId, grant, clock());
+        return serializeAvatar(user, new Map(), storage);
+      } catch (error) {
+        await repository.expire(userId, grant.id).catch(() => undefined);
+        if (error instanceof AppError || error?.statusCode) throw error;
+        throw new AppError('Não foi possível confirmar a foto. Tente novamente.', { statusCode: 503, code: 'AVATAR_STORAGE_UNAVAILABLE' });
+      }
+    },
+    async delete(userId) { await repository.remove(userId); return { ok: true }; }
+  };
 }
-
-function ownedStorageKey(url, userId) {
-  if (typeof url !== 'string') return null;
-  const marker = `/avatars/${userId}/`;
-  const index = url.indexOf(marker);
-  return index === -1 ? null : url.slice(index + 1);
-}
-
-export const avatarService = {
-  async presign(userId, input) {
-    const data = presignSchema.parse(input);
-    const imageId = randomUUID();
-    return { imageId, ...await storageService.createPresignedAvatarUpload({ ownerId: userId, imageId, ...data }) };
-  },
-
-  async complete(userId, input) {
-    const { isCover: _ignored, ...data } = completeUploadSchema.parse({ ...input, isCover: false });
-    assertAvatarKey(data.storageKey, userId, data.imageId);
-    await storageService.assertUploaded(data.storageKey, data);
-    const user = await usersRepository.findById(userId);
-    if (!user) throw new AppError('Perfil não encontrado.', { statusCode: 404, code: 'USER_NOT_FOUND' });
-    const avatarUrl = storageService.getPublicUrl(data.storageKey);
-
-    try {
-      await usersRepository.update(userId, { avatarUrl });
-    } catch (error) {
-      await storageService.delete(data.storageKey).catch(() => undefined);
-      throw error;
-    }
-
-    const previousKey = ownedStorageKey(user.avatarUrl, userId);
-    if (previousKey && previousKey !== data.storageKey) await storageService.delete(previousKey).catch(() => undefined);
-    return { avatarUrl };
-  },
-
-  async delete(userId) {
-    const user = await usersRepository.findById(userId);
-    if (!user) throw new AppError('Perfil não encontrado.', { statusCode: 404, code: 'USER_NOT_FOUND' });
-    await usersRepository.update(userId, { avatarUrl: null });
-    const key = ownedStorageKey(user.avatarUrl, userId);
-    if (key) await storageService.delete(key).catch(() => undefined);
-    return { ok: true };
-  }
-};
+export const avatarService = createAvatarService();

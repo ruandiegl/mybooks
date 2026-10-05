@@ -1,6 +1,13 @@
 import { prisma } from '../../shared/database/prisma.js';
 
 export const storageCleanupRepository = {
+  async isReferenced(storageKey) {
+    const [avatar, book] = await Promise.all([
+      prisma.user.findFirst({ where: { avatarStorageKey: storageKey }, select: { id: true } }),
+      prisma.bookImage.findFirst({ where: { storageKey }, select: { id: true } })
+    ]);
+    return Boolean(avatar || book);
+  },
   listDue(now, limit) {
     return prisma.storageCleanupJob.findMany({
       where: { nextAttemptAt: { lte: now } },

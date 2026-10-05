@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   env: { STORAGE_MODE: 'r2' },
-  storageCleanupRepository: { delete: vi.fn(), listDue: vi.fn(), recordFailure: vi.fn() },
+  storageCleanupRepository: { delete: vi.fn(), listDue: vi.fn(), recordFailure: vi.fn(), isReferenced: vi.fn() },
   storageService: { delete: vi.fn() }
 }));
 
@@ -18,6 +18,7 @@ describe('storageCleanupService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.env.STORAGE_MODE = 'r2';
+    mocks.storageCleanupRepository.isReferenced.mockResolvedValue(false);
   });
 
   it('remove job depois da exclusão confirmada do objeto', async () => {
@@ -46,5 +47,11 @@ describe('storageCleanupService', () => {
 
     await expect(storageCleanupService.processDue()).resolves.toBe(0);
     expect(mocks.storageCleanupRepository.listDue).not.toHaveBeenCalled();
+  });
+
+  it('never deletes the current avatar even when an old cleanup job was enqueued', async () => {
+    mocks.storageCleanupRepository.isReferenced.mockResolvedValue(true);
+    await storageCleanupService.process('avatars/user/current.jpg');
+    expect(mocks.storageService.delete).not.toHaveBeenCalled();
   });
 });
