@@ -1,0 +1,10 @@
+**
+!app/
+!app/**
+!web/
+!web/**
+app/.env
+app/.expo/
+app/.vs/
+app/node_modules/
+app/dist/

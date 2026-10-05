@@ -1,16 +1,19 @@
-# 3. Frontend mobile
+# 3. Frontend mobile e PWA
 
 Telas ficam em `app/src/pages/<Nome>/index.tsx` com `styles.ts`; componentes reutilizáveis seguem a mesma dupla. Parâmetros de navegação vivem em `src/types/navigation.ts`.
 
 ## Sessão
 
-- use `useSession()`; não leia o SecureStore diretamente fora de `authStorage.ts`;
+- use `useSession()`; não leia o SecureStore diretamente fora do transporte nativo;
+- no web, `SessionProvider` usa refresh HttpOnly no mesmo domínio; refresh token nunca entra em localStorage, sessionStorage ou no bundle;
 - use a instância Axios de `services/api.ts` para rotas privadas;
 - um 401 tenta exatamente um refresh compartilhado por requisições concorrentes e repete cada requisição no máximo uma vez;
-- falha no refresh invalida a sessão local e limpa o cache TanStack Query;
+- sessão inválida/revogada no refresh invalida a sessão local e limpa o cache TanStack Query; falha transitória web preserva cookie e estado para retry;
 - Socket.IO recebe o mesmo access token em `handshake.auth.token`.
 
-Na PWA, o access token vive apenas em memória e o refresh token fica em cookie HttpOnly, Secure e SameSite=Strict. Publique a API no mesmo endereço HTTPS da PWA usando `/api` como proxy. Não envie credenciais por HTTP de LAN; o modo HTTP efêmero existe apenas para `localhost`/loopback. O logout espera a revogação no servidor; se a API estiver indisponível, mantém a conta aberta e oferece retry.
+Na PWA, o access token vive apenas em memória e o refresh token fica em cookie HttpOnly e Secure. O contrato da main usa `X-Session-Transport: cookie` e `SameSite=Strict`; a variante `authApi.web.ts` usa `/api/v1/auth/browser/*` com cookie `__Host-`. Os dois contratos devem manter HTTPS e validação de Origin. Publique a API no mesmo endereço HTTPS da PWA usando `/api` como proxy. Não envie credenciais por HTTP de LAN; o modo HTTP efêmero existe apenas para `localhost`/loopback, sem refresh cookie persistente.
+
+Web Locks coordena a rotação entre abas; sua indisponibilidade não autoriza rotações concorrentes. O logout espera a revogação no servidor; se a API estiver indisponível, mantém a conta aberta, preserva o cookie e oferece retry. A política antiga da branch PWA de concluir logout offline não é aceite para a versão integrada. Socket.IO consulta o access token atual por handshake e tenta um único refresh quando necessário.
 
 ## Fluxo
 
@@ -24,11 +27,19 @@ O app autenticado exibe 5 abas na barra inferior: **Descobrir**, **Curtidas**, *
 
 Telas acessíveis via push/modal a partir das tabs: `BookCreate` (modal), `BookDetails`, `BookEdit` (modal), `Matches` e `Chat`.
 
+## Variantes web, deep links e instalação
+
+`env.web.ts` usa `window.location.origin` para API e Socket.IO; `authTransport.web.ts` concentra sessão em memória e refresh por cookie, `notice.web.ts` preserva callbacks de confirmação e `preparePickedImage.web.ts` prepara mídia no navegador. As variantes nativas continuam usando SecureStore, avisos nativos e validação de imagem sem conversão HEIC.
+
+O linking usa a origem da página na Web e o esquema `mybooks://` no nativo. Mapeia `/auth`, `/onboarding/profile`, `/onboarding/books`, `/discover`, `/library`, `/messages`, `/profile`, `/books/new`, `/books/:bookId`, `/books/:bookId/edit`, `/matches` e `/chat/:conversationId`. Abrir uma URL mantém os guards de autenticação/onboarding e a autorização da API. A aba Curtidas da main precisa permanecer nas cinco tabs; a revisão de seu mapeamento de URL na integração ainda está pendente.
+
+O manifesto, os ícones e metadados iOS permitem preparar a instalação PWA. O proxy serve o fallback SPA para navegações profundas e mantém erros da API como JSON. O service worker oferece página offline sem dados privados e cache restrito a assets com hash; não fornece login, chat ou sincronização offline. Instalação, deep links em Safari/PWA instalada e atualização do service worker ainda precisam de aceite no iPhone físico.
+
 ## Curtidas
 
 A aba Curtidas exibe um grid de 2 colunas com as curtidas recebidas (quem curtiu os livros do usuário). Cada card mostra a capa do livro curtido como fundo, avatar e nome do ator no topo, e botões de curtir de volta e dispensar quando há um livro disponível de quem enviou a curtida. Um toggle alterna para "Minhas curtidas" (livros que o usuário curtiu), onde é possível remover a curtida com confirmação. Falhas ao consultar qualquer uma das listas mostram uma mensagem com ação de tentar novamente em vez de apresentar a lista como vazia.
 
-O acesso gratuito de 30 dias libera a lista e a identidade das curtidas recebidas e likes ilimitados. Sem Premium, o app mantém a contagem agregada de curtidas pendentes e a lista de curtidas enviadas; o limite é de 15 livros curtidos por dia local. A oferta depende de aceite explícito e pode ser aberta pelo perfil; os cards semanal, mensal e anual apenas dizem “Em breve”. O app esconde identidades no prazo exato calculado a partir do relógio do servidor, limpa o cache correspondente e consulta novamente ao voltar ao primeiro plano.
+O acesso gratuito de 30 dias libera a lista e a identidade das curtidas recebidas e likes ilimitados. Sem Premium, o app mantém a contagem agregada de curtidas pendentes e a lista de curtidas enviadas; o limite é de 15 livros distintos curtidos por dia em `America/Sao_Paulo`. A oferta depende de aceite explícito e pode ser aberta pelo perfil; os cards semanal, mensal e anual apenas dizem “Em breve”. O app esconde identidades no prazo exato calculado a partir do relógio do servidor, limpa o cache correspondente e consulta novamente ao voltar ao primeiro plano.
 
 A aba exibe um badge com a contagem de curtidas pendentes (recebidas e ainda não respondidas), atualizado por polling a cada 30 segundos. Filtros de ordenação (mais recentes/mais antigos) e por livro específico estão disponíveis nas curtidas recebidas.
 
@@ -38,12 +49,14 @@ Toda tela deve tratar loading, erro, vazio e retry, respeitar safe area/teclado,
 
 `BookCreate` e `BookEdit` aceitam até três fotos JPEG/PNG/WebP de até 8 MiB cada. A faixa compartilhada de miniaturas mostra ordem, identifica a primeira como capa e oferece controles acessíveis para mover ou remover. O primeiro item é enviado como capa; no detalhe, as fotos aparecem em galeria horizontal.
 
-A seleção múltipla não usa recorte simultâneo; fotos HEIC ou sem tamanho conhecido recebem mensagem e não são enviadas. O app pede `presign`, envia bytes por PUT e chama `complete` sequencialmente. Se uma etapa falhar, preserva o rascunho em memória e permite retry em `BookEdit`; livros já confirmados não são enviados de novo. A ordem final é persistida pelo endpoint completo de reordenação. O app renova URLs privadas em intervalo inferior à expiração e ao retornar ao primeiro plano. Cancelar a galeria não altera o estado, e nenhuma URL arbitrária é enviada pelo app.
+A seleção múltipla não usa recorte simultâneo. No nativo, HEIC e arquivos sem tamanho conhecido recebem mensagem e não são enviados. Na Web, HEIC/HEIF ou JPEG acima de 8 MiB podem ser convertidos/redimensionados localmente, desde que o original tenha tamanho conhecido e até 24 MiB. A saída JPEG ainda precisa respeitar 8 MiB; se o navegador não decodificar HEIC, a orientação é exportar como JPEG. Esse comportamento exige aceite real em Safari/iPhone.
+
+O app pede `presign`, envia bytes por PUT e chama `complete` sequencialmente. Se uma etapa falhar, preserva o rascunho em memória e permite retry em `BookEdit`; livros já confirmados não são enviados de novo. A ordem final é persistida pelo endpoint completo de reordenação. O app renova URLs privadas em intervalo inferior à expiração e ao retornar ao primeiro plano. Cancelar a galeria não altera o estado, e nenhuma URL arbitrária é enviada pelo app. A conversão web não altera limite, ordem, capa, ownership ou renovação de URL privada.
 
 ## Leitura de código de barras
 
-O app usa Expo 57, React Native 0.86 e `expo-camera` 57.0.5. Em `BookCreate`, a ação de leitura abre `BarcodeScannerModal`, que solicita permissão de câmera somente nesse momento e usa `CameraView` traseira configurada apenas para `ean13`.
+O app usa Expo 57, React Native 0.86 e `expo-camera` 57.0.5. Em `BookCreate`, a ação de leitura abre `BarcodeScannerModal`, que solicita permissão de câmera somente nesse momento e usa `CameraView` traseira configurada apenas para `ean13`. A implementação web usa a API de detecção de código de barras do Expo e requer HTTPS; ainda não foi aceita em iPhone físico.
 
 Antes de qualquer chamada HTTP, o cliente aceita somente 13 dígitos com prefixo de livro `978` ou `979` e checksum EAN-13 válido. QR, URL, texto e EAN de produto não consultam a API. Uma leitura aceita preenche o ISBN e chama automaticamente `GET /api/v1/isbn/:isbn`; os dados retornados permanecem editáveis e precisam ser revisados antes do cadastro.
 
-O cadastro manual continua disponível em todos os estados e aceita ISBN-10 válido. A leitura física direta de ISBN-10 não faz parte do scanner, e a câmera não é prometida na Web. Nenhum frame ou foto é enviado ou armazenado; uma capa externa retornada pela consulta também não é persistida automaticamente.
+O cadastro manual continua disponível em todos os estados e aceita ISBN-10 válido. A leitura física direta de ISBN-10 não faz parte do scanner. Nenhum frame ou foto é enviado ou armazenado; uma capa externa retornada pela consulta também não é persistida automaticamente.

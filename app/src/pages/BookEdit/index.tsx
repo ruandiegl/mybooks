@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Crypto from 'expo-crypto';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { Platform, ScrollView, Text, View } from 'react-native';
 import { AppButton } from '../../components/AppButton';
 import { BookPhotoPicker } from '../../components/BookPhotoPicker';
 import { IsbnBadge } from '../../components/IsbnBadge';
@@ -22,6 +22,8 @@ import {
 } from '../../features/books/bookPhotos';
 import { deleteBookPhoto, saveBookPhotoOrder, uploadBookPhoto } from '../../features/books/bookPhotoUpload';
 import { api, apiErrorMessage } from '../../services/api';
+import { Alert } from '../../services/notice';
+import { preparePickedImage, releasePreparedImage, type PreparedUploadImage } from '../../features/media/preparePickedImage';
 import type { ApiEnvelope, Book } from '../../types/api';
 import type { RootStackParamList } from '../../types/navigation';
 import { styles } from './styles';
@@ -37,6 +39,7 @@ export function BookEdit({ route, navigation }: Props) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<Form>(empty);
   const [photos, setPhotos] = useState<BookPhotoDraft[]>([]);
+  const preparedImages = useRef(new Map<string, PreparedUploadImage>());
   const hasLoadedBook = useRef(false);
   const photosAreDirty = useRef(false);
   const photoDraftKey = ['book-photos-draft', route.params.bookId];
@@ -45,6 +48,14 @@ export function BookEdit({ route, navigation }: Props) {
     queryFn: async () => (await api.get<ApiEnvelope<Book>>('/api/v1/books/' + route.params.bookId)).data.data,
     refetchInterval: (currentQuery) => getSignedBookImageRefreshDelay(currentQuery.state.data ? [currentQuery.state.data] : [])
   });
+
+  useEffect(() => () => {
+    const cached = queryClient.getQueryData<PhotoDraftCache>(['book-photos-draft', route.params.bookId]);
+    const retainedUris = new Set(cached?.photos.map((photo) => photo.uri));
+    for (const image of preparedImages.current.values()) {
+      if (!retainedUris.has(image.uri)) releasePreparedImage(image);
+    }
+  }, [queryClient, route.params.bookId]);
 
   useEffect(() => {
     const book = query.data;
@@ -57,6 +68,11 @@ export function BookEdit({ route, navigation }: Props) {
     if (!hasLoadedBook.current) {
       setForm({ title: book.title, authors: book.authors.join(', '), publisher: book.publisher || '', synopsis: book.synopsis || '', year: book.year ? String(book.year) : '', pageCount: book.pageCount ? String(book.pageCount) : '', subjects: book.subjects.join(', '), isbn: book.isbn || '' });
       const cached = queryClient.getQueryData<PhotoDraftCache>(photoDraftKey);
+      for (const photo of cached?.photos ?? []) {
+        if (!photo.imageId && photo.uri.startsWith('blob:') && photo.mimeType && photo.size) {
+          preparedImages.current.set(photo.uri, { uri: photo.uri, mimeType: photo.mimeType, size: photo.size });
+        }
+      }
       if (cached?.mode === 'replace') {
         const currentIds = new Set(remotePhotos.map((photo) => photo.imageId));
         setPhotos(cached.photos.filter((photo) => !photo.imageId || currentIds.has(photo.imageId)));
@@ -97,7 +113,12 @@ export function BookEdit({ route, navigation }: Props) {
     let firstValidationError: unknown;
     for (const asset of result.assets) {
       try {
-        validPhotos.push(createBookPhoto(asset, Crypto.randomUUID()));
+        const prepared = Platform.OS === 'web' ? await preparePickedImage(asset) : null;
+        const photo = createBookPhoto(prepared
+          ? { uri: prepared.uri, mimeType: prepared.mimeType, fileSize: prepared.size }
+          : asset, Crypto.randomUUID());
+        validPhotos.push(photo);
+        if (prepared) preparedImages.current.set(photo.uri, prepared);
       } catch (error) {
         firstValidationError ??= error;
       }
@@ -121,6 +142,12 @@ export function BookEdit({ route, navigation }: Props) {
   function confirmRemovePhoto(index: number) {
     const photo = photos[index];
     const remove = () => {
+      const prepared = photo && preparedImages.current.get(photo.uri);
+      const cached = queryClient.getQueryData<PhotoDraftCache>(photoDraftKey);
+      if (prepared && !cached?.photos.some((draft) => draft.uri === photo.uri)) {
+        releasePreparedImage(prepared);
+        preparedImages.current.delete(photo.uri);
+      }
       photosAreDirty.current = true;
       setPhotos((current) => removeBookPhoto(current, index));
     };

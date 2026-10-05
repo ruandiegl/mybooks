@@ -2,6 +2,7 @@ import express from 'express';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { createAuthRouter } from '../src/modules/auth/auth.routes.js';
+import { AppError } from '../src/shared/errors/AppError.js';
 import { errorHandler } from '../src/shared/http/errorHandler.js';
 import { requestContext } from '../src/shared/http/requestContext.js';
 
@@ -31,12 +32,37 @@ function makeApp(options = {}) {
   app.set('trust proxy', 1);
   app.use(requestContext);
   app.use(express.json());
-  app.use('/api/v1/auth', createAuthRouter(options));
+  app.use('/api/v1/auth', createAuthRouter({ allowedOrigins: ['https://trocalivros.example'], ...options }));
   app.use(errorHandler);
   return app;
 }
 
 describe('auth HTTP routes', () => {
+  it.each(['login', 'verify-email', 'refresh', 'logout'])('requires an HTTPS connection on browser/%s', async (route) => {
+    const service = createFakeService();
+    const response = await request(makeApp({ service }))
+      .post('/api/v1/auth/browser/' + route)
+      .set('origin', 'https://trocalivros.example')
+      .send({ email: 'leitora@example.com', password: 'Senha@123', code: '123456' });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('HTTPS_REQUIRED_FOR_WEB_SESSION');
+    expect(service.calls).toHaveLength(0);
+  });
+
+  it('rejects an HTTP browser origin even if it is on the origin list', async () => {
+    const service = createFakeService();
+    const response = await request(makeApp({ service, allowedOrigins: ['http://trocalivros.example'] }))
+      .post('/api/v1/auth/browser/login')
+      .set('origin', 'http://trocalivros.example')
+      .set('x-forwarded-proto', 'https')
+      .send({ email: 'leitora@example.com', password: 'Senha@123' });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('HTTPS_REQUIRED_FOR_WEB_SESSION');
+    expect(service.calls).toHaveLength(0);
+  });
+
   it('creates a pending account with the standard envelope', async () => {
     const service = createFakeService();
     const response = await request(makeApp({ service })).post('/api/v1/auth/register').send({
@@ -99,5 +125,162 @@ describe('auth HTTP routes', () => {
     expect(limited.status).toBe(429);
     expect(limited.headers['ratelimit']).toBeTruthy();
     expect(limited.body.error.code).toBe('RATE_LIMITED');
+  });
+
+  it('sets an HttpOnly refresh cookie and omits the refresh token from browser login JSON', async () => {
+    const service = createFakeService();
+    const browserRefreshToken = 'browser-refresh-token-'.padEnd(32, 'x');
+    service.login = async (input, meta) => {
+      service.calls.push(['login', input, meta]);
+      return { accessToken: 'access', refreshToken: browserRefreshToken, expiresAt: new Date('2026-09-11T12:15:00Z'), user: { id: 'user-1' } };
+    };
+    const response = await request(makeApp({ service }))
+      .post('/api/v1/auth/browser/login')
+      .set('origin', 'https://trocalivros.example')
+      .set('x-forwarded-proto', 'https')
+      .send({ email: 'leitora@example.com', password: 'Senha@123' });
+
+    expect(response.status).toBe(200);
+    expect(response.headers['cache-control']).toBe('no-store');
+    expect(response.body.data).toEqual({
+      accessToken: 'access',
+      expiresAt: '2026-09-11T12:15:00.000Z',
+      user: { id: 'user-1' }
+    });
+    expect(response.headers['set-cookie'][0]).toMatch(new RegExp(`^__Host-trocalivros_refresh=${browserRefreshToken};`));
+    expect(response.headers['set-cookie'][0]).toContain('HttpOnly');
+    expect(response.headers['set-cookie'][0]).toContain('Secure');
+    expect(response.headers['set-cookie'][0]).toContain('SameSite=Lax');
+    expect(response.headers['set-cookie'][0]).toContain('Path=/');
+  });
+
+  it('sets a browser refresh cookie after email verification and rejects a different origin', async () => {
+    const service = createFakeService();
+    const browserRefreshToken = 'verification-refresh-token-'.padEnd(32, 'x');
+    service.verifyEmail = async (input, meta) => {
+      service.calls.push(['verifyEmail', input, meta]);
+      return { accessToken: 'access', refreshToken: browserRefreshToken, expiresAt: new Date('2026-09-11T12:15:00Z'), user: { id: 'user-1' } };
+    };
+    const app = makeApp({ service });
+    const verified = await request(app)
+      .post('/api/v1/auth/browser/verify-email')
+      .set('origin', 'https://trocalivros.example')
+      .set('x-forwarded-proto', 'https')
+      .send({ email: 'leitora@example.com', code: '123456' });
+
+    expect(verified.status).toBe(200);
+    expect(verified.body.data).not.toHaveProperty('refreshToken');
+    expect(verified.headers['set-cookie'][0]).toMatch(new RegExp(`^__Host-trocalivros_refresh=${browserRefreshToken};`));
+
+    const rejected = await request(app)
+      .post('/api/v1/auth/browser/login')
+      .set('origin', 'https://attacker.example')
+      .send({ email: 'leitora@example.com', password: 'Senha@123' });
+    expect(rejected.status).toBe(403);
+    expect(service.calls).toHaveLength(1);
+  });
+
+  it('rotates a browser refresh cookie and never accepts a cross-origin refresh', async () => {
+    const service = createFakeService();
+    const browserRefreshToken = 'browser-refresh-token-'.padEnd(32, 'x');
+    const app = makeApp({ service });
+    const rotated = await request(app)
+      .post('/api/v1/auth/browser/refresh')
+      .set('origin', 'https://trocalivros.example')
+      .set('x-forwarded-proto', 'https')
+      .set('cookie', `__Host-trocalivros_refresh=${browserRefreshToken}`);
+
+    expect(rotated.status).toBe(200);
+    expect(service.calls[0][0]).toBe('refresh');
+    expect(service.calls[0][1]).toBe(browserRefreshToken);
+    expect(rotated.body.data).not.toHaveProperty('refreshToken');
+    expect(rotated.headers['set-cookie'][0]).toMatch(/^__Host-trocalivros_refresh=next-refresh;/);
+
+    const crossOrigin = await request(app)
+      .post('/api/v1/auth/browser/refresh')
+      .set('origin', 'https://attacker.example')
+      .set('cookie', `__Host-trocalivros_refresh=${browserRefreshToken}`);
+
+    expect(crossOrigin.status).toBe(403);
+    expect(service.calls).toHaveLength(1);
+  });
+
+  it('revokes and clears the browser refresh cookie on logout', async () => {
+    const service = createFakeService();
+    const browserRefreshToken = 'browser-refresh-token-'.padEnd(32, 'x');
+    const response = await request(makeApp({ service }))
+      .post('/api/v1/auth/browser/logout')
+      .set('origin', 'https://trocalivros.example')
+      .set('x-forwarded-proto', 'https')
+      .set('cookie', `__Host-trocalivros_refresh=${browserRefreshToken}`);
+
+    expect(response.status).toBe(200);
+    expect(service.calls.at(-1)).toEqual(['logout', { refreshToken: browserRefreshToken }]);
+    expect(response.headers['set-cookie'][0]).toMatch(/^__Host-trocalivros_refresh=;/);
+    expect(response.headers['set-cookie'][0]).toContain('Max-Age=0');
+  });
+
+  it('expires an invalid browser refresh cookie instead of leaving it to loop on reload', async () => {
+    const service = createFakeService();
+    service.refresh = async () => { throw new AppError('Sessão inválida.', { statusCode: 401, code: 'INVALID_SESSION' }); };
+    const browserRefreshToken = 'browser-refresh-token-'.padEnd(32, 'x');
+    const response = await request(makeApp({ service }))
+      .post('/api/v1/auth/browser/refresh')
+      .set('origin', 'https://trocalivros.example')
+      .set('x-forwarded-proto', 'https')
+      .set('cookie', `__Host-trocalivros_refresh=${browserRefreshToken}`);
+
+    expect(response.status).toBe(401);
+    expect(response.headers['set-cookie'][0]).toContain('Max-Age=0');
+  });
+
+  it.each(['%E0%A4%A', ''])('expires a malformed or empty browser refresh cookie instead of leaving it to loop on reload', async (cookieValue) => {
+    const service = createFakeService();
+    const response = await request(makeApp({ service }))
+      .post('/api/v1/auth/browser/refresh')
+      .set('origin', 'https://trocalivros.example')
+      .set('x-forwarded-proto', 'https')
+      .set('cookie', `__Host-trocalivros_refresh=${cookieValue}`);
+
+    expect(response.status).toBe(401);
+    expect(response.headers['set-cookie'][0]).toContain('Max-Age=0');
+    expect(service.calls).toHaveLength(0);
+  });
+
+  it('preserves the browser refresh cookie after a transient refresh failure', async () => {
+    const service = createFakeService();
+    service.refresh = async () => { throw new Error('database unavailable'); };
+    const browserRefreshToken = 'browser-refresh-token-'.padEnd(32, 'x');
+    const response = await request(makeApp({ service }))
+      .post('/api/v1/auth/browser/refresh')
+      .set('origin', 'https://trocalivros.example')
+      .set('x-forwarded-proto', 'https')
+      .set('cookie', `__Host-trocalivros_refresh=${browserRefreshToken}`);
+
+    expect(response.status).toBe(500);
+    expect(response.headers['set-cookie']).toBeUndefined();
+  });
+
+  it('preserves the browser cookie when revocation fails and clears it after a successful retry', async () => {
+    const service = createFakeService();
+    service.logout = async () => { throw new Error('database unavailable'); };
+    const browserRefreshToken = 'browser-refresh-token-'.padEnd(32, 'x');
+    const response = await request(makeApp({ service }))
+      .post('/api/v1/auth/browser/logout')
+      .set('origin', 'https://trocalivros.example')
+      .set('x-forwarded-proto', 'https')
+      .set('cookie', `__Host-trocalivros_refresh=${browserRefreshToken}`);
+
+    expect(response.status).toBe(500);
+    expect(response.headers['set-cookie']).toBeUndefined();
+
+    service.logout = async () => ({ ok: true });
+    const retry = await request(makeApp({ service }))
+      .post('/api/v1/auth/browser/logout')
+      .set('origin', 'https://trocalivros.example')
+      .set('x-forwarded-proto', 'https')
+      .set('cookie', `__Host-trocalivros_refresh=${browserRefreshToken}`);
+    expect(retry.status).toBe(200);
+    expect(retry.headers['set-cookie'][0]).toContain('Max-Age=0');
   });
 });

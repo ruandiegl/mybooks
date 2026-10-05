@@ -5,12 +5,28 @@ A API usa JavaScript ESM, Express 5, Zod e Prisma. O ponto de composição HTTP 
 ## Pipeline HTTP
 
 1. request ID e log estruturado;
-2. Helmet, CORS e limite JSON de 1 MB;
+2. Helmet, CORS restrito e limite JSON de 1 MB;
 3. middleware de autenticação própria e sessão revogável;
 4. rate limit em `/api/v1`;
 5. autenticação e hidratação do usuário local;
 6. rota/controller/service/repository;
 7. handler central de erro.
+
+## Sessão nativa e contratos web
+
+Todos os caminhos abaixo ficam sob `/api/v1/auth` e reutilizam os mesmos services de identidade e `AuthSession` revogável:
+
+| Cliente/contrato | Login, verificação, refresh e logout | Transporte do refresh |
+| --- | --- | --- |
+| APK/nativo | `/login`, `/verify-email`, `/refresh`, `/logout` sem seleção de cookie | token no JSON e SecureStore no dispositivo |
+| Web da main | os mesmos endpoints com `X-Session-Transport: cookie` | `trocalivros_refresh`, HttpOnly, Secure, SameSite=Strict, Path=/api/v1/auth |
+| PWA/adaptador web | `/browser/login`, `/browser/verify-email`, `/browser/refresh`, `/browser/logout` | `__Host-trocalivros_refresh`, HttpOnly, Secure, Path=/, sem Domain |
+
+O refresh token não aparece no JSON dos dois contratos web. Ambos devem exigir `req.secure` e `Origin` HTTPS autorizado, com proteção CSRF e rejeição de `Sec-Fetch-Site: cross-site`. A allowlist combina `CLIENT_ORIGINS` e `PWA_CLIENT_ORIGIN` sem apagar origens existentes; a configuração efetivamente implantada ainda precisa ser conferida para a versão integrada. O APK mantém o transporte nativo.
+
+Cookie inválido/expirado deve ser removido no refresh; erro transitório não deve apagar cookie nem encerrar uma sessão válida. Logout remove cookie e estado local somente após revogação confirmada. A regra da main prevalece sobre o logout offline/local da branch PWA; os testes dos dois contratos conciliados ainda precisam ser executados.
+
+O Caddy preserva método, URI, corpo, Origin, cookies e headers de encaminhamento nas rotas `/api/v1`, `/health`, `/socket.io` e `/covers`. A Railway termina TLS; o protocolo da borda precisa chegar à API, sem promover HTTP a HTTPS. A configuração de `trust proxy` deve corresponder à cadeia real de proxies confiáveis, para que HTTPS e limites por IP continuem corretos. O fallback HTML não pode mascarar respostas de API, WebSocket ou arquivos ausentes.
 
 ## Respostas
 

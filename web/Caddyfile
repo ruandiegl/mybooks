@@ -1,0 +1,54 @@
+{
+	admin off
+	servers {
+		trusted_proxies static private_ranges
+		trusted_proxies_strict
+	}
+}
+
+:{$PORT:8080} {
+	root * {$WEB_ROOT:/srv}
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(self), microphone=(), geolocation=()"
+	}
+
+	@upstream path /api/v1* /health* /socket.io* /covers*
+	handle @upstream {
+		reverse_proxy {$API_UPSTREAM} {
+			header_up X-Forwarded-For {client_ip}
+			header_up X-Forwarded-Host {host}
+			# Railway terminates TLS and overwrites this header at its HTTPS edge.
+			# Preserve it instead of reporting the edge-to-Caddy HTTP connection.
+			header_up X-Forwarded-Proto {http.request.header.X-Forwarded-Proto}
+		}
+	}
+
+	@htmlShell {
+		method GET HEAD
+		header Accept *text/html*
+		not path_regexp extension \.[^/]+$
+	}
+
+	@htmlPath path / /index.html
+	header @htmlPath Cache-Control "no-store, max-age=0"
+	header @htmlShell Cache-Control "no-store, max-age=0"
+
+	@immutable path /_expo/static/* /assets/*
+	header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+	@metadata path /manifest.json /favicon.ico /icons/* /sw.js /offline.html
+	header @metadata Cache-Control "no-cache"
+
+	handle @htmlShell {
+		try_files {path} /index.html
+		file_server
+	}
+
+	handle {
+		file_server
+	}
+}

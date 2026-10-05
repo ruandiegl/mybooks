@@ -11,9 +11,9 @@ export function isCookieSessionRequest(req) {
   return req.get(SESSION_TRANSPORT_HEADER)?.toLowerCase() === 'cookie';
 }
 
-export function assertCookieSessionRequest(req) {
+export function assertCookieSessionRequest(req, allowedOrigins = env.CLIENT_ORIGINS) {
   const origin = req.get('origin');
-  if (!origin || !env.CLIENT_ORIGINS.includes(origin)) {
+  if (!origin || !allowedOrigins.includes(origin)) {
     throw new AppError('Origem não autorizada.', { statusCode: 403, code: 'WEB_ORIGIN_NOT_ALLOWED' });
   }
 

@@ -6,6 +6,12 @@ E-mail é normalizado e confirmado por código. CPF passa por dígitos verificad
 
 Access tokens JWT HS256 têm `iss`, `aud`, `sub`, `sid`, `jti`, `iat` e `exp` curto. Refresh tokens são aleatórios, persistidos apenas por hash, rotacionados a cada uso e agrupados por família. Reuso de token revogado revoga a família. Reset de senha e logout global revogam todas as sessões.
 
+## Transporte por plataforma
+
+Android/iOS mantém o refresh no SecureStore e usa `/auth/login`, `/auth/verify-email`, `/auth/refresh` e `/auth/logout`. A PWA guarda somente o access token curto em memória; o refresh permanece no cookie first-party `__Host-trocalivros_refresh` (`HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, sem `Domain`). Login, verificação, refresh e logout web exigem uma origem exata na allowlist: a API combina `CLIENT_ORIGINS` com `PWA_CLIENT_ORIGIN`, quando definido, e rejeita `Sec-Fetch-Site: cross-site`. A rotação e o logout web são serializados entre abas pela Web Locks API. O armazenamento local mantém apenas um marcador não secreto de logout offline, para não restaurar o cookie ao reabrir outra aba; nenhum token é salvo em `localStorage` ou `sessionStorage`.
+
+O domínio público PWA deve ser servido por HTTPS no mesmo origin usado para API e Socket.IO. Renovação entre abas requer Safari/iOS 15.4 ou mais recente, que inclui Web Locks. Caddy encaminha os cookies e os cabeçalhos; antes do aceite público, verificar `X-Forwarded-For` e `X-Forwarded-Proto` através dos proxies reais da Railway sem aumentar `trust proxy` da API por suposição.
+
 Códigos têm 6 dígitos, hash, TTL de 15 minutos, uso único e até 5 tentativas. Reenvio tem cooldown. Cadastro/login/verificação/reenvio/recuperação/reset/refresh têm limites separados por IP e identificador protegido por hash.
 
 O cadastro não verificado permanece pendente por 24 horas. Repetir o cadastro com o mesmo e-mail reutiliza imediatamente o registro pendente, invalida o código anterior, atualiza senha/CPF/celular e envia um novo código, desde que o novo CPF não esteja associado a outra conta. Após a validade, o registro pendente e seus códigos são removidos de forma oportunista na próxima tentativa. Uma conta não verificada nunca pode iniciar sessão.

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppButton } from '../../components/AppButton';
 import { AvatarPicker } from '../../components/AvatarPicker';
@@ -8,6 +8,7 @@ import { OnboardingProgress } from '../../components/OnboardingProgress';
 import { TextField } from '../../components/TextField';
 import { useSession } from '../../providers/SessionProvider';
 import { api, apiErrorMessage } from '../../services/api';
+import { Alert } from '../../services/notice';
 import type { ApiEnvelope, User } from '../../types/api';
 import { styles } from './styles';
 

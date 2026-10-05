@@ -48,7 +48,12 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && request && !request._authRetry && !isRefreshRequest) {
       request._authRetry = true;
       refreshPromise ??= sessionAccessor.refresh().finally(() => { refreshPromise = null; });
-      const refreshed = await refreshPromise;
+      let refreshed: boolean;
+      try {
+        refreshed = await refreshPromise;
+      } catch {
+        return Promise.reject(error);
+      }
 
       if (refreshed) {
         const token = await sessionAccessor.getAccessToken();

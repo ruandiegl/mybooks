@@ -1,5 +1,17 @@
 # 16. Histórico de alterações
 
+Os resultados abaixo pertencem às execuções e branches indicadas em cada registro; não comprovam testes, deploy ou aceite da integração em curso.
+
+## 05/10/2026 — Integração da PWA com a main
+
+- Conciliados os documentos 01, 02, 03, 04, 11, 15, 16 e README entre a main `249751e` e a branch PWA `89733ef`, preservando Curtidas, Premium implementado, até três fotos ordenadas e GET privado renovável do R2.
+- Incorporados manifesto/ícones, service worker restrito, proxy Caddy, deep links e variantes web de sessão, avisos e mídia. Uso autenticado offline, push e cobrança real continuam fora do que foi implementado.
+- Registrada a coexistência dos contratos `X-Session-Transport: cookie` e `/auth/browser/*` com cookie `__Host-`, com HTTPS/Origin nas duas entradas e preservação da regra da main de revogar antes de encerrar o logout local. A conciliação de código e seus testes estão a cargo da integração, ainda sem aceite neste registro.
+- Mantidos os resultados anteriores como históricos, incluindo publicação e GETs básicos registrados na branch PWA. Login/cookies, WebSocket, R2 real, migração no banco alvo e Safari/iPhone não foram aprovados por esta revisão documental.
+- Nenhum teste npm, deploy, staging, commit ou push foi executado nesta conciliação documental.
+
+Após a conciliação documental, a integração de código preservou as funcionalidades da main e foi validada localmente: app 26 arquivos/91 testes; API 34 arquivos/228 testes com 3 arquivos/7 testes condicionais ignorados; typecheck, lint, exports Web/Android e smoke PWA/Caddy aprovados. A revisão independente identificou e confirmou correções do prefixo native, refresh compartilhado HTTP/socket e escolhas do adapter web. Também foram preservados HTTPS/Origin e logout após revogação confirmada, acrescentado `/likes`, evitada recursão Metro na preparação JPEG e mantidos os blobs de drafts para retry. Serviços Railway e aceite físico não foram alterados/realizados; o checkout principal permaneceu intacto.
+
 ## 30/09/2026 — Até três fotos por livro no R2
 
 - `BookImage` passou a ter ordem estável, capa única e migração com backfill determinístico e pré-condição que aborta sem excluir fotos quando encontra dados fora da regra.
@@ -8,6 +20,17 @@
 - O app aceita JPEG/PNG/WebP de até 8 MiB, com até três imagens, seleção sequencial, retry em `BookEdit`, capa na posição 0 e galeria em `BookDetails`.
 - Validação local: API 27 arquivos/177 testes aprovados, 1 ignorado; lint e Prisma validate/generate passaram. App 9 arquivos/39 testes, typecheck e export Web/Android passaram.
 - Migração, inventário do banco, R2 real, CORS/lifecycle no bucket e teste em dispositivos permanecem pendentes; não havia DATABASE_URL, Docker disponível ou credenciais R2 configuradas no checkout isolado.
+
+## 28/09/2026 — Base Web/PWA compartilhada (branch PWA)
+
+- Adicionada a área `web/` com Dockerfile multi-stage, Caddy, roteiro Railway e smoke de proxy HTTP/WebSocket/cache. Na validação local registrada, o proxy não foi executado por ausência de Caddy e daemon Docker acessível.
+- O Expo Web recebeu manifesto instalável, ícones 192/512/180, metadados iOS, build `single` e service worker limitado a assets com hash e página offline sem dados privados.
+- A configuração web usa a origem da página para API e Socket.IO; o smoke de build registrado confirmou ausência do IP local/fallback nativo no bundle.
+- A branch PWA introduziu access token em memória, refresh rotativo no cookie `__Host-trocalivros_refresh`, allowlist de Origin e omissão do refresh no JSON web. Refresh/logout usam Web Locks; falha transitória de refresh preserva cookie e memória e cookie inválido/malformado é expirado. O logout offline com marcador não secreto era comportamento dessa branch; a integração deve preservar a regra mais forte da main de confirmar revogação antes de encerrar a sessão local.
+- Adicionados linking React Navigation, avisos com callbacks, preparação HEIC/JPEG grande e token atual no handshake Socket.IO.
+- Validação histórica: app 12 arquivos/47 testes e typecheck; API lint e 23 arquivos/170 testes, 1 ignorado; export web 821 módulos com smoke PWA; Android Hermes 1.067 módulos. O resumo da matriz informa API 24 arquivos/172 testes, 1 ignorado; a divergência entre registros fica explícita e nenhum total aprova o merge atual.
+- A matriz da branch registra deploys `SUCCESS`, GET `/` e `/health` `200`, e `/api/v1/auth/me` `401` JSON via proxy. Esse histórico comprova publicação/HTTP básico daquela versão, sem aceite de login/cookie, Socket.IO, cache ou Safari/iPhone e sem comprovar deploy da integração.
+- O Premium e a galeria privada ainda não estavam presentes naquele checkout PWA; ambos já existem na main e são preservados na integração. Os aceites de serviços reais e dispositivos continuam pendentes.
 
 ## 24/09/2026 — Implementação do Premium gratuito de demonstração
 

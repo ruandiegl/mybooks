@@ -1,4 +1,5 @@
 import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { linking } from './linking';
 import { ActivityIndicator, View } from 'react-native';
 import { useSession } from '../providers/SessionProvider';
 import { theme } from '../styles/theme';
@@ -32,7 +33,7 @@ export function Routes() {
 
   return (
     <PremiumOfferProvider>
-      <NavigationContainer theme={navigationTheme}>
+      <NavigationContainer theme={navigationTheme} linking={linking}>
         {isSignedIn ? <AppRoutes /> : <AuthRoutes />}
       </NavigationContainer>
     </PremiumOfferProvider>

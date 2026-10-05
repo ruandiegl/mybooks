@@ -76,7 +76,7 @@ export const authApi = {
     assertAuthTransportAvailable();
     return data<AuthSessionResponse>(await publicApi.post('/api/v1/auth/login', input, sessionRequestConfig));
   },
-  async refresh(refreshToken: string | null) {
+  async refresh(refreshToken: string | null = null) {
     assertAuthTransportAvailable();
     if (!usesCookieSession && !refreshToken) throw new Error('Token de sessão ausente.');
     const body = usesCookieSession ? {} : { refreshToken };
@@ -85,7 +85,7 @@ export const authApi = {
     );
     return data<AuthSessionResponse>(response);
   },
-  async logout(refreshToken: string | null) {
+  async logout(refreshToken: string | null = null) {
     assertAuthTransportAvailable();
     if (!usesCookieSession && !refreshToken) throw new Error('Token de sessão ausente.');
     const body = usesCookieSession ? {} : { refreshToken };

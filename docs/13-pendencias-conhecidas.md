@@ -3,7 +3,10 @@
 ## Produção
 
 - validar finalidade, base legal, retenção, exportação e exclusão de CPF/celular com o responsável jurídico/LGPD;
-- configurar HTTPS, domínio, CORS e cadeia real de proxies antes de confiar em `trust proxy=1`;
+- validar login/cookie, Socket.IO, câmera, mídia e instalação da PWA em Safari/iPhone físico; o domínio HTTPS, o proxy privado `/health` e `PWA_CLIENT_ORIGIN` já estão publicados;
+- repetir o aceite do proxy no domínio público e em Safari/iPhone; os smoke tests locais HTTP/WebSocket/HTTPS foram executados com Caddy 2.10.2 temporário na integração;
+- melhorar a recuperação da sessão ao abrir a PWA offline: o access token só existe em memória; se o primeiro refresh falhar por rede/5xx, o cookie é preservado, mas a pessoa precisa recarregar quando o serviço voltar ou autenticar novamente;
+- confirmar a cadeia real `cliente → edge Railway → Caddy → API`, incluindo `X-Forwarded-For`/`X-Forwarded-Proto`, e testar limites por IP antes de alterar `trust proxy`;
 - provisionar PostgreSQL gerenciado, backup automático, teste de restore e monitoração;
 - configurar Resend com domínio verificado e monitorar bounces/entrega;
 - executar `API/prisma/book-image-preflight.sql` no banco alvo e aplicar a migração só depois de resolver explicitamente livros com mais de três fotos ou capas conflitantes;
@@ -12,10 +15,11 @@
 - reconciliar objetos finais órfãos em `books/` quando a cópia do R2 tiver sucesso e o commit do banco falhar sem conseguir registrar a fila de limpeza;
 - criar processo de migração/recuperação para contas legadas antes de remover fisicamente `clerkUserId`;
 - realizar testes com dois usuários reais e em Android/iOS físico, incluindo acessibilidade;
-- aceitar o scanner em Android e iOS físicos com permissão negada/bloqueada, baixa luz, código danificado, offline, ISBN não encontrado (`404`), provedor indisponível (`503`) e limite excedido (`429`). O cadastro manual, inclusive de ISBN-10, deve permanecer funcional em todos esses casos.
+- concluir o aceite físico do Premium de teste de 30 dias e do limite gratuito de 15 curtidas/dia, já presentes na integração; cobrança real continua fora do MVP;
+- aceitar câmera/scanner, seleção e envio de JPEG/PNG/WebP/HEIC, rotas diretas, sessão renovada e chat em Android/iOS físicos, incluindo permissão negada/bloqueada e fallback manual. O cadastro manual, inclusive de ISBN-10, deve permanecer funcional.
 - antes de escalar a API para múltiplas réplicas, mover os rate limits geral, de autenticação e de ISBN do armazenamento em memória para um store compartilhado, como Redis; em memória, cada processo mantém sua própria cota e reinícios zeram a janela.
 
-O scanner não oferece leitura física direta de ISBN-10 e não deve ser anunciado como recurso Web. Esses limites são decisões do escopo atual, não defeitos a mascarar no aceite.
+O scanner não oferece leitura física direta de ISBN-10. Expo Camera tem adaptador web, mas a compatibilidade final em Safari/iPhone ainda aguarda teste físico.
 
 
 ## Premium do MVP de TCC — aceite externo

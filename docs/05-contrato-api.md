@@ -1,6 +1,6 @@
 # 5. Contrato HTTP
 
-Base: `/api/v1`. `/health` e as rotas públicas abaixo não exigem bearer. Todo o restante exige `Authorization: Bearer <accessToken>` nativo. Não existe cabeçalho de identidade local.
+Base: `/api/v1`. `/health` e as rotas públicas abaixo não exigem bearer. Rotas privadas exigem `Authorization: Bearer <accessToken>`. Os endpoints de sessão web são protegidos por cookie first-party e validação exata de `Origin`; nenhum cliente pode fornecer um cabeçalho de identidade local.
 
 ## Autenticação
 
@@ -16,10 +16,16 @@ Base: `/api/v1`. `/health` e as rotas públicas abaixo não exigem bearer. Todo 
 | POST | `/auth/forgot-password` | resposta genérica `{ accepted: true }` |
 | POST | `/auth/reset-password` | troca senha e revoga todas as sessões |
 | GET | `/auth/me` | usuário da sessão atual |
+| POST | `/auth/browser/login` | login web; refresh em cookie HttpOnly e sem refresh token no JSON |
+| POST | `/auth/browser/verify-email` | verifica e inicia sessão web pelo mesmo cookie |
+| POST | `/auth/browser/refresh` | rotaciona refresh a partir do cookie HttpOnly |
+| POST | `/auth/browser/logout` | revoga refresh e expira o cookie web |
 
 `register` recebe somente `email`, `password`, `cpf` e `phone`. Se já existir um cadastro pendente não verificado com o mesmo e-mail, a chamada reutiliza imediatamente esse cadastro, atualiza senha/CPF/celular, invalida o código anterior e envia uma nova confirmação; se o novo CPF já pertencer a outra conta, ou se o e-mail já estiver verificado, a API retorna erro genérico. `verify-email` recebe `email` e código de 6 dígitos. No cliente nativo, respostas de sessão incluem `accessToken`, `refreshToken`, `expiresAt` e `user`. Na PWA, a origem HTTPS precisa ser exatamente a origem permitida pela API; enviando `X-Session-Transport: cookie`, a API guarda refresh em cookie HttpOnly/Secure/SameSite=Strict e omite `refreshToken` do JSON. A PWA mantém o access token só em memória. Códigos, hashes, CPF protegido e metadados internos nunca são retornados.
 
 Para a PWA, publique `/api` no mesmo origin HTTPS por reverse proxy; HTTP de LAN/Internet é bloqueado antes do envio de credenciais. HTTP efêmero em memória é aceito somente com a página e a API em loopback no desenvolvimento. Refresh de cookie é serializado entre abas com Web Locks. As rotas de cookie exigem `Origin` HTTPS listado em `CLIENT_ORIGINS`; logout limpa o cookie e revoga a sessão antes de o app encerrar a sessão local.
+
+As respostas web de login/verificação/refresh incluem somente `accessToken`, `expiresAt` e `user`. O refresh fica em `__Host-trocalivros_refresh` com `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, sem `Domain` e validade alinhada à sessão. Todas as rotas browser exigem origem exata na allowlist composta por `CLIENT_ORIGINS` e pelo `PWA_CLIENT_ORIGIN` opcional; logout limpa o cookie mesmo se a revogação remota falhar.
 
 Cada grupo tem limite configurável e headers `RateLimit`; ao exceder, responde `429` com `RATE_LIMITED`. Login usa mensagem genérica para conta ausente/senha errada; recuperação e reenvio não confirmam existência.
 

@@ -45,7 +45,7 @@ export function AppRoutes() {
       <Stack.Screen
         name="Chat"
         component={Chat}
-        options={({ route }) => ({ title: route.params.title })}
+        options={({ route }) => ({ title: route.params.title || 'Conversa' })}
       />
     </Stack.Navigator>
   );

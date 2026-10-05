@@ -2,8 +2,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Crypto from 'expo-crypto';
 import * as ImagePicker from 'expo-image-picker';
-import { useRef, useState } from 'react';
-import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 import { AppButton } from '../../components/AppButton';
 import { BarcodeScannerModal } from '../../components/BarcodeScannerModal';
 import { BookPhotoPicker } from '../../components/BookPhotoPicker';
@@ -30,6 +30,8 @@ import {
 } from '../../features/books/bookPhotos';
 import { uploadBookPhoto } from '../../features/books/bookPhotoUpload';
 import { api, apiErrorMessage } from '../../services/api';
+import { Alert } from '../../services/notice';
+import { preparePickedImage, releasePreparedImage, type PreparedUploadImage } from '../../features/media/preparePickedImage';
 import { theme } from '../../styles/theme';
 import type { ApiEnvelope, Book, IsbnLookup } from '../../types/api';
 import type { RootStackParamList } from '../../types/navigation';
@@ -44,11 +46,23 @@ export function BookCreate({ navigation }: Props) {
   const [form, setForm] = useState(initialForm);
   const [lookup, setLookup] = useState<IsbnLookup | null>(null);
   const [photos, setPhotos] = useState<BookPhotoDraft[]>([]);
+  const preparedImages = useRef(new Map<string, PreparedUploadImage>());
+  const pendingPhotosBookId = useRef<string | null>(null);
   const [scannerVisible, setScannerVisible] = useState(false);
   const dirtyFields = useRef(new Set<EditableBookField>());
   const currentIsbn = useRef('');
   const pendingIsbn = useRef<string | null>(null);
   const lastConfirmedIsbn = useRef<string | null>(null);
+
+  useEffect(() => () => {
+    const draft = pendingPhotosBookId.current
+      ? queryClient.getQueryData<{ photos: BookPhotoDraft[] }>(['book-photos-draft', pendingPhotosBookId.current])
+      : null;
+    const retainedUris = new Set(draft?.photos.map((photo) => photo.uri));
+    for (const image of preparedImages.current.values()) {
+      if (!retainedUris.has(image.uri)) releasePreparedImage(image);
+    }
+  }, [queryClient]);
 
   const set = (key: keyof BookDraft, value: string) => {
     if (key !== 'isbn') dirtyFields.current.add(key);
@@ -129,7 +143,12 @@ export function BookCreate({ navigation }: Props) {
     let firstValidationError: unknown;
     for (const asset of result.assets) {
       try {
-        validPhotos.push(createBookPhoto(asset, Crypto.randomUUID()));
+        const prepared = Platform.OS === 'web' ? await preparePickedImage(asset) : null;
+        const photo = createBookPhoto(prepared
+          ? { uri: prepared.uri, mimeType: prepared.mimeType, fileSize: prepared.size }
+          : asset, Crypto.randomUUID());
+        validPhotos.push(photo);
+        if (prepared) preparedImages.current.set(photo.uri, prepared);
       } catch (error) {
         firstValidationError ??= error;
       }
@@ -147,6 +166,16 @@ export function BookCreate({ navigation }: Props) {
       Alert.alert('Foto não adicionada', message);
     }
     if (validPhotos.length > remaining) Alert.alert('Limite de fotos', 'Um livro pode ter até três fotos.');
+  }
+
+  function removePhoto(index: number) {
+    const photo = photos[index];
+    const prepared = photo && preparedImages.current.get(photo.uri);
+    if (prepared) {
+      releasePreparedImage(prepared);
+      preparedImages.current.delete(photo.uri);
+    }
+    setPhotos((current) => removeBookPhoto(current, index));
   }
 
   const createMutation = useMutation({
@@ -178,6 +207,7 @@ export function BookCreate({ navigation }: Props) {
       void queryClient.invalidateQueries({ queryKey: ['books'] });
       void queryClient.invalidateQueries({ queryKey: ['discover'] });
       if (photosPending.length) {
+        pendingPhotosBookId.current = book.id;
         queryClient.setQueryData(['book-photos-draft', book.id], { mode: 'append', photos: photosPending });
         Alert.alert('Livro publicado; fotos pendentes', 'O livro já está na sua biblioteca. Algumas fotos não foram enviadas; você pode tentar novamente na edição.', [
           { text: 'Ver livro', onPress: () => navigation.replace('BookDetails', { bookId: book.id }) },
@@ -224,7 +254,7 @@ export function BookCreate({ navigation }: Props) {
             photos={photos}
             onAdd={() => void pickImages()}
             onMove={(from, to) => setPhotos((current) => moveBookPhoto(current, from, to))}
-            onRemove={(index) => setPhotos((current) => removeBookPhoto(current, index))}
+            onRemove={removePhoto}
             disabled={createMutation.isPending}
           />
           <AppButton label="Publicar livro" icon="arrow-forward" loading={createMutation.isPending} onPress={() => createMutation.mutate()} />

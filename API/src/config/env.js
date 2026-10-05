@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { z } from 'zod';
+import { buildClientOrigins } from './clientOrigins.js';
 
 const emptyToUndefined = (value) => value === '' ? undefined : value;
 const optionalString = z.preprocess(emptyToUndefined, z.string().optional());
@@ -17,6 +18,7 @@ const schema = z.object({
   DATABASE_URL: z.string().min(1).default('postgresql://mybooks:mybooks@localhost:5432/mybooks?schema=public'),
   PUBLIC_API_BASE_URL: z.string().url().default('http://localhost:3001'),
   CLIENT_ORIGINS: z.string().default('http://localhost:8081,http://localhost:19006'),
+  PWA_CLIENT_ORIGIN: optionalUrl,
   AUTH_MODE: z.literal('native', { error: 'AUTH_MODE=native é obrigatório.' }).default('native'),
   BCRYPT_ROUNDS: z.coerce.number().int().min(10).max(14).default(12),
   AUTH_ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(900),
@@ -113,5 +115,5 @@ if (
 export const env = {
   ...parsed.data,
   ...authSecrets,
-  CLIENT_ORIGINS: parsed.data.CLIENT_ORIGINS.split(',').map((item) => item.trim()).filter(Boolean)
+  CLIENT_ORIGINS: buildClientOrigins(parsed.data.CLIENT_ORIGINS, parsed.data.PWA_CLIENT_ORIGIN)
 };

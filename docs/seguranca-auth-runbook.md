@@ -4,6 +4,10 @@
 
 Revogue todas as `AuthSession` ativas do usuário, force novo login, preserve request IDs relevantes e investigue IP hash/user-agent sem expor tokens. Se houver replay, a aplicação revoga automaticamente a família.
 
+## Cookie de sessão web
+
+O refresh da PWA usa `__Host-trocalivros_refresh`, `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/` e nenhum `Domain`. Se houver replay ou sessão revogada, investigue request ID sem copiar cookie/token para logs, revogue a família da sessão e confirme que `/auth/browser/refresh` expira o cookie inválido. Não remova `Secure` para contornar falhas de ambiente; corrija HTTPS e `CLIENT_ORIGINS`.
+
 ## Segredo JWT/pepper comprometido
 
 Interrompa emissões, gere novos segredos aleatórios base64 de 32 bytes no cofre, revogue todas as sessões, publique a API e force login. Trocar pepper invalida refresh/códigos existentes. Registre horário e escopo; nunca copie o segredo para ticket/log.
