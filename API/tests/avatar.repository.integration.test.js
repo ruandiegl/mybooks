@@ -65,4 +65,13 @@ integration('avatar grants and version locks with PostgreSQL', () => {
     expect((await client.avatarUpload.findUnique({ where: { id: upload.id } })).status).toBe('EXPIRED');
     expect(await client.storageCleanupJob.count({ where: { storageKey: upload.storageKey } })).toBe(1);
   });
+  it('bounds terminal-grant retention work per sweep', async () => {
+    const user = await fixture();
+    for (let n=0;n<21;n++) {
+      const upload = await grant(user);
+      await client.avatarUpload.update({ where: { id: upload.id }, data: { status: 'CANCELED', updatedAt: new Date(Date.now()-172800000) } });
+    }
+    await repository.sweepExpired();
+    expect(await client.avatarUpload.count({ where: { userId: user.id } })).toBe(1);
+  });
 });

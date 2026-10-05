@@ -1,3 +1,4 @@
+import { serializeOwnUser } from '../users/users.serializer.js';
 import { AppError } from '../../shared/errors/AppError.js';
 import { emailService as applicationEmailService } from '../email/email.service.js';
 import { authRepository as applicationRepository } from './auth.repository.js';
@@ -39,24 +40,7 @@ const invalidSession = () => new AppError('Sessão inválida ou expirada.', {
 
 const isUniqueRace = (error) => error?.code === 'P2002';
 
-const publicUser = (user) => ({
-  id: user.id,
-  name: user.name,
-  email: user.email,
-  emailVerifiedAt: user.emailVerifiedAt,
-  phone: user.phone,
-  firstName: user.firstName,
-  lastName: user.lastName,
-  interests: user.interests,
-  profileCompletedAt: user.profileCompletedAt,
-  booksOnboardingCompletedAt: user.booksOnboardingCompletedAt,
-  isActive: user.isActive,
-  avatarUrl: user.avatarUrl,
-  bio: user.bio,
-  city: user.city,
-  createdAt: user.createdAt,
-  updatedAt: user.updatedAt
-});
+
 
 export const createAuthService = ({
   repository = applicationRepository,
@@ -79,7 +63,7 @@ export const createAuthService = ({
 
   const issueSession = async (user, session, refreshToken, now) => ({
     ...await createTokenResponse({ user, session, refreshToken, now }),
-    user: publicUser(user)
+    user: await serializeOwnUser(user)
   });
 
   return {

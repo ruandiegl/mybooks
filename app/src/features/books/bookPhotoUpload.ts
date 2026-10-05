@@ -1,6 +1,7 @@
-import { File, UploadType } from 'expo-file-system';
+import { File } from 'expo-file-system';
 import { Platform } from 'react-native';
 import { api } from '../../services/api';
+import { MediaUploadError, putPreparedImage } from '../media/putPreparedImage';
 import type { ApiEnvelope, Book, BookImage } from '../../types/api';
 import { BookPhotoError, MAX_BOOK_PHOTO_SIZE, type BookPhotoDraft } from './bookPhotos';
 
@@ -13,20 +14,6 @@ type PresignedUpload = {
 };
 
 const imagesEndpoint = (bookId: string) => `/api/v1/books/${encodeURIComponent(bookId)}/images`;
-const safeStorageErrorCodes = new Set([
-  'AccessDenied',
-  'InvalidAccessKeyId',
-  'NoSuchBucket',
-  'RequestExpired',
-  'RequestTimeTooSkewed',
-  'SignatureDoesNotMatch'
-]);
-
-function safeStorageErrorCode(body: string) {
-  const code = body.match(/<Code>\s*([^<\s]+)\s*<\/Code>/i)?.[1];
-  return code && safeStorageErrorCodes.has(code) ? code : undefined;
-}
-
 export class BookPhotoUploadError extends Error {
   constructor(message: string, public readonly code: string, public readonly status?: number) {
     super(message);
@@ -69,38 +56,13 @@ export async function uploadBookPhoto(bookId: string, photo: BookPhotoDraft): Pr
     `${imagesEndpoint(bookId)}/presign`,
     { mimeType: photo.mimeType, size: uploadSize }
   )).data.data;
-  let status: number;
-  let responseBody = '';
   try {
-    if (Platform.OS === 'web') {
-      const response = await fetch(presign.uploadUrl, {
-        method: 'PUT',
-        headers: presign.headers,
-        body: blob as Blob
-      });
-      status = response.status;
-    } else {
-      const response = await localFile!.upload(presign.uploadUrl, {
-        httpMethod: 'PUT',
-        uploadType: UploadType.BINARY_CONTENT,
-        headers: { ...presign.headers, 'Content-Length': String(uploadSize) }
-      });
-      status = response.status;
-      responseBody = response.body;
-    }
-  } catch (error) {
-    if (error instanceof BookPhotoError) throw error;
+    await putPreparedImage({uri:photo.uri,mimeType:photo.mimeType,size:uploadSize},presign);
+  } catch(error) {
     throw new BookPhotoUploadError(
-      'Não foi possível transferir a foto do aparelho para o armazenamento. Tente novamente.',
-      'BOOK_PHOTO_TRANSFER_FAILED'
-    );
-  }
-  if (status < 200 || status >= 300) {
-    const providerCode = safeStorageErrorCode(responseBody);
-    throw new BookPhotoUploadError(
-      `O armazenamento recusou a foto (HTTP ${status}${providerCode ? `: ${providerCode}` : ''}).`,
-      'BOOK_PHOTO_UPLOAD_REJECTED',
-      status
+      error instanceof MediaUploadError ? error.message : 'Não foi possível transferir a foto. Tente novamente.',
+      error instanceof MediaUploadError && error.code === 'MEDIA_UPLOAD_REJECTED' ? 'BOOK_PHOTO_UPLOAD_REJECTED' : 'BOOK_PHOTO_TRANSFER_FAILED',
+      error instanceof MediaUploadError ? error.status : undefined
     );
   }
 

@@ -33,3 +33,9 @@ O acesso gratuito, os limites, a tela de oferta e a sessão segura da PWA estão
 ## Segurança/dependências
 
 Em 11/09/2026, `npm audit --omit=dev` reportou 4 ocorrências altas no grafo Prisma (`deepmerge-ts`, sem correção compatível) e 36 vulnerabilidades moderadas transitivas no grafo Expo/React Navigation, sem correção disponível. Os relatórios precisam de triagem por advisory e alcance no runtime. Não executar `npm audit fix --force`; uma atualização incompatível exige avaliação separada e repetição do aceite. MFA, bloqueio adaptativo, moderação e painel de revogação administrativa ficam para evolução posterior.
+
+## Foto de perfil — plano 009 (implementação não publicada)
+
+Plano 009: publicação bloqueada por R2 atualmente público/sem CORS, lifecycle de pending/avatars ausente, migração/deploy de alvo não executados, Docker Linux e aceites físicos pendentes. Expo Doctor local: 20/21, com patches preexistentes de expo/camera/image-picker atrasados.
+
+Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).

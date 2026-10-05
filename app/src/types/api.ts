@@ -4,6 +4,8 @@ export type ProfileStats = {
   conversationCount: number;
 };
 
+export type AvatarDescriptor = { avatarUrl: string | null; avatarUrlExpiresAt: string | null; avatarVersion: number };
+
 export type User = {
   id: string;
   name: string;
@@ -17,6 +19,8 @@ export type User = {
   booksOnboardingCompletedAt?: string | null;
   isActive: boolean;
   avatarUrl?: string | null;
+  avatarUrlExpiresAt?: string | null;
+  avatarVersion?: number;
   bio?: string | null;
   city?: string | null;
   stats?: ProfileStats | null;
@@ -85,7 +89,7 @@ export type Book = {
   coverUrl?: string | null;
   coverUrlExpiresAt?: string | null;
   images: BookImage[];
-  owner?: Pick<User, 'id' | 'name' | 'avatarUrl' | 'city'> | null;
+  owner?: Pick<User, 'id' | 'name' | 'avatarUrl' | 'avatarUrlExpiresAt' | 'avatarVersion' | 'city'> | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -103,7 +107,7 @@ export type Paginated<T> = {
 export type Match = {
   id: string;
   status: string;
-  otherUser: Pick<User, 'id' | 'name' | 'avatarUrl' | 'city'>;
+  otherUser: Pick<User, 'id' | 'name' | 'avatarUrl' | 'avatarUrlExpiresAt' | 'avatarVersion' | 'city'>;
   conversationId?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -114,7 +118,7 @@ export type Message = {
   clientMessageId: string;
   conversationId: string;
   senderId: string;
-  sender?: Pick<User, 'id' | 'name' | 'avatarUrl'>;
+  sender?: Pick<User, 'id' | 'name' | 'avatarUrl' | 'avatarUrlExpiresAt' | 'avatarVersion'>;
   body: string;
   createdAt: string;
   updatedAt: string;
@@ -124,7 +128,7 @@ export type Message = {
 export type Conversation = {
   id: string;
   matchId: string;
-  otherUser: Pick<User, 'id' | 'name' | 'avatarUrl' | 'city'>;
+  otherUser: Pick<User, 'id' | 'name' | 'avatarUrl' | 'avatarUrlExpiresAt' | 'avatarVersion' | 'city'>;
   lastMessage?: Message | null;
   updatedAt: string;
 };

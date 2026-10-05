@@ -22,7 +22,7 @@ export const likesRepository = {
           select: {
             id: true,
             name: true,
-            avatarUrl: true,
+            avatarStorageKey: true, avatarVersion: true, avatarUrl: true,
             city: true,
             books: {
               where: { availability: 'AVAILABLE' },
@@ -79,7 +79,7 @@ export const likesRepository = {
             id: true,
             title: true,
             owner: {
-              select: { id: true, name: true, avatarUrl: true, city: true }
+              select: { id: true, name: true, avatarStorageKey: true, avatarVersion: true, avatarUrl: true, city: true }
             },
             images: {
               take: 1,

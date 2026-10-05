@@ -116,7 +116,7 @@ Arredondar e limitar o retângulo final inteiro à fonte antes de exportar. Não
 | `POST /api/v1/me/avatar/presign` | novo cliente envia `{ mimeType: 'image/png', size, width: 512, height: 512, protocolVersion: 2 }`; API grava grant ligado à sessão e responde `201` com `{ imageId, uploadUrl, storageKey, headers, expiresIn, expiresAt, protocolVersion: 2 }` |
 | PUT direto no R2 | bytes exatos do PNG em `pending/avatars/<user>/<imageId>.png`; usar os headers autorizados, sem bearer/cookie da API |
 | `POST /api/v1/me/avatar/complete` | novo cliente envia `{ imageId }`; API recupera os valores autorizados, valida objeto e persiste; resposta `200` com `AvatarDescriptor` |
-| `DELETE /api/v1/me/avatar` | mantém `204`; remove referência, invalida grants pendentes e enfileira chaves controladas pelo servidor na transação |
+| `DELETE /api/v1/me/avatar` | mantém `204`; com `Prefer: return=representation`, retorna `200` com `{data:AvatarDescriptor}` e `Preference-Applied`; remove referência, invalida grants pendentes e enfileira chaves controladas pelo servidor na transação |
 | DTOs que mostram usuário | preservar `avatarUrl`; acrescentar `avatarUrlExpiresAt: string|null` e `avatarVersion: number` |
 
 `AvatarDescriptor = { avatarUrl: string|null; avatarUrlExpiresAt: string|null; avatarVersion: number }`. A ausência de avatar retorna URL/expiração `null`. Um URL externo legado pode ter expiração `null`.

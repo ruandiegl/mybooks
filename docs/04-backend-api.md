@@ -72,3 +72,9 @@ npm test
 npm run prisma:generate
 npm run prisma:migrate
 ```
+
+## Foto de perfil — plano 009 (implementação não publicada)
+
+avatar.schemas/repository/processing/service/serializer vinculam grants à sessão, fazem claim exclusivo e normalizam com sharp antes do commit CAS. Limites por conta: presign 10 e complete 20 por 60 s. Sweep e retenção operam em lotes de até 20; limpeza não exclui chave com referência viva.
+
+Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).

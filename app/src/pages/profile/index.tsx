@@ -1,3 +1,5 @@
+import { useIsFocused } from '@react-navigation/native';
+import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -8,6 +10,9 @@ import { AppButton } from '../../components/AppButton';
 import { AppScreen } from '../../components/AppScreen';
 import { Avatar } from '../../components/Avatar';
 import { AvatarPicker } from '../../components/AvatarPicker';
+import { AvatarEditor } from '../../components/AvatarEditor';
+import { useAvatarEditor } from '../../features/avatar/useAvatarEditor';
+import { avatarDescriptorOf } from '../../features/avatar/avatarTypes';
 import { Badge } from '../../components/Badge';
 import { BookCard } from '../../components/BookCard';
 import { ProfileMetricRow, type ProfileMetric } from '../../components/ProfileMetricRow';
@@ -52,6 +57,9 @@ export function Profile({ navigation }: Props) {
     queryKey: ['me'],
     queryFn: async () => (await api.get<ApiEnvelope<User>>('/api/v1/me')).data.data
   });
+  const avatarEditor = useAvatarEditor(session.user?.id, (avatar) => {
+    if (session.user) session.updateAvatar(avatar, session.user.id);
+  });
   const booksQuery = useInfiniteQuery({
     queryKey: ['books', 'mine', 'profile'],
     initialPageParam: '',
@@ -59,15 +67,21 @@ export function Profile({ navigation }: Props) {
     getNextPageParam: (lastPage) => lastPage.pageInfo.hasNextPage ? lastPage.pageInfo.nextCursor || undefined : undefined
   });
 
+  useAvatarRefresh(booksQuery.data, booksQuery.refetch, useIsFocused());
+
   useEffect(() => {
-    if (!profileQuery.data) return;
+    if (!profileQuery.data || editing) return;
     setFirstName(profileQuery.data.firstName || '');
     setLastName(profileQuery.data.lastName || '');
     setCity(profileQuery.data.city || '');
     setBio(profileQuery.data.bio || '');
     setPhone(maskBrazilianPhone(profileQuery.data.phone || ''));
     setInterests(profileQuery.data.interests.join(', '));
-  }, [profileQuery.data]);
+  }, [profileQuery.data, editing]);
+
+  useEffect(() => {
+    if ((avatarEditor.source || avatarEditor.error) && !editing) openEditor();
+  }, [avatarEditor.source, avatarEditor.error]);
 
   const saveMutation = useMutation({
     mutationFn: async () => (await api.patch<ApiEnvelope<User>>('/api/v1/me', {
@@ -118,6 +132,8 @@ export function Profile({ navigation }: Props) {
   }
 
   function closeEditor() {
+    if (avatarEditor.busy) return;
+    if (avatarEditor.source) return avatarEditor.cancel();
     if (!hasChanges()) return setEditing(false);
     Alert.alert('Descartar alterações?', 'As informações editadas ainda não foram salvas.', [
       { text: 'Continuar editando', style: 'cancel' },
@@ -145,7 +161,9 @@ export function Profile({ navigation }: Props) {
       } />
       <View style={styles.identity}>
         <View style={[styles.identityRow, stackedIdentity && styles.identityStacked]}>
-          <Avatar name={profile?.name || 'Leitor TrocaLivros'} url={profile?.avatarUrl} size={72} />
+          <Pressable accessibilityRole="button" accessibilityLabel="Alterar foto de perfil" disabled={avatarEditor.busy} onPress={avatarEditor.choose}>
+            <Avatar name={profile?.name || 'Leitor TrocaLivros'} url={profile?.avatarUrl} version={profile?.avatarVersion} onImageError={() => { void session.refreshUser().catch(() => undefined); }} size={72} />
+          </Pressable>
           <View style={[styles.identityCopy, stackedIdentity && styles.identityCopyStacked]}>
             <Text accessibilityRole="header" style={styles.name}>{profile?.name}</Text>
             {profile?.city ? <View style={styles.location}>
@@ -240,6 +258,7 @@ export function Profile({ navigation }: Props) {
       </ScrollView>}
       <Modal visible={editing} animationType="slide" onRequestClose={closeEditor}>
         <View style={[styles.modalSafe, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+          {avatarEditor.source ? <AvatarEditor key={avatarEditor.source.uri} source={avatarEditor.source} busy={avatarEditor.busy} error={avatarEditor.error} statusLabel={avatarEditor.statusLabel} previewUri={avatarEditor.previewUri} onSave={avatarEditor.save} onCancel={avatarEditor.cancel} onChooseAnother={avatarEditor.choose} /> : <>
           <KeyboardAvoidingView style={styles.modalKeyboard} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View style={styles.modalHeader}>
               <Pressable accessibilityRole="button" accessibilityLabel="Fechar edição de perfil" style={({ pressed }) => [styles.modalClose, pressed && styles.modalPressed]} onPress={closeEditor}><MaterialIcons name="close" size={24} color={theme.colors.foreground} /></Pressable>
@@ -247,16 +266,17 @@ export function Profile({ navigation }: Props) {
               <View style={styles.modalHeaderSpacer} />
             </View>
             <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.modalScroll}>
-              <View style={styles.editorIdentity}><AvatarPicker name={[firstName, lastName].filter(Boolean).join(' ')} avatarUrl={profile.avatarUrl} onUploaded={() => { void profileQuery.refetch(); void session.refreshUser(); }} /></View>
+              <View style={styles.editorIdentity}><AvatarPicker name={[firstName, lastName].filter(Boolean).join(' ')} avatar={avatarDescriptorOf(profile)} busy={avatarEditor.busy} error={avatarEditor.error} onChoose={avatarEditor.choose} onRemove={avatarEditor.remove} onOpenSettings={avatarEditor.permissionBlocked ? avatarEditor.openSettings : undefined} /></View>
               <TextField label="Nome" value={firstName} maxLength={50} onChangeText={(value) => { setFirstName(value); if (nameError) setNameError(undefined); }} error={nameError} autoCapitalize="words" />
               <TextField label="Sobrenome" value={lastName} maxLength={80} onChangeText={setLastName} autoCapitalize="words" />
               <TextField label="Cidade" value={city} maxLength={100} onChangeText={setCity} placeholder="Ex.: São Paulo" />
               <TextField label="Telefone" value={phone} onChangeText={(value) => setPhone(maskBrazilianPhone(value))} keyboardType="phone-pad" textContentType="telephoneNumber" placeholder="(11) 91234-5678" maxLength={15} />
               <TextField label="Bio" value={bio} onChangeText={setBio} maxLength={280} multiline placeholder="Conte um pouco sobre seus gostos literários" help={`${bio.length}/280 caracteres`} />
               <TextField label="Interesses" value={interests} onChangeText={setInterests} placeholder="Fantasia, clássicos, romance" help="Separe por vírgulas." />
-              <AppButton label="Salvar alterações" icon="check" loading={saveMutation.isPending} onPress={saveProfile} />
+              <AppButton label="Salvar alterações" icon="check" loading={saveMutation.isPending} disabled={avatarEditor.busy} onPress={saveProfile} />
             </ScrollView>
           </KeyboardAvoidingView>
+          </>}
         </View>
       </Modal>
     </AppScreen>

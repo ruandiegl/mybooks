@@ -7,6 +7,9 @@ export const styles = StyleSheet.create({
   image: { width: '100%', height: '100%', borderRadius: 52 },
   initials: { color: theme.colors.secondary, fontFamily: theme.typography.extraBold, fontSize: 30 },
   edit: { position: 'absolute', right: 0, bottom: 2, width: 32, height: 32, borderRadius: 16, backgroundColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center' },
-  help: { color: theme.colors.mutedForeground, fontFamily: theme.typography.regular, fontSize: 11 },
-  remove: { color: theme.colors.danger, fontFamily: theme.typography.semibold, fontSize: 12 }
+  help: { color: theme.colors.mutedForeground, fontFamily: theme.typography.regular, fontSize: 14, lineHeight: 21, textAlign:'center' },
+  remove: { color: theme.colors.danger, fontFamily: theme.typography.semibold, fontSize: 14 },
+  action: {minHeight:48,paddingHorizontal:16,justifyContent:'center',alignItems:'center'},
+  error: {color:theme.colors.danger,fontFamily:theme.typography.regular,fontSize:14,textAlign:'center'},
+  pressed: {opacity:0.78}
 });

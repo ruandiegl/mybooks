@@ -1,3 +1,5 @@
+import { useIsFocused } from '@react-navigation/native';
+import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 import { ScrollView, Text, View } from 'react-native';
@@ -8,7 +10,6 @@ import { Badge } from '../../components/Badge';
 import { BookGallery } from '../../components/BookGallery';
 import { IsbnBadge } from '../../components/IsbnBadge';
 import { StateView } from '../../components/StateView';
-import { getSignedBookImageRefreshDelay } from '../../features/books/bookPhotos';
 import { getBookGalleryPhotos } from '../../features/books/bookPresentation';
 import { api } from '../../services/api';
 import type { ApiEnvelope, Book, User } from '../../types/api';
@@ -22,10 +23,11 @@ export function BookDetails({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
   const query = useQuery({
     queryKey: ['book', route.params.bookId],
-    queryFn: async () => (await api.get<ApiEnvelope<Book>>('/api/v1/books/' + route.params.bookId)).data.data,
-    refetchInterval: (currentQuery) => getSignedBookImageRefreshDelay(currentQuery.state.data ? [currentQuery.state.data] : [])
+    queryFn: async () => (await api.get<ApiEnvelope<Book>>('/api/v1/books/' + route.params.bookId)).data.data
   });
   const me = useQuery({ queryKey: ['me'], queryFn: async () => (await api.get<ApiEnvelope<User>>('/api/v1/me')).data.data });
+  const refreshAvatar = useAvatarRefresh(query.data, query.refetch, useIsFocused());
+
   if (query.isLoading) return <View style={styles.page}><StateView loading title="Abrindo o livro" /></View>;
   if (query.isError) return <View style={styles.page}><StateView title="Não foi possível abrir o livro" description="Confira sua conexão e tente novamente." icon="cloud-off" actionLabel="Tentar novamente" onAction={() => query.refetch()} /></View>;
   if (!query.data) return <View style={styles.page}><StateView title="Livro não encontrado" icon="menu-book" actionLabel="Tentar novamente" onAction={() => query.refetch()} /></View>;
@@ -37,7 +39,7 @@ export function BookDetails({ route, navigation }: Props) {
     <ScrollView style={styles.page} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
       {book.owner ? (
         <View style={styles.owner}>
-          <Avatar name={book.owner.name} url={book.owner.avatarUrl} />
+          <Avatar name={book.owner.name} url={book.owner.avatarUrl} version={book.owner.avatarVersion} onImageError={refreshAvatar} />
           <View style={styles.ownerInfo}><Text style={styles.ownerCaption}>Na estante de</Text><Text style={styles.ownerName}>{book.owner.name}</Text><Text style={styles.ownerCity}>{book.owner.city || 'Localização não informada'}</Text></View>
         </View>
       ) : null}

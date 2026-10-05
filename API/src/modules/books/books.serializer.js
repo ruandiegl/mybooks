@@ -1,3 +1,4 @@
+import { serializeAvatarUser } from '../media/avatar.serializer.js';
 import { storageService } from '../media/storage.service.js';
 
 function compareImages(a, b) {
@@ -23,7 +24,7 @@ async function serializeImage(image, sortOrder) {
   };
 }
 
-export async function serializeBook(book) {
+export async function serializeBook(book, avatarCache = new Map()) {
   if (!book) return null;
 
   const sortedImages = [...(book.images ?? [])].sort(compareImages);
@@ -47,7 +48,7 @@ export async function serializeBook(book) {
     coverUrl: cover?.url ?? book.coverExternalUrl ?? null,
     coverUrlExpiresAt: cover?.url ? cover.expiresAt : null,
     images,
-    owner: book.owner ?? null,
+    owner: await serializeAvatarUser(book.owner, avatarCache),
     createdAt: book.createdAt,
     updatedAt: book.updatedAt
   };

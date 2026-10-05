@@ -68,3 +68,9 @@ O app usa Expo 57, React Native 0.86 e `expo-camera` 57.0.5. Em `BookCreate`, a 
 Antes de qualquer chamada HTTP, o cliente aceita somente 13 dígitos com prefixo de livro `978` ou `979` e checksum EAN-13 válido. QR, URL, texto e EAN de produto não consultam a API. Uma leitura aceita preenche o ISBN e chama automaticamente `GET /api/v1/isbn/:isbn`; os dados retornados permanecem editáveis e precisam ser revisados antes do cadastro.
 
 O cadastro manual continua disponível em todos os estados e aceita ISBN-10 válido. A leitura física direta de ISBN-10 não faz parte do scanner. Nenhum frame ou foto é enviado ou armazenado; uma capa externa retornada pela consulta também não é persistida automaticamente.
+
+## Foto de perfil — plano 009 (implementação não publicada)
+
+AvatarEditor nativo usa PanResponder/Animated; variante Web usa react-easy-crop. Fonte orientada até 2048 px, export PNG 512×512 até 2 MiB, prévia circular com movimento/zoom e alternativas por botão. O editor troca o conteúdo do modal existente e não salva nome/bio nem conclui onboarding.
+
+Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).

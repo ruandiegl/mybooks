@@ -12,7 +12,9 @@ import React, {
 import { authApi } from '../features/auth/authApi';
 import { sessionTransport, type SessionResponse, type SessionSnapshot } from '../features/auth/authTransport';
 import { configureApiSession } from '../services/api';
-import type { User } from '../types/api';
+import { mergeAvatarVersion } from '../features/avatar/avatarRefresh';
+import { useAvatarRefresh } from '../features/avatar/useAvatarRefresh';
+import type { AvatarDescriptor, User } from '../types/api';
 
 type SessionContextValue = {
   isLoaded: boolean;
@@ -22,6 +24,7 @@ type SessionContextValue = {
   establishSession: (response: SessionResponse) => Promise<void>;
   refreshSession: () => Promise<boolean>;
   refreshUser: () => Promise<User | null>;
+  updateAvatar: (avatar: AvatarDescriptor, userId: string) => void;
   signOut: () => Promise<void>;
 };
 
@@ -32,6 +35,8 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
   const sessionRef = useRef<SessionSnapshot | null>(null);
   const [session, setSession] = useState<SessionSnapshot | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const userRef = useRef(user); userRef.current = user;
+  const epoch = useRef(0);
   const [isLoaded, setIsLoaded] = useState(false);
 
   const replaceSession = useCallback((next: SessionSnapshot | null) => {
@@ -40,12 +45,14 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
   }, []);
 
   const establishSession = useCallback(async (response: SessionResponse) => {
+    epoch.current++;
     const next = await sessionTransport.accept(response);
     replaceSession(next);
     setUser(next.user ?? response.user);
   }, [replaceSession]);
 
   const clearSession = useCallback(async () => {
+    epoch.current++;
     await sessionTransport.clear();
     replaceSession(null);
     setUser(null);
@@ -60,7 +67,7 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
     }
 
     replaceSession(next);
-    if (next.user) setUser(next.user);
+    if (next.user) setUser(mergeAvatarVersion(userRef.current, next.user));
     return true;
   }, [clearSession, replaceSession]);
 
@@ -68,11 +75,26 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
 
   const refreshUser = useCallback(async () => {
     if (!sessionRef.current) return null;
-    const currentUser = await authApi.me();
+    const ticket = epoch.current;
+    const fetched = await queryClient.fetchQuery({ queryKey: ['me'], queryFn: authApi.me, staleTime: 0 });
+    if (ticket !== epoch.current || !sessionRef.current) return null;
+    const currentUser = mergeAvatarVersion(userRef.current, fetched);
     setUser(currentUser);
     replaceSession({ ...sessionRef.current, user: currentUser });
     return currentUser;
-  }, [replaceSession]);
+  }, [replaceSession, queryClient]);
+
+  const updateAvatar = useCallback((avatar: AvatarDescriptor, userId: string) => {
+    const current = userRef.current;
+    if (!current || current.id !== userId) return;
+    const next = mergeAvatarVersion(current, { ...current, ...avatar });
+    userRef.current = next;
+    setUser(next);
+    if (sessionRef.current) replaceSession({ ...sessionRef.current, user: next });
+    void queryClient.cancelQueries({ queryKey: ['me'] });
+    queryClient.setQueryData<User>(['me'], old => mergeAvatarVersion(old, { ...(old ?? next), ...avatar }));
+  }, [queryClient, replaceSession]);
+  useAvatarRefresh(user, refreshUser, isLoaded && Boolean(session));
 
   const signOut = useCallback(async () => {
     const current = sessionRef.current;
@@ -126,8 +148,9 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
     establishSession,
     refreshSession,
     refreshUser,
+    updateAvatar,
     signOut
-  }), [establishSession, getToken, isLoaded, refreshSession, refreshUser, session, signOut, user]);
+  }), [establishSession, getToken, isLoaded, refreshSession, refreshUser, updateAvatar, session, signOut, user]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

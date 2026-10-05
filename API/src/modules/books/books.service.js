@@ -12,10 +12,11 @@ import {
 import { serializeBook } from './books.serializer.js';
 
 async function withPagination(rows, limit) {
+  const avatarCache = new Map();
   const hasNextPage = rows.length > limit;
   const items = hasNextPage ? rows.slice(0, limit) : rows;
   return {
-    items: await Promise.all(items.map(serializeBook)),
+    items: await Promise.all(items.map((book) => serializeBook(book, avatarCache))),
     pageInfo: {
       hasNextPage,
       nextCursor: hasNextPage ? items.at(-1)?.id ?? null : null

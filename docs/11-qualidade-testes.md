@@ -40,3 +40,9 @@ Na branch PWA, o registro de 28/09 informou app com 12 arquivos/47 testes e type
 No checkout isolado da galeria, a migração de `BookImage` não foi executada em PostgreSQL limpo nem em cópia do banco existente: faltavam URL de banco e Docker disponível. A consulta `API/prisma/book-image-preflight.sql` identifica exceções antes da aplicação. Também faltavam bucket e credenciais R2 naquele ambiente. PUT/HEAD/copy/GET/DELETE reais, lifecycle, CORS e prova física Android/iOS/Web continuam como aceites pendentes; validação em banco descartável do Premium não comprova migração das fotos no banco alvo.
 
 Migração em PostgreSQL limpo, entrega Resend, R2, dois usuários no Socket.IO e dispositivo Android/iOS são evidências separadas. O aceite físico do scanner deve incluir permissão negada e bloqueada, baixa luz, código danificado, offline, `404`, `503` e limite excedido. Se o ambiente não existir, registre como pendente; typecheck, export e mocks não equivalem a teste ponta a ponta.
+
+## Foto de perfil — plano 009 (implementação não publicada)
+
+Testes reais de grants: DATABASE_URL e AVATAR_TEST_DATABASE_URL apontam para banco descartável no loopback, já migrado; executar npm test -- tests/avatar.repository.integration.test.js em API/. O teste rejeita host não-loopback e limpa só suas fixtures. Suites/builds locais não aprovam R2 ou aparelhos físicos.
+
+Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).

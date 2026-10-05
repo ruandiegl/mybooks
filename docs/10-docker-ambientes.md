@@ -26,3 +26,9 @@ O frontend web é um serviço separado e não altera `API/Dockerfile`. A partir 
 Depois da criação do domínio, adicione a origem completa do site à variável `CLIENT_ORIGINS` da API, mantendo a origem atual necessária ao APK. O proxy recebe `/api/v1`, `/health`, `/socket.io` e `/covers`; o navegador nunca recebe o endereço privado da API. Consulte [`web/README.md`](../web/README.md) para smoke tests e configurações.
 
 Build local e teste do manifesto: `cd app; npm ci; npm run build:web; npm run test:pwa`. Com Caddy instalado, `node web/tests/proxy-smoke.mjs` valida SPA, proxy, WebSocket, cache e cookie sem depender de contas externas.
+
+## Foto de perfil — plano 009 (implementação não publicada)
+
+Avatares novos não dependem de R2_PUBLIC_URL. Exigem R2 privado, CORS para origens autorizadas e lifecycle pending/avatars de um dia. sharp é dependência da API; validar a imagem Node 20 Bookworm/Linux antes de deploy. Docker não estava disponível para esse ensaio local.
+
+Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).

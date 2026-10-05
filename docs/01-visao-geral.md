@@ -33,3 +33,9 @@ A base PWA inclui manifesto, ícones, metadados iOS, deep links e proxy Caddy no
 | Serviços | Cloudflare R2, Resend, BrasilAPI e Socket.IO 4 |
 
 Pastas principais: `app/` (telas compartilhadas), `API/`, `web/` (build/proxy PWA), `docs/` e `plans/`. O gerenciador oficial é npm.
+
+## Foto de perfil — plano 009 (implementação não publicada)
+
+Foto de perfil opcional com enquadramento circular pela galeria está implementada na branch do plano 009, ainda sem publicação. Não inclui câmera/selfie, filtros ou rebranding.
+
+Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).

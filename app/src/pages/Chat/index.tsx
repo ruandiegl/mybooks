@@ -1,3 +1,5 @@
+import { useIsFocused } from '@react-navigation/native';
+import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Crypto from 'expo-crypto';
@@ -36,6 +38,8 @@ export function Chat({ route }: Props) {
     queryFn: async ({ pageParam }) => (await api.get<ApiEnvelope<Paginated<MessageType>>>('/api/v1/conversations/' + conversationId + '/messages', { params: { limit: 30, cursor: pageParam || undefined } })).data.data,
     getNextPageParam: (lastPage) => lastPage.pageInfo.hasNextPage ? lastPage.pageInfo.nextCursor || undefined : undefined
   });
+
+  useAvatarRefresh(messages.data, messages.refetch, useIsFocused());
 
   useEffect(() => {
     let active = true;

@@ -10,7 +10,7 @@ export const publicUserSelect = {
   phone: true,
   interests: true,
   isActive: true,
-  avatarUrl: true,
+  avatarStorageKey: true, avatarVersion: true, avatarUrl: true,
   bio: true,
   city: true,
   profileCompletedAt: true,

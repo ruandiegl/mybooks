@@ -27,3 +27,9 @@ Antes de produção: gerar backup testado, aplicar `prisma migrate deploy`, conf
 A migração `20260924193100_premium_trial_and_daily_like_usage` adiciona a `User` os timestamps `premiumTrialStartedAt` e `premiumTrialEndsAt`, preservados após expiração, `premiumOfferPromptedAt` e `premiumOfferCohort` (`EXISTING`/`NEW`). Usuários presentes na migração são marcados `EXISTING`; novas contas usam `NEW`.
 
 `LikeDailyUsage` guarda usuário, livro-alvo, `quotaDate` (DATE civil em `America/Sao_Paulo`) e criação, com chave única por usuário/livro/data. A linha não possui FK para Book e sobrevive à remoção do livro/interação durante o dia; exclusão da conta remove usos em cascata. A transação com lock de User grava o uso e a Interaction juntos. O estado Premium é derivado dos timestamps do banco, nunca de sinalizador local; não existem produto de assinatura, preço ou dados de pagamento.
+
+## Foto de perfil — plano 009 (implementação não publicada)
+
+Migração 20261005120000_private_user_avatar adiciona User.avatarStorageKey único, avatarVersion e AvatarUpload com estados PENDING/PROCESSING/COMMITTED/CANCELED/EXPIRED. Preserva avatarUrl legado. Grants vinculam bytes/MIME/protocolo/prazo/versão e CAS usa lock curto da User; assinaturas não são persistidas.
+
+Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).

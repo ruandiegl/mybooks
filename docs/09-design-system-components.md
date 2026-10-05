@@ -39,3 +39,9 @@ Como esse fluxo depende de código nativo, ele precisa de um development build o
 ## Revisão visual
 
 Verifique telas pequenas, teclado aberto, texto longo, capa ausente, safe area, contraste, alvos de toque de pelo menos 44 pt/48 dp e todos os estados assíncronos. No scanner, inclua permissão negada/bloqueada, baixa luz, código danificado, offline, ISBN ausente, indisponibilidade externa e limite excedido; o fallback manual deve permanecer alcançável. O swipe de descoberta sempre mantém botões equivalentes. A tela respeita redução de movimento e adapta o cartão quando recebe dimensões horizontais, embora o binário atual seja distribuído em orientação retrato.
+
+## Foto de perfil — plano 009 (implementação não publicada)
+
+AvatarPicker é entrada/estado; AvatarEditor é conteúdo hospedado por um único modal. Mantém tokens/Be Vietnam Pro e ação magenta; círculo fixo com exterior escurecido, alvos 48 e alternativas de movimento/zoom sem gestos obrigatórios.
+
+Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).

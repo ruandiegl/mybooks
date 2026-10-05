@@ -37,7 +37,7 @@ export function createAvatarService({ repository = avatarRepository, storage = s
         throw new AppError('Não foi possível confirmar a foto. Tente novamente.', { statusCode: 503, code: 'AVATAR_STORAGE_UNAVAILABLE' });
       }
     },
-    async delete(userId) { await repository.remove(userId); return { ok: true }; }
+    async delete(userId) { return serializeAvatar(await repository.remove(userId), new Map(), storage); }
   };
 }
 export const avatarService = createAvatarService();

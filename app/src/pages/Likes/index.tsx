@@ -1,3 +1,5 @@
+import { useIsFocused } from '@react-navigation/native';
+import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Crypto from 'expo-crypto';
 import { useCallback, useEffect, useState } from 'react';
@@ -100,6 +102,10 @@ export function Likes({ navigation }: Props) {
     enabled: activeTab === 'sent',
   });
 
+  const focused = useIsFocused();
+  const refreshReceivedAvatars = useAvatarRefresh(receivedData, refetchReceived, focused && activeTab === 'received' && canSeeReceivedLikeIdentities(premiumStatusQuery.data, premiumStatusQuery.isTrialLocallyExpired));
+  const refreshSentAvatars = useAvatarRefresh(sentData, refetchSent, focused && activeTab === 'sent');
+
   // Interaction Mutation
   const interactionMutation = useMutation({
     mutationFn: ({ targetBookId, action }: { targetBookId: string; action: 'LIKE' | 'PASS' }) =>
@@ -192,7 +198,7 @@ export function Likes({ navigation }: Props) {
       <LikeCard
         variant="received"
         userName={item.actor.name}
-        userAvatar={item.actor.avatarUrl}
+        userAvatar={item.actor.avatarUrl} avatarVersion={item.actor.avatarVersion} onAvatarError={refreshReceivedAvatars}
         userCity={item.actor.city}
         bookTitle={item.book.title}
         bookCoverUrl={item.book.coverUrl}
@@ -215,7 +221,7 @@ export function Likes({ navigation }: Props) {
     <LikeCard
       variant="sent"
       userName={item.owner.name}
-      userAvatar={item.owner.avatarUrl}
+      userAvatar={item.owner.avatarUrl} avatarVersion={item.owner.avatarVersion} onAvatarError={refreshSentAvatars}
       userCity={item.owner.city}
       bookTitle={item.book.title}
       bookCoverUrl={item.book.coverUrl}

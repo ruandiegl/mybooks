@@ -1,3 +1,4 @@
+import { serializeAvatarUser } from '../media/avatar.serializer.js';
 import { AppError } from '../../shared/errors/AppError.js';
 import {
   conversationIdSchema,
@@ -6,13 +7,13 @@ import {
 } from './chat.schemas.js';
 import { chatRepository } from './chat.repository.js';
 
-function serializeMessage(message) {
+async function serializeMessage(message, avatarCache = new Map()) {
   return {
     id: message.id,
     clientMessageId: message.clientMessageId,
     conversationId: message.conversationId,
     senderId: message.senderId,
-    sender: message.sender,
+    sender: await serializeAvatarUser(message.sender, avatarCache, false),
     body: message.body,
     createdAt: message.createdAt,
     updatedAt: message.updatedAt
@@ -36,20 +37,21 @@ export const chatService = {
 
   async listConversations(userId) {
     const rows = await chatRepository.listConversations(userId);
-    return rows.map((conversation) => {
+    const cache = new Map();
+    return Promise.all(rows.map(async (conversation) => {
       const otherUser = conversation.match.userAId === userId
         ? conversation.match.userB
         : conversation.match.userA;
       return {
         id: conversation.id,
         matchId: conversation.matchId,
-        otherUser,
+        otherUser: await serializeAvatarUser(otherUser, cache),
         lastMessage: conversation.messages[0]
-          ? serializeMessage(conversation.messages[0])
+          ? await serializeMessage(conversation.messages[0], cache)
           : null,
         updatedAt: conversation.updatedAt
       };
-    });
+    }));
   },
 
   async listMessages(userId, conversationId, query) {
@@ -59,8 +61,9 @@ export const chatService = {
     const hasNextPage = rows.length > pagination.limit;
     const selected = hasNextPage ? rows.slice(0, pagination.limit) : rows;
 
+    const cache = new Map();
     return {
-      items: selected.map(serializeMessage).reverse(),
+      items: (await Promise.all(selected.map((message) => serializeMessage(message, cache)))).reverse(),
       pageInfo: {
         hasNextPage,
         nextCursor: hasNextPage ? selected.at(-1)?.id ?? null : null

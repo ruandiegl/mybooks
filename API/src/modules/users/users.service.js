@@ -2,32 +2,11 @@ import { AppError } from '../../shared/errors/AppError.js';
 import { usersRepository } from './users.repository.js';
 import { updateProfileSchema } from './users.schemas.js';
 
-function publicProfile(user) {
-  if (!user) return null;
-  return {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    emailVerifiedAt: user.emailVerifiedAt,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    phone: user.phone,
-    interests: user.interests,
-    isActive: user.isActive,
-    avatarUrl: user.avatarUrl,
-    bio: user.bio,
-    city: user.city,
-    profileCompletedAt: user.profileCompletedAt,
-    booksOnboardingCompletedAt: user.booksOnboardingCompletedAt,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
-    ...(user.stats ? { stats: user.stats } : {})
-  };
-}
+import { serializeOwnUser } from './users.serializer.js';
 
 export const usersService = {
   async getMe(userId) {
-    return publicProfile(await usersRepository.findByIdWithStats(userId));
+    return serializeOwnUser(await usersRepository.findByIdWithStats(userId));
   },
 
   async updateMe(userId, input) {
@@ -47,16 +26,16 @@ export const usersService = {
       ...(displayName ? { name: displayName } : {}),
       profileCompletedAt: new Date()
     });
-    return publicProfile(await usersRepository.findByIdWithStats(userId));
+    return serializeOwnUser(await usersRepository.findByIdWithStats(userId));
   },
 
   async skipProfileOnboarding(userId) {
     await usersRepository.update(userId, { profileCompletedAt: new Date() });
-    return publicProfile(await usersRepository.findByIdWithStats(userId));
+    return serializeOwnUser(await usersRepository.findByIdWithStats(userId));
   },
 
   async completeBooksOnboarding(userId) {
     await usersRepository.update(userId, { booksOnboardingCompletedAt: new Date() });
-    return publicProfile(await usersRepository.findByIdWithStats(userId));
+    return serializeOwnUser(await usersRepository.findByIdWithStats(userId));
   }
 };

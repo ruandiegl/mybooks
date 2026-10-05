@@ -1,3 +1,5 @@
+import { useIsFocused } from '@react-navigation/native';
+import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -12,7 +14,6 @@ import { Card } from '../../components/Card';
 import { IsbnBadge } from '../../components/IsbnBadge';
 import { StateView } from '../../components/StateView';
 import { TopBar } from '../../components/TopBar';
-import { getSignedBookImageRefreshDelay } from '../../features/books/bookPhotos';
 import { getBookGalleryPhotos } from '../../features/books/bookPresentation';
 import { api, apiErrorMessage } from '../../services/api';
 import { Alert } from '../../services/notice';
@@ -35,9 +36,10 @@ export function Discover() {
     queryKey,
     initialPageParam: '',
     queryFn: async ({ pageParam }) => (await api.get<ApiEnvelope<Paginated<Book>>>('/api/v1/discover', { params: { limit: 20, cursor: pageParam || undefined } })).data.data,
-    getNextPageParam: (lastPage) => lastPage.pageInfo.hasNextPage ? lastPage.pageInfo.nextCursor || undefined : undefined,
-    refetchInterval: (currentQuery) => getSignedBookImageRefreshDelay(currentQuery.state.data?.pages.flatMap((page) => page.items) ?? [])
+    getNextPageParam: (lastPage) => lastPage.pageInfo.hasNextPage ? lastPage.pageInfo.nextCursor || undefined : undefined
   });
+  const refreshAvatar = useAvatarRefresh(query.data, query.refetch, useIsFocused());
+
   const books = query.data?.pages.flatMap((page) => page.items) || [];
   const book = books[0];
   const photos = book ? getBookGalleryPhotos(book) : [];
@@ -104,7 +106,7 @@ export function Discover() {
               >
                 <Card style={styles.card}>
                   <View style={styles.ownerRow}>
-                    <Avatar name={book.owner?.name || 'Leitor TrocaLivros'} url={book.owner?.avatarUrl} size={44} />
+                    <Avatar name={book.owner?.name || 'Leitor TrocaLivros'} url={book.owner?.avatarUrl} version={book.owner?.avatarVersion} onImageError={refreshAvatar} size={44} />
                     <View style={styles.ownerInfo}>
                       <Text style={styles.ownerName} numberOfLines={1}>{book.owner?.name || 'Leitor TrocaLivros'}</Text>
                       <Text style={styles.ownerCity} numberOfLines={1}>{book.owner?.city || 'Livro em circulação'}</Text>

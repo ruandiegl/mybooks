@@ -2,10 +2,10 @@ import { prisma } from '../../shared/database/prisma.js';
 
 const matchInclude = {
   userA: {
-    select: { id: true, name: true, avatarUrl: true, city: true }
+    select: { id: true, name: true, avatarStorageKey: true, avatarVersion: true, avatarUrl: true, city: true }
   },
   userB: {
-    select: { id: true, name: true, avatarUrl: true, city: true }
+    select: { id: true, name: true, avatarStorageKey: true, avatarVersion: true, avatarUrl: true, city: true }
   },
   conversation: {
     select: { id: true, updatedAt: true }

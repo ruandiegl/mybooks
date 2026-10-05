@@ -27,7 +27,7 @@ async function enqueueBookImageCleanup(tx, userIds) {
     where: { book: { ownerId: { in: userIds } }, storageKey: { not: null } },
     select: { storageKey: true }
   });
-  const users = await tx.user.findMany({ where: { id: { in: userIds } }, select: { id: true, avatarStorageKey: true, avatarUrl: true } });
+  const users = await tx.user.findMany({ where: { id: { in: userIds } }, select: { id: true, avatarStorageKey: true, avatarVersion: true, avatarUrl: true } });
   const grants = await tx.avatarUpload.findMany({ where: { userId: { in: userIds } } });
   const keys = [...images.map((image) => image.storageKey),
     ...users.flatMap((user) => [user.avatarStorageKey, ownedLegacyAvatarKey(user)]),
@@ -104,7 +104,7 @@ export const authRepository = {
             phone: true,
             interests: true,
             isActive: true,
-            avatarUrl: true,
+            avatarStorageKey: true, avatarVersion: true, avatarUrl: true,
             bio: true,
             city: true,
             createdAt: true,

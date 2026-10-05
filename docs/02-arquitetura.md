@@ -42,3 +42,9 @@ O bucket de fotos de livros é privado. As respostas de livro assinam GET por pr
 `clerkUserId` permanece nullable apenas como coluna histórica durante a janela de migração. Não é usado pelo runtime, autorização, seed ou payload público.
 
 A experiência PWA de iOS usa a mesma conta, API, trial e cota diária do APK. O Premium deriva do estado persistido no servidor; a API inicia e expira o período e aplica os entitlements. O cliente oculta dados identificáveis ao fim exato e limpa o cache de curtidas recebidas. Cobrança real não faz parte desta arquitetura.
+
+## Foto de perfil — plano 009 (implementação não publicada)
+
+Avatares novos seguem grant → pending/avatars → validação/normalização no servidor → chave permanente → GET assinado. Claim/CAS e fila de limpeza controlam concorrência; originais ficam efêmeros no cliente.
+
+Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).

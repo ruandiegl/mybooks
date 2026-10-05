@@ -95,3 +95,9 @@ São aceitos 0–3 arquivos JPEG/PNG/WebP de até 8 MiB por livro. `sortOrder = 
 O parâmetro aceita ISBN-10 ou ISBN-13 conforme a validação do domínio; a leitura por câmera envia somente EAN-13 de livro com prefixo `978`/`979`. A API valida formato e checksum novamente, independentemente do cliente, e valida o payload externo antes de mapeá-lo. A consulta usa cache de 10 minutos limitado a 500 entradas, timeout e limite dedicado de 30 requisições por janela de 60 segundos, por usuário autenticado e com IP como fallback.
 
 Os status esperados de falha são `404` para ISBN não encontrado, `422` para parâmetro inválido, `429` para limite excedido e `503` para indisponibilidade da consulta externa. Todos mantêm o envelope seguro de erro e permitem continuar pelo cadastro manual; o endpoint não cadastra o livro nem persiste automaticamente eventual URL de capa externa.
+
+## Foto de perfil — plano 009 (implementação não publicada)
+
+Avatar v2: presign recebe {mimeType:"image/png",size,width:512,height:512,protocolVersion:2}; complete recebe {imageId}. Resposta AvatarDescriptor = {avatarUrl,avatarUrlExpiresAt,avatarVersion}; URL/expiração podem ser null. DELETE segue 204 legado; Prefer:return=representation retorna 200 com envelope data e Preference-Applied. Resumos de usuários incluem expiração/versão, sem avatarStorageKey. Capas de Curtidas incluem coverUrlExpiresAt.
+
+Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).

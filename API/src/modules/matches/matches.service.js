@@ -1,16 +1,17 @@
+import { serializeAvatarUser } from '../media/avatar.serializer.js';
 import { AppError } from '../../shared/errors/AppError.js';
 import { likesQuotaService } from '../premium/likesQuota.service.js';
 import { booksRepository } from '../books/books.repository.js';
 import { matchesRepository } from './matches.repository.js';
 import { interactionSchema } from './matches.schemas.js';
 
-function serializeMatch(match, currentUserId) {
+async function serializeMatch(match, currentUserId, avatarCache = new Map()) {
   if (!match) return null;
   const otherUser = match.userAId === currentUserId ? match.userB : match.userA;
   return {
     id: match.id,
     status: match.status,
-    otherUser,
+    otherUser: await serializeAvatarUser(otherUser, avatarCache),
     conversationId: match.conversation?.id ?? null,
     createdAt: match.createdAt,
     updatedAt: match.updatedAt
@@ -65,13 +66,14 @@ export function createMatchesService({
           targetBookId: interaction.targetBookId,
           createdAt: interaction.createdAt
         },
-        match: serializeMatch(match, actorId)
+        match: await serializeMatch(match, actorId)
       };
     },
 
     async list(userId) {
       const items = await matches.listForUser(userId);
-      return items.map((match) => serializeMatch(match, userId));
+      const cache = new Map();
+      return Promise.all(items.map((match) => serializeMatch(match, userId, cache)));
     }
   };
 }

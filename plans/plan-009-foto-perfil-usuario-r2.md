@@ -172,4 +172,4 @@ Integração PostgreSQL deve usar a fixture/flag dedicada dos testes novos, banc
 
 ## Handoff
 
-Planejamento pronto para revisão. A implementação deve seguir 1 → 2 → 3 → 4 → 5 → 6 → 7, com testes focados por entrega e validação completa ao final. O documento de especificação contém as fontes e os limites de evidência; nenhum checkbox de execução foi concluído nesta etapa.
+Implementação de código das tarefas 1–6 em branch isolada, com evidências locais em [execução](./plan-009-foto-perfil-usuario-r2-execucao.md). A revisão final e os aceites externos da tarefa 7 ainda não autorizam publicação. Os checkboxes que envolvem R2 privado, Docker ou aparelhos físicos permanecem pendentes; a migração de produção e a troca das branches Railway não foram executadas.

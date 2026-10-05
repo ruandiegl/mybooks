@@ -143,3 +143,9 @@ Após a conciliação documental, a integração de código preservou as funcion
 - As alterações locais posteriores foram integradas em `main`, incluindo configuração local, seeds e capas, TrocaLivros, autenticação própria, onboarding, leitura de ISBN e documentação.
 - O arquivo `.env` da raiz permanece local e foi incluído no `.gitignore`.
 - A integração foi feita localmente; nenhum commit foi enviado ao GitHub.
+
+## Foto de perfil — plano 009 (implementação não publicada)
+
+05/10/2026 — plano 009 implementado em codex/foto-perfil-usuario-r2: galeria/crop circular, PNG local/JPEG final, grants/CAS/cleanup, DTOs privados renováveis e perfil/onboarding. Código em revisão; main, Railway e R2 não modificados/publicados nesta execução.
+
+Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).

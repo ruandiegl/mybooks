@@ -71,7 +71,9 @@ export function createAvatarRepository(client = prisma) {
         { status: 'PROCESSING', processingStartedAt: { lte: new Date(now - 60_000) } }
       ] }, orderBy: { createdAt: 'asc' }, take: 20 });
       for (const g of grants) await repository.expire(g.userId, g.id);
-      await client.avatarUpload.deleteMany({ where: { status: { in: ['COMMITTED','CANCELED','EXPIRED'] }, updatedAt: { lt: new Date(now - 86_400_000) } } });
+      const terminalWhere = { status: { in: ['COMMITTED','CANCELED','EXPIRED'] }, updatedAt: { lt: new Date(now - 86_400_000) } };
+      const terminal = await client.avatarUpload.findMany({ where: terminalWhere, select: { id: true }, orderBy: { updatedAt: 'asc' }, take: 20 });
+      if (terminal.length) await client.avatarUpload.deleteMany({ where: { ...terminalWhere, id: { in: terminal.map(g => g.id) } } });
       return grants.length;
     }
   };

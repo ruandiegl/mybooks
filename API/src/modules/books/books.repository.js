@@ -9,7 +9,7 @@ const includeBook = {
     select: {
       id: true,
       name: true,
-      avatarUrl: true,
+      avatarStorageKey: true, avatarVersion: true, avatarUrl: true,
       city: true
     }
   }

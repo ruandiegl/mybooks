@@ -55,3 +55,9 @@ O plano 007 da PWA adicionou adaptadores web de API/sessão, avisos, deep links,
 7. configurar domínio Resend e validar a mensagem de boas-vindas;
 8. executar o app em Android e iOS físicos e revisar teclado, safe area e reconexão do chat;
 9. validar a câmera com permissão negada/bloqueada, baixa luz, código danificado, offline, `404`, `503` e `429`, confirmando que o cadastro manual continua disponível.
+
+## Foto de perfil — plano 009 (implementação não publicada)
+
+Para testar foto de perfil, usar branch do plano 009 e API nova/migrada de teste. Selecionar galeria, ajustar círculo e salvar foto independentemente dos textos; cancelar mantém atual; remover exige confirmação. Não apontar o cliente novo para API antiga nem presumir que a main esteja publicada.
+
+Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).

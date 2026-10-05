@@ -50,3 +50,9 @@ Builds, testes e GETs básicos de publicação anteriores estão registrados com
 Comece por [Visão geral](./01-visao-geral.md) e [Arquitetura](./02-arquitetura.md). Para colocar o projeto em execução, siga [Docker e ambientes](./10-docker-ambientes.md) e [Execução do MVP](./14-execucao-do-mvp.md).
 
 _Última revisão documental: 05/10/2026; validação da integração pendente._
+
+## Foto de perfil — plano 009 (implementação não publicada)
+
+Foto de perfil do plano 009 está em branch isolada, com evidências locais e aceites externos separados. Preflight real confirmou bucket ainda público e sem CORS; não há aprovação de privacidade ou publicação.
+
+Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).

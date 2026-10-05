@@ -9,6 +9,9 @@ export async function completeAvatar(req, res) {
 }
 
 export async function deleteAvatar(req, res) {
-  await avatarService.delete(req.currentUser.id);
+  const avatar = await avatarService.delete(req.currentUser.id);
+  if (req.get('Prefer')?.split(',').map((value) => value.trim()).includes('return=representation')) {
+    return res.set('Preference-Applied', 'return=representation').status(200).json({ data: avatar });
+  }
   return res.status(204).send();
 }

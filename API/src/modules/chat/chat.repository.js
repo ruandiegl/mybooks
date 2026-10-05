@@ -3,14 +3,14 @@ import { prisma } from '../../shared/database/prisma.js';
 const conversationInclude = {
   match: {
     include: {
-      userA: { select: { id: true, name: true, avatarUrl: true, city: true } },
-      userB: { select: { id: true, name: true, avatarUrl: true, city: true } }
+      userA: { select: { id: true, name: true, avatarStorageKey: true, avatarVersion: true, avatarUrl: true, city: true } },
+      userB: { select: { id: true, name: true, avatarStorageKey: true, avatarVersion: true, avatarUrl: true, city: true } }
     }
   },
   messages: {
     take: 1,
     orderBy: { createdAt: 'desc' },
-    include: { sender: { select: { id: true, name: true } } }
+    include: { sender: { select: { id: true, name: true, avatarStorageKey: true, avatarVersion: true, avatarUrl: true } } }
   }
 };
 
@@ -33,7 +33,7 @@ export const chatRepository = {
     return prisma.message.findMany({
       where: { conversationId },
       include: {
-        sender: { select: { id: true, name: true, avatarUrl: true } }
+        sender: { select: { id: true, name: true, avatarStorageKey: true, avatarVersion: true, avatarUrl: true } }
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,
@@ -46,7 +46,7 @@ export const chatRepository = {
       return await prisma.$transaction(async (tx) => {
         const message = await tx.message.create({
           data: { conversationId, senderId, clientMessageId, body },
-          include: { sender: { select: { id: true, name: true, avatarUrl: true } } }
+          include: { sender: { select: { id: true, name: true, avatarStorageKey: true, avatarVersion: true, avatarUrl: true } } }
         });
         await tx.conversation.update({
           where: { id: conversationId },
@@ -58,7 +58,7 @@ export const chatRepository = {
       if (error?.code === 'P2002') {
         return prisma.message.findUnique({
           where: { senderId_clientMessageId: { senderId, clientMessageId } },
-          include: { sender: { select: { id: true, name: true, avatarUrl: true } } }
+          include: { sender: { select: { id: true, name: true, avatarStorageKey: true, avatarVersion: true, avatarUrl: true } } }
         });
       }
       throw error;

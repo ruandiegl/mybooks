@@ -152,3 +152,9 @@ As coberturas abaixo são evidências históricas da main; reexecutar as regress
 | LGPD | aprovação de finalidade, base legal e retenção de CPF/celular |
 
 Não declarar produção pronta enquanto esses itens estiverem pendentes.
+
+## Foto de perfil — plano 009 (implementação não publicada)
+
+Execução local do plano 009: API lint e 254 testes passaram (7 condicionais pulados); PostgreSQL real descartável confirmou migração/5 casos; app/typecheck e exports Web/Android tiveram êxito, com verificação final registrada no relatório. R2 público/sem CORS e aparelhos físicos NÃO foram aprovados.
+
+Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).

@@ -24,3 +24,9 @@ Eventos duráveis retornam acknowledgement `{ ok, data? }` ou `{ ok: false, erro
 ## UI
 
 As primitives nativas `MessageScroller`, `Message`, `Bubble`, `TypingIndicator`, `MessageComposer`, `ConnectionStateBanner` e `DeliveryStatus` vivem em `app/src/components/chat`. O header é fornecido pela stack nativa. Anexos não fazem parte do contrato atual do MVP. Não importe componentes shadcn web/DOM no React Native.
+
+## Foto de perfil — plano 009 (implementação não publicada)
+
+Resumos de otherUser e sender agora são allowlists com avatarUrl/expiração/versão, inclusive mensagens emitidas por Socket.IO. Eventos e membership são preservados. O cliente invalida mensagens pela chave real [messages,conversationId], além de conversations/matches.
+
+Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).

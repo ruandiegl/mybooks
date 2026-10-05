@@ -20,7 +20,7 @@ Helmet, CORS restrito, corpo máximo de 1 MB, request ID e erros sanitizados fic
 
 Fotos de livros aceitam JPEG, PNG ou WebP até 8 MiB cada, com no máximo três por livro. A API deriva owner e chave, emite PUT pré-assinado para `pending/books/<owner>/<book>/...`, valida tipo/tamanho por HEAD e só então copia para `books/...`. Reordenação, confirmação e exclusão verificam ownership e usam lock transacional; a foto 0 é a capa. Não aceite `userId`, chaves ou URLs arbitrárias do cliente.
 
-O bucket de livros é privado. GET é pré-assinado no endpoint S3 do R2 e possui expiração curta declarada na resposta; não persista a assinatura nem a compartilhe em logs. Configure lifecycle de 1 dia para `pending/books/`, CORS apenas para origens Web necessárias e uma credencial de escopo mínimo. Exclusões falhas ficam na fila persistente de limpeza com retry. `R2_PUBLIC_URL` permanece opcional para avatares legados, não para fotos de livros.
+O bucket de livros deve ser privado. GET é pré-assinado no endpoint S3 do R2 e possui expiração curta declarada na resposta; não persista a assinatura nem a compartilhe em logs. Configure lifecycle de 1 dia para `pending/books/`, CORS apenas para origens Web necessárias e uma credencial de escopo mínimo. Exclusões falhas ficam na fila persistente de limpeza com retry. `R2_PUBLIC_URL` permanece opcional para avatares legados, não para fotos de livros.
 
 A consulta de ISBN é autenticada e possui proteção própria contra abuso: 30 consultas por janela de 60 segundos, identificadas pelo usuário da sessão e por IP como fallback. No fluxo de câmera, formato, prefixo de livro e checksum são filtrados no app para evitar tráfego desnecessário, mas a API não confia nessa validação e verifica o parâmetro novamente com Zod e checksum.
 
@@ -33,3 +33,9 @@ Produção exige `AUTH_MODE=native`, HTTPS, segredos aleatórios base64 de 32 by
 A PWA não usa SecureStore. O access token fica somente em memória; o refresh token usa cookie `HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth`. O cookie é enviado somente quando a PWA e a API compartilham a mesma origem HTTPS. Publique a API atrás de reverse proxy no caminho `/api`, inclua a origem exata em `CLIENT_ORIGINS` e configure TLS e `trust proxy` para que `req.secure` reflita corretamente HTTPS. CORS permite apenas as origens configuradas; operações com cookie exigem `Origin` HTTPS autorizado e `X-Session-Transport: cookie`, e encerramento/refresh sempre passa por guarda de origem.
 
 O refresh cookie fica fora do JavaScript e o refresh entre abas usa Web Locks para evitar duas rotações concorrentes da mesma família. A PWA só habilita o fluxo seguro em navegador com suporte a locks. HTTP é permitido apenas quando tanto a página quanto a API usam host de loopback; nessa execução de desenvolvimento os tokens ficam em memória e somem ao fechar. Credenciais são bloqueadas em HTTP de LAN/Internet. No logout, a API revoga a sessão antes de limpar o cookie. Se a revogação falhar, preserva o cookie para permitir retry; o app mantém a conta ativa e informa que é preciso tentar novamente.
+
+## Foto de perfil — plano 009 (implementação não publicada)
+
+O preflight real de 05/10/2026 mostrou o bucket trocalivros público (domínio e r2.dev), sem CORS. A política de privacidade documentada é requisito, não configuração aprovada de produção. Não liberar avatares privados antes de migrar referências e fechar ambas as exposições em operação autorizada; GET assinado sozinho não resolve.
+
+Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).

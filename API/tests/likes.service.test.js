@@ -63,6 +63,8 @@ describe('likesService', () => {
 
       expect(result.items[0].actorBook.coverUrl).toBe('https://signed.example/books/actor/cover.jpg');
       expect(result.items[0].book.coverUrl).toBe('https://signed.example/books/target/cover.jpg');
+      expect(result.items[0].book.coverUrlExpiresAt).toBe('2026-09-30T12:05:00.000Z');
+      expect(result.items[0].actorBook.coverUrlExpiresAt).toBe('2026-09-30T12:05:00.000Z');
       expect(mocks.storageService.getPresignedGetUrl).toHaveBeenCalledWith('books/actor/cover.jpg');
       expect(mocks.storageService.getPresignedGetUrl).toHaveBeenCalledWith('books/target/cover.jpg');
       expect(mocks.storageService.getPresignedGetUrl).toHaveBeenCalledTimes(2);
@@ -102,13 +104,13 @@ describe('likesService', () => {
       expect(result.items).toHaveLength(1);
       expect(result.items[0]).toEqual({
         id: interactionId,
-        actor: { id: otherUserId, name: 'Bia', avatarUrl: 'https://example.com/avatar.jpg', city: 'São Paulo' },
+        actor: { id: otherUserId, name: 'Bia', avatarUrl: 'https://example.com/avatar.jpg', avatarUrlExpiresAt: null, avatarVersion: 0, city: 'São Paulo' },
         actorBook: {
           id: '50000000-0000-4000-8000-000000000005',
           title: 'A Hora da Estrela',
-          coverUrl: 'https://example.com/actor-book.jpg'
+          coverUrl: 'https://example.com/actor-book.jpg', coverUrlExpiresAt: null
         },
-        book: { id: bookId, title: 'Dom Casmurro', coverUrl: 'https://example.com/cover.jpg' },
+        book: { id: bookId, title: 'Dom Casmurro', coverUrl: 'https://example.com/cover.jpg', coverUrlExpiresAt: null },
         likedAt: createdAt
       });
       expect(result.hasMore).toBe(false);
@@ -195,8 +197,8 @@ describe('likesService', () => {
       expect(result.items).toHaveLength(1);
       expect(result.items[0]).toEqual({
         id: interactionId,
-        book: { id: bookId, title: '1984', coverUrl: 'https://example.com/1984.jpg' },
-        owner: { id: otherUserId, name: 'Carlos', avatarUrl: null, city: 'Curitiba' },
+        book: { id: bookId, title: '1984', coverUrl: 'https://example.com/1984.jpg', coverUrlExpiresAt: null },
+        owner: { id: otherUserId, name: 'Carlos', avatarUrl: null, avatarUrlExpiresAt: null, avatarVersion: 0, city: 'Curitiba' },
         likedAt: createdAt
       });
       expect(result.hasMore).toBe(false);

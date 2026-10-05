@@ -10,6 +10,8 @@ import { styles } from './styles';
 type LikeCardProps = {
   userName: string;
   userAvatar?: string | null;
+  avatarVersion?: number;
+  onAvatarError?: () => void;
   userCity?: string | null;
   bookTitle: string;
   bookCoverUrl?: string | null;
@@ -25,7 +27,7 @@ type LikeCardProps = {
 };
 
 export function LikeCard({
-  userName, userAvatar, userCity, bookTitle, bookCoverUrl, variant,
+  userName, userAvatar, avatarVersion, onAvatarError, userCity, bookTitle, bookCoverUrl, variant,
   onLikeBack, onDismiss, onUnlike, onPress, relatedBookTitle, onOpenRelatedBook, disabled
 }: LikeCardProps) {
   const { width } = useWindowDimensions();
@@ -46,7 +48,7 @@ export function LikeCard({
         style={({ pressed }) => [pressed && styles.pressed]}
       >
         <View style={styles.topRow}>
-          <Avatar name={userName} url={userAvatar} size={28} />
+          <Avatar name={userName} url={userAvatar} version={avatarVersion} onImageError={onAvatarError} size={28} />
           <View style={styles.userSection}>
             <Text style={styles.userName} numberOfLines={1}>{userName}</Text>
             <Text style={styles.userCaption} numberOfLines={1}>{variant === 'received' ? 'Curtiu seu livro' : userCity || 'Dono do livro'}</Text>

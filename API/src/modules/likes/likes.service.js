@@ -1,3 +1,4 @@
+import { serializeAvatarUser } from '../media/avatar.serializer.js';
 import { AppError } from '../../shared/errors/AppError.js';
 import { storageService } from '../media/storage.service.js';
 import { premiumService } from '../premium/premium.service.js';
@@ -12,14 +13,14 @@ function compareImages(a, b) {
   return new Date(a.createdAt ?? 0) - new Date(b.createdAt ?? 0);
 }
 
-async function getCoverUrl(images) {
+async function getCoverDescriptor(images) {
   const image = [...(images ?? [])].sort(compareImages)[0];
-  if (!image) return null;
+  if (!image) return { coverUrl: null, coverUrlExpiresAt: null };
   if (image.storageKey) {
     const signed = await storageService.getPresignedGetUrl(image.storageKey);
-    return signed?.url ?? null;
+    return { coverUrl: signed?.url ?? null, coverUrlExpiresAt: signed?.expiresAt ?? null };
   }
-  return image.url ?? null;
+  return { coverUrl: image.url ?? null, coverUrlExpiresAt: null };
 }
 
 export const likesService = {
@@ -38,26 +39,22 @@ export const likesService = {
     const items = hasMore ? interactions.slice(0, limit) : interactions;
     const nextCursor = hasMore ? items[items.length - 1].id : null;
 
+    const cache = new Map();
     return {
       items: await Promise.all(items.map(async interaction => ({
         id: interaction.id,
-        actor: {
-          id: interaction.actor.id,
-          name: interaction.actor.name,
-          avatarUrl: interaction.actor.avatarUrl,
-          city: interaction.actor.city
-        },
+        actor: await serializeAvatarUser(interaction.actor, cache),
         actorBook: interaction.actor.books?.[0]
           ? {
               id: interaction.actor.books[0].id,
               title: interaction.actor.books[0].title,
-              coverUrl: await getCoverUrl(interaction.actor.books[0].images)
+              ...await getCoverDescriptor(interaction.actor.books[0].images)
             }
           : null,
         book: {
           id: interaction.targetBook.id,
           title: interaction.targetBook.title,
-          coverUrl: await getCoverUrl(interaction.targetBook.images)
+          ...await getCoverDescriptor(interaction.targetBook.images)
         },
         likedAt: interaction.createdAt
       }))),
@@ -75,15 +72,16 @@ export const likesService = {
     const items = hasMore ? interactions.slice(0, limit) : interactions;
     const nextCursor = hasMore ? items[items.length - 1].id : null;
 
+    const cache = new Map();
     return {
       items: await Promise.all(items.map(async interaction => ({
         id: interaction.id,
         book: {
           id: interaction.targetBook.id,
           title: interaction.targetBook.title,
-          coverUrl: await getCoverUrl(interaction.targetBook.images)
+          ...await getCoverDescriptor(interaction.targetBook.images)
         },
-        owner: interaction.targetBook.owner,
+        owner: await serializeAvatarUser(interaction.targetBook.owner, cache),
         likedAt: interaction.createdAt
       }))),
       nextCursor,
