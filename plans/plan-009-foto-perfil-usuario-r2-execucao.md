@@ -1,7 +1,7 @@
 # Execução — plano 009: foto de perfil no R2
 
 Data: 05/10/2026. Branch isolada: `codex/foto-perfil-usuario-r2`, base `6eb3300`.
-Implementação local validada e correções da revisão concluídas; **não publicada** e não incorporada à main nesta tarefa.
+Implementação local validada e correções da revisão concluídas. Em06/10/2026, o código foi integrado/enviado à main; o deploy e a migração de produção aguardam acesso para backup. Consulte [publicação](./plan-009-foto-perfil-usuario-r2-publicacao.md).
 
 ## Entrega de código
 
