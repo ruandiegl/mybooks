@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, shrink-to-fit=no" />
     <meta name="application-name" content="TrocaLivros" />
     <meta name="theme-color" content="#B90041" />
     <meta name="description" content="Descubra livros, encontre leitores e troque histórias." />
@@ -23,12 +23,27 @@
       /* These styles disable body scrolling if you are using <ScrollView> */
       body {
         overflow: hidden;
+        margin: 0;
+        background-color: #FFF8F7;
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
       }
       /* These styles make the root element full-height */
       #root {
         display: flex;
         height: 100%;
         flex: 1;
+        min-height: 0;
+        width: 100%;
+      }
+      /* Follow the visible viewport as Safari's toolbars expand/collapse.
+         Insets belong to SafeAreaView/tab bar, not a second padding on body. */
+      @supports (height: 100dvh) {
+        html,
+        body,
+        #root {
+          height: 100dvh;
+        }
       }
     </style>
   </head>

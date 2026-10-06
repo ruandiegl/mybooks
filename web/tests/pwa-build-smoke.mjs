@@ -19,6 +19,14 @@ const html = await read('index.html');
 const manifest = JSON.parse(await read('manifest.json'));
 const worker = await read('sw.js');
 
+const viewportTag = html.match(/<meta\b[^>]*\bname=["']viewport["'][^>]*>/i)?.[0];
+assert.ok(viewportTag, 'exported HTML must declare its mobile viewport');
+const viewportContent = viewportTag.match(/\bcontent=["']([^"']*)["']/i)?.[1] ?? '';
+const viewport = Object.fromEntries(viewportContent.split(',').map(entry => entry.trim().split('=')));
+assert.equal(viewport['viewport-fit'], 'cover', 'export must expose real iOS safe-area insets');
+assert.notEqual(viewport['user-scalable'], 'no', 'the PWA must allow accessibility pinch zoom');
+assert.ok(Number(viewport['maximum-scale'] ?? 10) > 1, 'the viewport must not lock user zoom');
+
 assert.match(html, /rel=["']manifest["']/i, 'Expo HTML must link the PWA manifest');
 assert.match(html, /apple-touch-icon/i, 'Expo HTML must expose the iOS home-screen icon');
 assert.match(html, /name=["']apple-mobile-web-app-capable["']/i, 'Expo HTML must enable standalone iOS display');

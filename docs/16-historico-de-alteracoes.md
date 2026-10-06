@@ -2,6 +2,15 @@
 
 Os resultados abaixo pertencem às execuções e branches indicadas em cada registro; não comprovam testes, deploy ou aceite da integração em curso.
 
+## 06/10/2026 — Safe area e viewport da PWA
+
+- Correção na branch codex/pwa-safe-area: viewport-fit=cover expõe os insets do sistema; altura dinâmica100dvh acompanha barras do navegador, com fallback100%. Não há padding de env() no body/root nem bloqueio de zoom.
+- Abas: AppScreen reserva topo/laterais, tab bar reserva o inset inferior. Stack: header continua dono do topo; corpos de Chat/livros/Matches recebem laterais, excluindo Main/onboarding para não dobrar os insets. Composer web reserva o home indicator.
+- Campos web de formulário/busca/chat usam16px; paleta e medidas nativas preservadas. Não altera API, dados ou R2.
+- Validação local final: typecheck;40 arquivos/161 testes; export Web e smoke PWA aprovados. O smoke confirma cover e zoom permitido no HTML efetivamente exportado. Bundle Android também exportado.
+- Chrome local:375×812 e812×375, root acompanha viewport, sem overflow horizontal; fontes calculadas dos campos de login16px. Insets físicos59/34 e21 são fixtures de contrato, não emulação de Dynamic Island.
+- Safari/PWA instalada em iPhone físico ainda requer aceite. Teclado virtual web preexistente não foi redesenhado:100dvh não garante resize por teclado. Publicação na main/Railway depende de autorização do usuário, ainda não realizada neste registro.
+
 ## 05/10/2026 — Integração da PWA com a main
 
 - Conciliados os documentos 01, 02, 03, 04, 11, 15, 16 e README entre a main `249751e` e a branch PWA `89733ef`, preservando Curtidas, Premium implementado, até três fotos ordenadas e GET privado renovável do R2.

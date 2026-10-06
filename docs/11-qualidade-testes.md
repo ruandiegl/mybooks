@@ -41,6 +41,12 @@ No checkout isolado da galeria, a migração de `BookImage` não foi executada e
 
 Migração em PostgreSQL limpo, entrega Resend, R2, dois usuários no Socket.IO e dispositivo Android/iOS são evidências separadas. O aceite físico do scanner deve incluir permissão negada e bloqueada, baixa luz, código danificado, offline, `404`, `503` e limite excedido. Se o ambiente não existir, registre como pendente; typecheck, export e mocks não equivalem a teste ponta a ponta.
 
+## Safe area da PWA
+
+Regressões em app/src/__tests__/pwaSafeArea.component.test.tsx verificam os contratos enviados à navegação/SafeAreaView: topo/laterais das abas, altura/padding inferior com insets34/21/0, laterais do Stack sem duplicação em Main/onboarding e preservação dos valores nativos. O inset é fronteira controlada, não prova física de Safari/ilha. O teste de fonte inspeciona a declaração CSS gerada; tamanho calculado foi conferido separadamente no Chrome, pois jsdom mantém incorretamente o shorthand14px do React Native Web.
+
+O smoke web/tests/pwa-build-smoke.mjs exige viewport-fit=cover e zoom acessível no HTML exportado. Repetir no iPhone em Safari e PWA instalada, retrato/paisagem, com foco/fechamento do teclado e barras do navegador visíveis/ocultas. Não somar ou duplicar safe area no body/root, conteúdo e tab bar.
+
 ## Foto de perfil — plano 009 (implementação não publicada)
 
 Testes reais de grants: DATABASE_URL e AVATAR_TEST_DATABASE_URL apontam para banco descartável no loopback, já migrado; executar npm test -- tests/avatar.repository.integration.test.js em API/. O teste rejeita host não-loopback e limpa só suas fixtures. Suites/builds locais não aprovam R2 ou aparelhos físicos.

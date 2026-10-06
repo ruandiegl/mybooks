@@ -1,6 +1,8 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useQuery } from '@tanstack/react-query';
+import { Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Discover } from '../pages/Discover';
 import { Library } from '../pages/Library';
 import { Likes } from '../pages/Likes';
@@ -21,6 +23,8 @@ const tabIcons: Record<keyof MainTabParamList, keyof typeof MaterialIcons.glyphM
 };
 
 export function MainTabs() {
+  const insets = useSafeAreaInsets();
+  const bottomInset = Platform.OS === 'web' ? Math.max(0, insets.bottom) : 0;
   const { data } = useQuery({
     queryKey: ['likes', 'received', 'count'],
     queryFn: () => likesApi.fetchReceivedLikesCount(),
@@ -36,9 +40,9 @@ export function MainTabs() {
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.mutedForeground,
         tabBarStyle: {
-          height: 72,
+          height: 72 + bottomInset,
           paddingTop: 8,
-          paddingBottom: 8,
+          paddingBottom: 8 + bottomInset,
           borderTopColor: theme.colors.outline,
           backgroundColor: theme.colors.surface
         },

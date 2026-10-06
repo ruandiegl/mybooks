@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { theme } from '../../styles/theme';
 
 export const styles = StyleSheet.create({
@@ -13,7 +13,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     color: theme.colors.foreground,
     fontFamily: theme.typography.regular,
-    fontSize: 15
+    fontSize: Platform.OS === 'web' ? 16 : 15
   },
   multiline: { minHeight: 112, paddingTop: theme.spacing.md, textAlignVertical: 'top' },
   error: { borderColor: theme.colors.danger },
