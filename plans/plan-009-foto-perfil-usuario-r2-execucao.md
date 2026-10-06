@@ -116,7 +116,7 @@ O teste unitário antigo de retry após expiração substitui `deps.now` depois 
 
 ### Limites que o reviewer não aprovou
 
-Privacidade/CORS/lifecycle e PUT-timeouts/cleanup no R2 real; EXIF/HEIC/iCloud/gestos em aparelho; acessibilidade/foco/fonte ampliada/Safari instalado; Docker Linux; migração no alvo, auditoria, backup/restore e rollout; patches preexistentes do Expo. Permanecem pendências de liberação, não exceções tratadas como aprovação.
+Na data da revisão local esses cenários não estavam aprovados: privacidade/CORS/lifecycle e PUT-timeouts/cleanup no R2 real; EXIF/HEIC/iCloud/gestos em aparelho; acessibilidade/foco/fonte ampliada/Safari instalado; Docker Linux; migração no alvo, auditoria, backup/restore e rollout; patches preexistentes do Expo. O status real posterior de06/10 está em [publicação](./plan-009-foto-perfil-usuario-r2-publicacao.md): API/PWA, migraçãoPG18, Docker e ensaios privados R2 concluídos; backup dispensado pelo usuário; lifecycle, dispositivos físicos e cenários de falha de rede ainda separados/pendentes.
 
 ## Decisões adicionais do fix pass
 

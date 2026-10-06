@@ -165,11 +165,11 @@ Integração PostgreSQL deve usar a fixture/flag dedicada dos testes novos, banc
 
 - [ ] Critérios 1–7 da especificação cumpridos.
 - [ ] Migração, ownership, CAS, retry e fila de limpeza validados em PostgreSQL.
-- [ ] R2 privado real aceita o arquivo processado; leitura, expiração e remoção funcionam.
+- [x] R2 privado real aceita o arquivo processado; leitura, expiração e remoção funcionam. Evidências em publicação06/10.
 - [ ] Prévia circular e imagem final coincidem em iOS/Android/PWA, com alternativas acessíveis.
 - [ ] Foto atual e campos do perfil são preservados em falha/cancelamento; todos os consumidores exibem o descritor correto.
 - [ ] Documentação distingue entrega, testes locais e aceites externos; fotos de usuário/artefatos ausentes do commit.
 
 ## Handoff
 
-Implementação de código das tarefas 1–6 em branch isolada, com evidências locais em [execução](./plan-009-foto-perfil-usuario-r2-execucao.md). A revisão independente e o fix pass local estão concluídos; os aceites externos da tarefa 7 ainda não autorizam publicação. Os checkboxes que envolvem R2 privado, Docker ou aparelhos físicos permanecem pendentes; a migração de produção e a troca das branches Railway não foram executadas.
+Tarefas1–6 implementadas e revisadas, com evidências locais em [execução](./plan-009-foto-perfil-usuario-r2-execucao.md). Em06/10 o usuário autorizou o rollout e dispensou backup por estar em desenvolvimento. API/PWA foram publicados da main, migrationsPG18 aplicadas, referências legadas convertidas preservando fontes e ambas as exposições públicas R2 desativadas. Docker Linux, CORS e ensaios API/R2 reais passaram. Evidências e limites em [publicação](./plan-009-foto-perfil-usuario-r2-publicacao.md). Lifecycle aguarda autorização específica; aceite físico/visual continua pendente, sem ampliar permissões do navegador.

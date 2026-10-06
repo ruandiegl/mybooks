@@ -37,13 +37,25 @@ node src/scripts/backfill-private-media.js --apply
 
 Antes de --apply: dry-run sem bloqueios, testes e revisão focada. Antes de fechar R2: auditoria com zero referências URL-onlyR2 e leitura assinada das fotos verificadas.
 
-## Pendente nesta atualização
+## Liberação confirmada
 
-- Publicar/executar backfill controlado; verificar fila de limpeza dos objetos sintéticos.
-- Desativar acesso público do domínio media.podepedirppd.com.br e r2.dev após leitura assinada validada.
-- Lifecycle exclusivo pending/avatars/ em1dia, sem atingir avatars/ ou books/; nunca ativar se houver referência definitiva pending/.
-- Publicar Web main apenas após os gates anteriores; validar fluxo PWA. Aceite em dispositivos físicos iOS/Android/Safari é separado, ainda não realizado.
-- Restaurar preDeploy padrão npx prisma migrate deploy ao terminar operações pontuais.
+- Main publicada:9b8ea50e117a9520d2b9490dc4a6e4f8993ccd8e. Testes/lint repetidos na main integrada:265pass/12skip.
+- Deploy API eeaf1091-eaf2-4c36-932a-9e969ea10afb SUCCESS: dry-run planned2, blocked0; apply avatars1/books1/copies1, skipped12, blocked0. Fonte compartilhada preservada.
+- Auditoria posterior:7users/14BookImages;1avatar privado/2fotos de livros privadas; zero URLs R2 legadas/zero referências definitivas pending/. Três GETs assinados validados, cleanupJobs0.
+- Domínio media.podepedirppd.com.br: Access Disabled; domínio/DNS não removidos. r2.dev: Public Development URL disabled. CORS preservado.
+- Teste pelo proxy Web após fechar bucket: login/logout seed válidos;3GETs assinados200 e3CORS exatos; os mesmos3objetos recusados em cada um dos dois hosts públicos. Nenhuma exposição pública é necessária para novas fotos.
+- Ensaio API inteiro repetido com bucket privado passou: PUTPNG, JPEG512 semEXIF, idempotência, substituição, conflito409 antigo, remoção e campos textuais preservados. Sessão seed encerrada.
+- Inspeção somente-leitura do R2 após os ensaios confirmou zero objetos finais e zero pending da conta seed usada no teste. Nenhuma foto real foi removida.
+- preDeploy padrão npx prisma migrate deploy restaurado; deploy51e1aff5-2da6-4c5a-baea-5d0123cfc0d2 SUCCESS com comando padrão, sem repetir backfill.
+- Web mudou de codex/plan-007-pwa para main, preservando Docker/Caddy/variáveis. Deploy a6446dee-c53b-4cd2-8028-55122bc02d63 SUCCESS na mesma revisão9b8ea50. Página carregou sessão existente; Perfil e capa do livro presentes.
+
+## Aceites ainda pendentes
+
+- Lifecycle exclusivo pending/avatars/ em1dia foi preparado e cancelado, NÃO salvo. Aguarda autorização específica para exclusão permanente dos temporários; nenhuma mudança nos objetos finais ou nos livros foi proposta.
+- Teste visual do recorte com arquivo sintético não concluiu: extensão Chrome recusou setFiles por não possuir acesso a file URLs. A permissão não foi ampliada. Foto/dados do perfil existente não foram salvos/substituídos; fluxo local foi encerrado.
+- Aceite em dispositivos físicos iOS/Android e Safari/PWA instalada permanece separado: galeria limitada/negada, HEIC/iCloud, pan/pinch, rede instável e acessibilidade. Não declarar esses cenários verificados pelos testes unitários/API.
+
+Rollback deve manter a migração aditiva e os serializers privados; retornar a API antiga que depende de URL pública quebraria essas fotos. Não reativar acesso público como rollback automático.
 
 ## Nota operacional
 
