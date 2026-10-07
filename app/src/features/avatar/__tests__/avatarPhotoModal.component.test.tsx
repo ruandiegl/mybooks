@@ -14,6 +14,16 @@ function props(overrides: Partial<AvatarPhotoModalProps> = {}): AvatarPhotoModal
 }
 afterEach(cleanup);
 describe('expanded profile photo', () => {
+  it('keeps the photo viewer open while suppressing the browser image menu', async () => {
+    const events: string[] = [];
+    render(<AvatarPhotoModal {...props({ onClose: () => events.push('close') })} />);
+    const photo = await screen.findByRole('img', { name: 'Foto de perfil de Leitora' });
+    const image = photo.querySelector('img')!;
+    const menu = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    expect(fireEvent(image, menu)).toBe(false);
+    expect(events).toEqual([]);
+    expect(screen.getByRole('button', { name: 'Editar foto' })).toBeTruthy();
+  });
   it('starts keyboard focus on the close control instead of the backdrop', async () => {
     render(<AvatarPhotoModal {...props()} />);
     const close = await screen.findByRole('button', { name: 'Fechar foto de perfil' });

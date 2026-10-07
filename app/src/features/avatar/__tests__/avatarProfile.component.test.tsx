@@ -28,6 +28,14 @@ function host(node:React.ReactNode){const client=new QueryClient({defaultOptions
 beforeEach(()=>{vi.clearAllMocks();boundary.selections=0;boundary.captures=0;boundary.removals=0;boundary.longPress=undefined;boundary.editorSource=undefined;boundary.editorError=undefined;boundary.session={user:{...person},isSignedIn:true,refreshUser:async()=>person,refreshAvatar:()=>{},updateAvatar:()=>{},signOut:async()=>{}};boundary.get.mockImplementation(async(url:string)=>({data:{data:url.endsWith('/me')?person:{items:[],pageInfo:{hasNextPage:false}}}}));});
 afterEach(()=>{cleanup();clients.forEach(c=>c.clear());clients.length=0;boundary.failImage=false;vi.useRealTimers();});
 describe('profile and onboarding mounted avatar coordination',()=>{
+ it('suppresses the browser photo menu while retaining the tap-to-open action',async()=>{
+  render(host(<Profile navigation={{navigate:()=>{}} as any}/>));
+  const avatar=await screen.findByRole('button',{name:'Ver foto de perfil'});
+  const menu=new MouseEvent('contextmenu',{bubbles:true,cancelable:true});
+  expect(fireEvent(avatar.querySelector('img')!,menu)).toBe(false);
+  fireEvent.click(avatar);
+  expect(await screen.findByRole('button',{name:'Tirar foto'})).toBeTruthy();
+ });
  it('does not reopen the text editor after closing a photo error',async()=>{
   const tree=host(<Profile navigation={{navigate:()=>{}} as any}/>),mounted=render(tree);
   fireEvent.click(await screen.findByRole('button',{name:'Editar perfil'}));

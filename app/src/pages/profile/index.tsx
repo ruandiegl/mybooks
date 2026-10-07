@@ -179,7 +179,7 @@ export function Profile({ navigation }: Props) {
       <View style={styles.identity}>
         <View style={[styles.identityRow, stackedIdentity && styles.identityStacked]}>
           <Pressable accessibilityRole="button" accessibilityLabel="Ver foto de perfil" accessibilityHint="Toque ou mantenha pressionado para ampliar a foto e abrir as opções." disabled={avatarEditor.busy || saveMutation.isPending} onPress={openPhoto} onLongPress={openPhoto} delayLongPress={500}>
-            <Avatar name={profile?.name || 'Leitor TrocaLivros'} url={profile?.avatarUrl} version={profile?.avatarVersion} onImageError={session.refreshAvatar} size={72} />
+            <Avatar name={profile?.name || 'Leitor TrocaLivros'} url={profile?.avatarUrl} version={profile?.avatarVersion} onImageError={session.refreshAvatar} size={72} suppressBrowserActions />
           </Pressable>
           <View style={[styles.identityCopy, stackedIdentity && styles.identityCopyStacked]}>
             <Text accessibilityRole="header" style={styles.name}>{profile?.name}</Text>

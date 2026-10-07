@@ -2,6 +2,14 @@
 
 Os resultados abaixo pertencem às execuções e branches indicadas em cada registro; não comprovam testes, deploy ou aceite da integração em curso.
 
+## 07/10/2026 — Pressão longa na foto na PWA (correção local)
+
+- O print do iPhone mostrou a prévia/menu contextual de imagem do Safari, sobreposto ao modal do app. A correção em `codex/pwa-avatar-touch-callout` adiciona opt-in ao Avatar para suprimir callout/seleção/menu somente na web, com `-webkit-touch-callout: none`, user-select e cancelamento de contextmenu.
+- Aplicada ao avatar do próprio perfil, à foto ampliada e ao AvatarPicker de edição/onboarding. Os pixels da Image deixam de receber hit-test, mas o controle pai permanece interativo. Não há bloqueio de touch/pinch, zoom do viewport ou crop, alteração de imagens, R2/API, paleta ou dependências. Avatares comuns e app nativo não recebem a proteção.
+- Regressões em RED/GREEN com componentes RN Web reais e CSS exportado por SSR; jsdom não interpreta a extensão WebKit, por isso não serve de prova de callout físico. Revisão independente sem Critical/Important; removido um onDragStart ineficaz que o View instalado não encaminha.
+- Validação final: 44 arquivos/191 testes, TypeScript, export Web, smoke PWA e export Android aprovados. Preview de loopback com dados/imagem fictícios: menus contextuais cancelados no avatar pequeno e ampliado, hit-test não atinge o img, toque abre o modal e tocar na foto não fecha; Escape devolve foco ao avatar. 375×812 e 812×375 sem overflow horizontal e viewport acessível preservado.
+- A correção ainda não foi enviada à main/Railway neste registro. Segurar ambas as fotos em Safari/PWA no iPhone, pinch real e leitores de tela exigem revalidação física depois da publicação.
+
 ## 07/10/2026 — Publicação da foto ampliada e safe area na main
 
 - Após autorização do usuário, `main` avançou de `355232c` para `fe07f80` por fast-forward, incluindo `3d5160d` (safe area) e a foto ampliada/câmera. Push confirmado com o mesmo SHA em `origin/main`. Os dois arquivos locais não rastreados (seed SQL e rascunho do plano 008) foram preservados e não enviados.
