@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { ComponentProps } from 'react';
-import { ActivityIndicator, Pressable, Text, type PressableProps } from 'react-native';
+import { ActivityIndicator, Pressable, Text, type PressableProps, type StyleProp, type TextStyle } from 'react-native';
 import { theme } from '../../styles/theme';
 import { styles } from './styles';
 
@@ -11,9 +11,10 @@ type Props = PressableProps & {
   variant?: ButtonVariant;
   icon?: IconName;
   loading?: boolean;
+  labelStyle?: StyleProp<TextStyle>;
 };
 
-export function AppButton({ label, variant = 'primary', icon, loading, disabled, style, ...props }: Props) {
+export function AppButton({ label, variant = 'primary', icon, loading, disabled, style, labelStyle, ...props }: Props) {
   const light = variant === 'primary' || variant === 'secondary';
   const color = light ? theme.colors.white : theme.colors.foreground;
 
@@ -31,7 +32,7 @@ export function AppButton({ label, variant = 'primary', icon, loading, disabled,
       {...props}
     >
       {loading ? <ActivityIndicator color={color} /> : icon ? <MaterialIcons name={icon} size={20} color={color} /> : null}
-      <Text style={[styles.label, light ? styles.lightLabel : styles.darkLabel]}>{label}</Text>
+      <Text style={[styles.label, light ? styles.lightLabel : styles.darkLabel, labelStyle]}>{label}</Text>
     </Pressable>
   );
 }

@@ -2,7 +2,7 @@ import { useEffect,useRef,useState } from 'react';
 import { useWindowDimensions } from 'react-native';
 import Cropper from 'react-easy-crop';
 import { updateCropperTransform,cropperPixelRect } from '../../features/avatar/avatarCropperState';
-import { clampAvatarTransform,getAvatarCropRect,reframeAvatarTransform,stepAvatarTransform,zoomAvatarAtPoint } from '../../features/avatar/avatarCrop';
+import { getAvatarCropRect,reframeAvatarTransform,zoomAvatarAtPoint } from '../../features/avatar/avatarCrop';
 import type { AvatarTransform,AvatarCropRect } from '../../features/avatar/avatarTypes';
 import { AvatarEditorControls } from './AvatarEditorControls';
 import type { AvatarEditorProps } from './AvatarEditor.types';
@@ -22,15 +22,16 @@ export function AvatarEditor(props:AvatarEditorProps) {
  const baseZoom=Math.max(diameter/(source.width*mediaScale),diameter/(source.height*mediaScale));
  const ready=loadedDiameter===diameter&&cropDiameter===diameter;
  useEffect(()=>{if(ready)stage.current?.querySelector<HTMLElement>('[tabindex]')?.focus();},[ready]);
- const change=(next:AvatarTransform)=>setT(()=>clampAvatarTransform(source,diameter,next));
  const pixels=getAvatarCropRect(source,diameter,t);
  const recordCrop=(_area:unknown,area:{x:number;y:number;width:number;height:number})=>{if(currentDiameter.current===diameter){rect.current=cropperPixelRect(source,area);setCropDiameter(diameter);}};
- return <AvatarEditorControls {...props} zoom={t.zoom} ready={ready} lowResolution={pixels.width<512}
-  onMove={direction=>change(stepAvatarTransform(source,diameter,t,direction))}
-  onZoom={z=>change(zoomAvatarAtPoint(source,diameter,t,z,{x:0,y:0}))}
-  onCenter={()=>change({...t,offsetX:0,offsetY:0})}
+ return <AvatarEditorControls {...props} ready={ready} lowResolution={pixels.width<512}
   onSave={()=>{if(ready&&rect.current)props.onSave(rect.current);}}>
-  <div ref={stage} style={{...webStyles.stage,width:diameter+32,height:diameter+32}}>
+  <div ref={stage} style={{...webStyles.stage,width:diameter+32,height:diameter+32}} onContextMenu={event=>event.preventDefault()} onKeyDown={event=>{
+   if(busy||event.ctrlKey||event.metaKey||event.altKey)return;
+   const delta=event.key==='+'||event.key==='='?0.1:event.key==='-'||event.key==='_'?-0.1:0;
+   if(!delta)return;
+   event.preventDefault();setT(old=>zoomAvatarAtPoint(source,diameter,old,old.zoom+delta,{x:0,y:0}));
+  }}>
    <Cropper key={diameter} image={source.uri} aspect={1} cropShape="round" cropSize={{width:diameter,height:diameter}}
     crop={{x:t.offsetX,y:t.offsetY}} zoom={t.zoom*baseZoom} minZoom={baseZoom} maxZoom={baseZoom*3}
     objectFit="contain" restrictPosition showGrid={false} keyboardStep={20}
@@ -38,8 +39,9 @@ export function AvatarEditor(props:AvatarEditorProps) {
     onCropChange={position=>{if(!busy){const current=currentDiameter.current===diameter;setT(old=>updateCropperTransform(old,{offsetX:position.x,offsetY:position.y},current));}}}
     onZoomChange={z=>{if(!busy&&currentDiameter.current===diameter)setT(old=>updateCropperTransform(old,{zoom:z/baseZoom}));}}
     onCropComplete={recordCrop} onCropAreaChange={recordCrop}
-    cropperProps={{tabIndex:busy?-1:0,role:'group','aria-label':'Prévia circular. Use as setas do teclado para mover a foto.'}}
-    style={{cropAreaStyle:webStyles.cropArea,containerStyle:{opacity:loadedDiameter===diameter?1:0,pointerEvents:busy?'none':'auto'}}}/>
+    onTouchRequest={()=>!busy} onWheelRequest={()=>!busy} mediaProps={{draggable:false}}
+    cropperProps={{tabIndex:busy?-1:0,role:'group','aria-label':'Prévia circular. Arraste e use dois dedos para ajustar. No teclado, use as setas para mover e mais ou menos para ampliar.'}}
+    style={{cropAreaStyle:webStyles.cropArea,mediaStyle:webStyles.media,containerStyle:{opacity:loadedDiameter===diameter?1:0,pointerEvents:busy?'none':'auto'}}}/>
   </div>
  </AvatarEditorControls>;
 }

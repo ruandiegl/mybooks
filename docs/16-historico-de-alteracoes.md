@@ -2,6 +2,15 @@
 
 Os resultados abaixo pertencem às execuções e branches indicadas em cada registro; não comprovam testes, deploy ou aceite da integração em curso.
 
+## 07/10/2026 — Editor de foto por gestos (implementação local)
+
+- Após aprovação do desenho em chat, removidos zoom +/−, setas, percentual, Centralizar e Outra foto. Cancelar/Salvar ficam no cabeçalho; foto circular e instrução curta ocupam o corpo. Paleta, tipografia, limites e envio privado ao R2 permanecem iguais. Para trocar a imagem, cancelar e voltar à seleção.
+- PanResponder nativo e react-easy-crop Web mantêm arraste/pinça 1×–3×. Alternativas não visuais: ações de acessibilidade nativas e setas/+/- no teclado web. Ctrl/Cmd/Alt +/− não são interceptados. No crop Web, imagem não recebe hit-test/arraste nativo e o container mantém os gestos.
+- Cabeçalho responsivo para fontes grandes e telas estreitas, com rótulos que podem quebrar; título excessivamente alto reorganiza o layout uma única vez, evitando loop. AppButton ganhou apenas labelStyle opcional, sem alterar o padrão das demais telas.
+- TDD com componentes reais/bridge de dispositivo: salvar o retângulo visível após pinch/pan, resize durante gesto, teclado, leitor de tela, cancelamento, carregamento/erro/retry e atalhos do navegador. Revisão independente encontrou e confirmou correções de Dynamic Type e Ctrl/Cmd +/−.
+- Validação final: 45 arquivos/200 testes, TypeScript, export Web, smoke PWA e export Android aprovados. Preview loopback com conta fictícia e ícone local: editor sem controles de ajuste, zoom por teclado, Cancelar retorna à foto ampliada, 375×812 e 812×375 sem overflow horizontal. Rótulos/título em 45/51 px foram testados por CSS, não por emulação de Dynamic Type físico. Nenhuma imagem pessoal foi enviada nem operação feita no R2/Railway.
+- A implementação e o fix de callout `60fd811` estão apenas na branch local `codex/pwa-avatar-touch-callout`. Main/push/deploy permanecem pendentes de autorização. Pinch, safe area, VoiceOver/TalkBack e captura no iPhone/Android reais ainda precisam de aceite.
+
 ## 07/10/2026 — Pressão longa na foto na PWA (correção local)
 
 - O print do iPhone mostrou a prévia/menu contextual de imagem do Safari, sobreposto ao modal do app. A correção em `codex/pwa-avatar-touch-callout` adiciona opt-in ao Avatar para suprimir callout/seleção/menu somente na web, com `-webkit-touch-callout: none`, user-select e cancelamento de contextmenu.

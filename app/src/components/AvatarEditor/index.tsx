@@ -44,13 +44,15 @@ export function AvatarEditor(props:AvatarEditorProps) {
  const base=Math.max(diameter/source.width,diameter/source.height),w=source.width*base,h=source.height*base;
  const pictureStyle={position:'absolute' as const,width:w,height:h,transform:[{translateX:position.x},{translateY:position.y},{scale:zoom}]};
  const rect=getAvatarCropRect(source,diameter,shown);
- return <AvatarEditorControls {...props} zoom={shown.zoom} ready={ready&&!failed} lowResolution={rect.width<512}
+ return <AvatarEditorControls {...props} ready={ready&&!failed} lowResolution={rect.width<512}
   error={props.error||(failed?'Não foi possível abrir a prévia. Escolha outra foto.':undefined)}
-  onMove={direction=>update(stepAvatarTransform(source,diameter,transform.current,direction),true)}
-  onZoom={z=>update(zoomAvatarAtPoint(source,diameter,transform.current,z,{x:0,y:0}),true)}
-  onCenter={()=>update({...transform.current,offsetX:0,offsetY:0},true)}
   onSave={()=>props.onSave(getAvatarCropRect(source,diameter,transform.current))}>
-  <View style={[styles.stage,{width:stageSize,height:stageSize}]} pointerEvents="box-only" {...responder.panHandlers} accessible accessibilityRole="image" accessibilityLabel="Prévia circular da foto de perfil. Ajuste com os controles abaixo.">
+  <View style={[styles.stage,{width:stageSize,height:stageSize}]} pointerEvents="box-only" {...responder.panHandlers} accessible accessibilityRole="adjustable" accessibilityLabel="Enquadramento da foto de perfil" accessibilityHint="Arraste a foto e use dois dedos para ampliar. Com leitor de tela, use as ações de zoom e posicionamento." accessibilityState={{disabled:busy}} accessibilityValue={{min:100,max:300,now:Math.round(shown.zoom*100)}} accessibilityActions={[{name:'increment',label:'Ampliar foto'},{name:'decrement',label:'Diminuir foto'},{name:'left',label:'Mover foto para a esquerda'},{name:'right',label:'Mover foto para a direita'},{name:'up',label:'Mover foto para cima'},{name:'down',label:'Mover foto para baixo'}]} onAccessibilityAction={event=>{
+   if(busy||!ready||failed)return;
+   const action=event.nativeEvent.actionName;
+   if(action==='increment'||action==='decrement')update(zoomAvatarAtPoint(source,diameter,transform.current,transform.current.zoom+(action==='increment'?0.1:-0.1),{x:0,y:0}),true);
+   else if(action==='left'||action==='right'||action==='up'||action==='down')update(stepAvatarTransform(source,diameter,transform.current,action),true);
+  }}>
    <Animated.Image source={{uri:source.uri}} style={[pictureStyle,{left:(stageSize-w)/2,top:(stageSize-h)/2}]} resizeMode="stretch" accessible={false}/>
    <View pointerEvents="none" style={[StyleSheet.absoluteFill,{backgroundColor:theme.colors.overlay}]}/>
    <View pointerEvents="none" style={[styles.circle,{width:diameter,height:diameter,borderRadius:diameter/2}]}>
