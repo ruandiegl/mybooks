@@ -2,6 +2,16 @@
 
 Os resultados abaixo pertencem às execuções e branches indicadas em cada registro; não comprovam testes, deploy ou aceite da integração em curso.
 
+## 07/10/2026 — Foto de perfil ampliada e captura pela câmera
+
+- Implementação local em `codex/profile-photo-preview`, baseada em `3d5160d` (safe area ainda não publicada). Toque ou pressão longa no avatar abre uma foto circular ampliada com somente Editar foto, Tirar foto e Remover foto; paleta e componentes existentes preservados.
+- Galeria e câmera compartilham preparação, recorte e envio privado ao R2. Permissão nativa só na captura; seletor web aberto diretamente pelo clique. Não há vídeo, áudio ou upload automático. Cancelar não substitui a foto e remover mantém confirmação.
+- Foto/crop permanecem no mesmo modal; nova URI reinicia o recorte. Bloqueio durante operações, descarte de respostas de outra conta, renovação de URL e liberação de Blob preservados. A câmera também está disponível em Editar perfil e onboarding.
+- Revisão independente identificou reabertura indevida da edição textual, estado de crop reutilizado e foco/tabulação decorativos. Regressões reproduzidas em RED e corrigidas; o ajuste final de foco inicial no X foi validado pelo implementador com RN Web real e navegador.
+- Validação final nesta branch: 42 arquivos/185 testes, TypeScript, export Web/PWA com smoke e export Android aprovados. O primeiro export desta retomada foi bloqueado pelo sandbox ao escrever o log; a repetição com aprovação concluiu normalmente.
+- Preview loopback com sessão/imagem fictícias: 375×812 e 812×375 sem overflow horizontal; toque na foto não fecha, área externa fecha; foco inicial no X, Tab pelas três ações e Escape devolvendo foco ao avatar. Em paisagem, o conteúdo rola para mostrar os rótulos completos. Nenhuma imagem pessoal ou operação de Railway/R2 foi usada nesta conferência.
+- Captura real, permissões e leitores de tela em iOS/Android e Safari/PWA instalada em iPhone continuam pendentes. A descrição de câmera atualizada requer novo binário nativo. Main, push e deploy não foram executados neste registro.
+
 ## 06/10/2026 — Safe area e viewport da PWA
 
 - Correção na branch codex/pwa-safe-area: viewport-fit=cover expõe os insets do sistema; altura dinâmica100dvh acompanha barras do navegador, com fallback100%. Não há padding de env() no body/root nem bloqueio de zoom.

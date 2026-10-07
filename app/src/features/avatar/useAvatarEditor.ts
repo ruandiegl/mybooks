@@ -24,17 +24,29 @@ export function useAvatarEditor(userId:string|undefined,onUploaded:(avatar:Avata
  function release(){for(const resource of resources.current.values())releaseAvatarResource(resource);resources.current.clear();sourceRef.current=undefined;prepared.current=undefined;savedRect.current='';uploadState.current={putDone:false};}
  function invalidate(){for(const key of ['me','books','book','likes','matches','conversations','messages','chat'])void queryClient.invalidateQueries({queryKey:[key],refetchType:'active'}).catch(()=>undefined);}
  useEffect(()=>{
-  setSource(undefined);setPhase('idle');setError(undefined);setPreviewUri(undefined);lock.current=false;
+  setSource(undefined);setPhase('idle');setError(undefined);setPreviewUri(undefined);setPermissionBlocked(false);lock.current=false;
   return()=>{epoch.current++;release();lock.current=false;};
  },[userId]);
  const current=(ticket:number,id:string|undefined)=>epoch.current===ticket&&owner.current===id;
- async function choose(){
+ async function select(origin:'library'|'camera'){
   if(lock.current||!owner.current)return;
   lock.current=true;const id=owner.current,ticket=++epoch.current;setError(undefined);setPermissionBlocked(false);setPhase('selecting');
   let asset:ImagePicker.ImagePickerAsset|undefined;
   try{
-   const result=await ImagePicker.launchImageLibraryAsync({mediaTypes:['images'],allowsEditing:false,allowsMultipleSelection:false,quality:1,base64:false,exif:false,
-    ...(Platform.OS==='ios'?{preferredAssetRepresentationMode:ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,shouldDownloadFromNetwork:true}:{})});
+   if(origin==='camera'&&Platform.OS!=='web'){
+    const permission=await ImagePicker.requestCameraPermissionsAsync();
+    if(!current(ticket,id))return;
+    if(!permission.granted){
+     setPermissionBlocked(!permission.canAskAgain);
+     setError(permission.canAskAgain?'Permita o acesso à câmera para tirar sua foto.':'Ative a câmera nos ajustes do aparelho para tirar sua foto.');
+     setPhase('error');return;
+    }
+   }
+   // Web capture must be launched directly by the click, before any permission await.
+   const result=origin==='camera'
+    ?await ImagePicker.launchCameraAsync({mediaTypes:['images'],cameraType:ImagePicker.CameraType.front,allowsEditing:false,quality:0.9,base64:false,exif:false})
+    :await ImagePicker.launchImageLibraryAsync({mediaTypes:['images'],allowsEditing:false,allowsMultipleSelection:false,quality:1,base64:false,exif:false,
+     ...(Platform.OS==='ios'?{preferredAssetRepresentationMode:ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,shouldDownloadFromNetwork:true}:{})});
    asset=result.canceled?undefined:result.assets[0];
    if(!current(ticket,id))return;
    if(result.canceled){setPhase(sourceRef.current?'editing':'idle');return;}
@@ -85,5 +97,5 @@ export function useAvatarEditor(userId:string|undefined,onUploaded:(avatar:Avata
   finally{if(current(ticket,id))lock.current=false;}
  }
  function remove(){if(lock.current)return;const ticket=epoch.current,id=owner.current;Alert.alert('Remover foto?','Seu perfil voltará a mostrar suas iniciais.',[{text:'Cancelar',style:'cancel'},{text:'Remover',style:'destructive',onPress:()=>{if(current(ticket,id))void removeNow();}}]);}
- return {source,error,phase,previewUri,permissionBlocked,busy:!['idle','editing','error'].includes(phase),statusLabel:labels[phase],choose,save,cancel,remove,openSettings:()=>{void Linking.openSettings();}};
+ return {source,error,phase,previewUri,permissionBlocked,busy:!['idle','editing','error'].includes(phase),statusLabel:labels[phase],choose:()=>select('library'),takePhoto:()=>select('camera'),save,cancel,remove,openSettings:()=>{void Linking.openSettings();}};
 }

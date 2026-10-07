@@ -59,7 +59,7 @@ export function OnboardingProfile() {
           <Text style={styles.title}>Conte um pouco sobre você</Text>
           <Text style={styles.description}>Essa etapa é opcional. Um perfil completo ajuda outras pessoas a conhecerem seus gostos de leitura.</Text>
           <Card style={styles.card}>
-            <AvatarPicker avatar={avatar} name={[firstName, lastName].filter(Boolean).join(' ')} busy={avatarEditor.busy} error={avatarEditor.error} onChoose={avatarEditor.choose} onRemove={avatarEditor.remove} onOpenSettings={avatarEditor.permissionBlocked ? avatarEditor.openSettings : undefined} />
+            <AvatarPicker avatar={avatar} name={[firstName, lastName].filter(Boolean).join(' ')} busy={avatarEditor.busy} error={avatarEditor.error} onChoose={avatarEditor.choose} onTakePhoto={avatarEditor.takePhoto} onRemove={avatarEditor.remove} onOpenSettings={avatarEditor.permissionBlocked ? avatarEditor.openSettings : undefined} />
             <TextField label="Nome" value={firstName} onChangeText={setFirstName} autoComplete="name-given" textContentType="givenName" maxLength={50} />
             <TextField label="Sobrenome" value={lastName} onChangeText={setLastName} autoComplete="name-family" textContentType="familyName" maxLength={80} />
             <TextField label="Bio" value={bio} onChangeText={setBio} multiline maxLength={280} help={`${bio.length}/280`} />

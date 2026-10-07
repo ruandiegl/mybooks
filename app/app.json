@@ -33,13 +33,14 @@
         "expo-image-picker",
         {
           "photosPermission": "Permita que o TrocaLivros use as fotos que você escolher para o perfil e os livros.",
+          "cameraPermission": "Permita que o TrocaLivros use a câmera para tirar sua foto de perfil e ler o ISBN dos livros.",
           "microphonePermission": false
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "Permita que o TrocaLivros use a câmera para ler o ISBN dos livros.",
+          "cameraPermission": "Permita que o TrocaLivros use a câmera para tirar sua foto de perfil e ler o ISBN dos livros.",
           "microphonePermission": false,
           "recordAudioAndroid": false
         }

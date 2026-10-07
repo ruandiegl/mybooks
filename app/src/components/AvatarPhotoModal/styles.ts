@@ -1,0 +1,28 @@
+import { StyleSheet } from 'react-native';
+import { theme } from '../../styles/theme';
+
+export const styles = StyleSheet.create({
+  container: { flex: 1 },
+  backdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: theme.colors.foreground, opacity: 0.94 },
+  safe: { flex: 1 },
+  crop: { flex: 1, backgroundColor: theme.colors.background },
+  header: { minHeight: 64, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: theme.spacing.lg },
+  title: { color: theme.colors.white, fontFamily: theme.typography.semibold, fontSize: 18 },
+  close: { width: 48, height: 48, borderWidth: 2, borderColor: 'transparent', borderRadius: theme.radius.pill, alignItems: 'center', justifyContent: 'center' },
+  scroll: { flex: 1 },
+  content: { flexGrow: 1, paddingHorizontal: theme.spacing.lg, paddingBottom: theme.spacing.md, gap: theme.spacing.md },
+  portrait: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: theme.spacing.md, gap: theme.spacing.md },
+  photo: { borderRadius: theme.radius.pill, borderWidth: 2, borderColor: theme.colors.outline, padding: 2 },
+  name: { color: theme.colors.white, fontFamily: theme.typography.medium, fontSize: 16, textAlign: 'center' },
+  actions: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', gap: theme.spacing.sm },
+  action: { flex: 1, maxWidth: 112, minHeight: 96, alignItems: 'center', gap: theme.spacing.xs, paddingVertical: theme.spacing.xs },
+  circle: { width: 56, height: 56, borderWidth: 2, borderColor: 'transparent', borderRadius: theme.radius.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.secondary },
+  edit: { backgroundColor: theme.colors.primary },
+  remove: { backgroundColor: theme.colors.danger },
+  label: { color: theme.colors.white, fontFamily: theme.typography.medium, fontSize: 14, lineHeight: 21, textAlign: 'center' },
+  focused: { borderColor: theme.colors.white },
+  pressed: { opacity: 0.72 },
+  disabled: { opacity: 0.45 },
+  notice: { color: theme.colors.white, fontFamily: theme.typography.regular, fontSize: 14, lineHeight: 21, textAlign: 'center' },
+  settings: { minHeight: 48, padding: theme.spacing.sm, borderWidth: 2, borderColor: 'transparent', borderRadius: theme.radius.md },
+});

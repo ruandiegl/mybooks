@@ -11,6 +11,7 @@ import { AppScreen } from '../../components/AppScreen';
 import { Avatar } from '../../components/Avatar';
 import { AvatarPicker } from '../../components/AvatarPicker';
 import { AvatarEditor } from '../../components/AvatarEditor';
+import { AvatarPhotoModal } from '../../components/AvatarPhotoModal';
 import { useAvatarEditor } from '../../features/avatar/useAvatarEditor';
 import { avatarDescriptorOf } from '../../features/avatar/avatarTypes';
 import { Badge } from '../../components/Badge';
@@ -45,6 +46,7 @@ export function Profile({ navigation }: Props) {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<ProfileTabKey>('shelf');
   const [editing, setEditing] = useState(false);
+  const [viewingPhoto, setViewingPhoto] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [city, setCity] = useState('');
@@ -59,6 +61,7 @@ export function Profile({ navigation }: Props) {
   });
   const avatarEditor = useAvatarEditor(session.user?.id, (avatar) => {
     if (session.user) session.updateAvatar(avatar, session.user.id);
+    setViewingPhoto(false);
   });
   const booksQuery = useInfiniteQuery({
     queryKey: ['books', 'mine', 'profile'],
@@ -80,8 +83,11 @@ export function Profile({ navigation }: Props) {
   }, [profileQuery.data, editing]);
 
   useEffect(() => {
-    if ((avatarEditor.source || avatarEditor.error) && !editing) openEditor();
+    if ((avatarEditor.source || avatarEditor.error) && !editing && !viewingPhoto) openEditor();
+    // Only a new source/error opens an editor; closing a modal must not reopen it.
   }, [avatarEditor.source, avatarEditor.error]);
+
+  useEffect(() => { setViewingPhoto(false); }, [session.user?.id]);
 
   const saveMutation = useMutation({
     mutationFn: async () => (await api.patch<ApiEnvelope<User>>('/api/v1/me', {
@@ -108,6 +114,17 @@ export function Profile({ navigation }: Props) {
     { value: stats.matchCount, label: 'matches', accessibilityLabel: `${stats.matchCount} matches ativos` },
     { value: stats.conversationCount, label: 'conversas', accessibilityLabel: `${stats.conversationCount} conversas` }
   ] : [];
+
+  function openPhoto() {
+    if (avatarEditor.busy || saveMutation.isPending || editing) return;
+    setViewingPhoto(true);
+  }
+
+  function closePhoto() {
+    if (avatarEditor.busy || saveMutation.isPending) return;
+    avatarEditor.cancel();
+    setViewingPhoto(false);
+  }
 
   function openEditor() {
     setFirstName(profile?.firstName || '');
@@ -161,7 +178,7 @@ export function Profile({ navigation }: Props) {
       } />
       <View style={styles.identity}>
         <View style={[styles.identityRow, stackedIdentity && styles.identityStacked]}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Alterar foto de perfil" disabled={avatarEditor.busy || saveMutation.isPending} onPress={avatarEditor.choose}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Ver foto de perfil" accessibilityHint="Toque ou mantenha pressionado para ampliar a foto e abrir as opções." disabled={avatarEditor.busy || saveMutation.isPending} onPress={openPhoto} onLongPress={openPhoto} delayLongPress={500}>
             <Avatar name={profile?.name || 'Leitor TrocaLivros'} url={profile?.avatarUrl} version={profile?.avatarVersion} onImageError={session.refreshAvatar} size={72} />
           </Pressable>
           <View style={[styles.identityCopy, stackedIdentity && styles.identityCopyStacked]}>
@@ -266,7 +283,7 @@ export function Profile({ navigation }: Props) {
               <View style={styles.modalHeaderSpacer} />
             </View>
             <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.modalScroll}>
-              <View style={styles.editorIdentity}><AvatarPicker name={[firstName, lastName].filter(Boolean).join(' ')} avatar={avatarDescriptorOf(profile)} busy={avatarEditor.busy || saveMutation.isPending} error={avatarEditor.error} onChoose={avatarEditor.choose} onRemove={avatarEditor.remove} onOpenSettings={avatarEditor.permissionBlocked ? avatarEditor.openSettings : undefined} /></View>
+              <View style={styles.editorIdentity}><AvatarPicker name={[firstName, lastName].filter(Boolean).join(' ')} avatar={avatarDescriptorOf(profile)} busy={avatarEditor.busy || saveMutation.isPending} error={avatarEditor.error} onChoose={avatarEditor.choose} onTakePhoto={avatarEditor.takePhoto} onRemove={avatarEditor.remove} onOpenSettings={avatarEditor.permissionBlocked ? avatarEditor.openSettings : undefined} /></View>
               <TextField label="Nome" value={firstName} maxLength={50} onChangeText={(value) => { setFirstName(value); if (nameError) setNameError(undefined); }} error={nameError} autoCapitalize="words" />
               <TextField label="Sobrenome" value={lastName} maxLength={80} onChangeText={setLastName} autoCapitalize="words" />
               <TextField label="Cidade" value={city} maxLength={100} onChangeText={setCity} placeholder="Ex.: São Paulo" />
@@ -279,6 +296,7 @@ export function Profile({ navigation }: Props) {
           </>}
         </View>
       </Modal>
+      <AvatarPhotoModal visible={viewingPhoto} name={profile.name} avatar={avatarDescriptorOf(profile)} source={avatarEditor.source} busy={avatarEditor.busy || saveMutation.isPending} error={avatarEditor.error} previewUri={avatarEditor.previewUri} statusLabel={avatarEditor.statusLabel} onClose={closePhoto} onEdit={avatarEditor.choose} onTakePhoto={avatarEditor.takePhoto} onRemove={avatarEditor.remove} onCancelCrop={avatarEditor.cancel} onSave={avatarEditor.save} onImageError={session.refreshAvatar} onOpenSettings={avatarEditor.permissionBlocked ? avatarEditor.openSettings : undefined} />
     </AppScreen>
   );
 }
