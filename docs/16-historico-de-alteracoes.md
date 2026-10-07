@@ -2,6 +2,14 @@
 
 Os resultados abaixo pertencem às execuções e branches indicadas em cada registro; não comprovam testes, deploy ou aceite da integração em curso.
 
+## 07/10/2026 — Publicação do editor por gestos e proteção de imagem no Safari
+
+- Após autorização do usuário, main avançou de `09cf04f` para `4d298e5` por fast-forward, incluindo `60fd811` (callout Safari). Push confirmado com o mesmo SHA em origin/main. Seed SQL e rascunho local do plano 008 foram preservados, sem envio.
+- Árvore integrada: 45 arquivos/200 testes, TypeScript, export Web, smoke PWA e export Android aprovados. Nenhum APK/IPA ou atualização EAS foi gerado. O export Android temporário criado nesta validação foi removido; arquivos do usuário não foram apagados.
+- Railway: PWA `3faf79fe-f23f-4be4-a1bb-e0bc0a595868` e API `32e179eb-2f0c-4b6b-8c22-77e7fb0b5cb1` em SUCCESS para `4d298e5`. Sem alterações de variáveis, infraestrutura, migrações novas ou conteúdo no R2.
+- Navegação `/auth` com Accept text/html e bundle retornaram 200. Bundle público `index-8aa69ae2dfd642e9ecfdab39ad5d039f.js` coincide com o build Railway e contém a instrução de arraste/pinça e a proteção do Safari; HTML mantém viewport-fit=cover. `/health` 200, `/api/v1/auth/me` sem sessão 401, `/sw.js` 200 com cache `trocalivros-static-a1a5577b62fd`. O fallback SPA exige Accept text/html; uma consulta genérica sem esse cabeçalho não valida navegação do navegador.
+- Na PWA, atualizar a página e fechar/reabrir o app instalado para carregar a nova versão. Expo Go usa a main local com Metro reiniciado por `npx expo start --clear` em app/. As requisições anônimas não aprovam login, upload, callout/pinch físico, câmera, safe area ou VoiceOver/TalkBack: o aceite em dispositivos continua pendente.
+
 ## 07/10/2026 — Editor de foto por gestos (implementação local)
 
 - Após aprovação do desenho em chat, removidos zoom +/−, setas, percentual, Centralizar e Outra foto. Cancelar/Salvar ficam no cabeçalho; foto circular e instrução curta ocupam o corpo. Paleta, tipografia, limites e envio privado ao R2 permanecem iguais. Para trocar a imagem, cancelar e voltar à seleção.
