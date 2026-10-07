@@ -69,13 +69,13 @@ Antes de qualquer chamada HTTP, o cliente aceita somente 13 dígitos com prefixo
 
 O cadastro manual continua disponível em todos os estados e aceita ISBN-10 válido. A leitura física direta de ISBN-10 não faz parte do scanner. Nenhum frame ou foto é enviado ou armazenado; uma capa externa retornada pela consulta também não é persistida automaticamente.
 
-## Foto de perfil — plano 009 (implementação não publicada)
+## Foto de perfil — plano 009
 
 AvatarEditor nativo usa PanResponder/Animated; variante Web usa react-easy-crop. Fonte orientada até 2048 px, export PNG 512×512 até 2 MiB, prévia circular com movimento/zoom e alternativas por botão. O editor troca o conteúdo do modal existente e não salva nome/bio nem conclui onboarding.
 
 Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).
 
-### Visualização ampliada e câmera (extensão local de 07/10/2026)
+### Visualização ampliada e câmera (07/10/2026)
 
 No perfil, tocar ou segurar o avatar por 500 ms abre `AvatarPhotoModal`, com foto circular ampliada e apenas **Editar foto**, **Tirar foto** e **Remover foto**. Não há compartilhamento, link, QR code ou criação de avatar. O modal usa a paleta existente, safe area e conteúdo rolável; fecha pelo X, pela área externa ou por Escape/voltar. Na web, o foco começa no botão de fechar e os elementos decorativos não entram na sequência de Tab.
 
@@ -83,4 +83,4 @@ Editar abre a galeria; tirar foto usa `expo-image-picker`, preferindo a câmera 
 
 Galeria/câmera e recorte usam o mesmo modal; trocar a URI reinicia o enquadramento, e cancelar o recorte retorna à foto atual. O envio só ocorre ao salvar, reaproveitando o fluxo privado de R2, limites, renovação, ownership e retry existentes. Remover mantém a confirmação e retorna às iniciais. Durante operações, ações e fechamento ficam bloqueados; trocar de conta cancela respostas tardias e fecha a visualização.
 
-Esta extensão está em `codex/profile-photo-preview`, baseada na correção local de safe area `3d5160d`, e ainda não foi integrada à main nem publicada. Captura física, permissões e VoiceOver/TalkBack em iOS/Android, além do seletor de câmera em Safari/PWA no iPhone, exigem aceite em aparelho real. A nova descrição de permissão em `app.json` só aparece em um novo build nativo; não é aplicada a um binário já instalado ([ImagePicker SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/imagepicker/)).
+Esta extensão e a correção de safe area `3d5160d` foram integradas à `main` e publicadas na PWA em 07/10/2026, pelo commit `fe07f80`. Para testar no Expo Go, reinicie o Metro em `app/` com `npx expo start --clear` e recarregue o aplicativo. Na PWA instalada, feche e abra novamente depois de atualizar a página, para carregar o bundle/service worker novos. Captura física, permissões e VoiceOver/TalkBack em iOS/Android, além do seletor de câmera em Safari/PWA no iPhone, exigem aceite em aparelho real. A nova descrição de permissão em `app.json` só aparece em um novo build nativo; não é aplicada a um binário já instalado ([ImagePicker SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/imagepicker/)).

@@ -2,6 +2,14 @@
 
 Os resultados abaixo pertencem às execuções e branches indicadas em cada registro; não comprovam testes, deploy ou aceite da integração em curso.
 
+## 07/10/2026 — Publicação da foto ampliada e safe area na main
+
+- Após autorização do usuário, `main` avançou de `355232c` para `fe07f80` por fast-forward, incluindo `3d5160d` (safe area) e a foto ampliada/câmera. Push confirmado com o mesmo SHA em `origin/main`. Os dois arquivos locais não rastreados (seed SQL e rascunho do plano 008) foram preservados e não enviados.
+- Na árvore integrada: 42 arquivos/185 testes, TypeScript, export Web e smoke PWA aprovados. Dependências não mudaram; o export Android da mesma árvore já havia passado antes da integração. Não foi gerado APK/IPA nem enviada atualização EAS.
+- Deploy automático Railway da PWA `c73de6c2-1c69-4788-8a15-ec01905fa5df` e da API `817760a6-94ba-42cf-bbb8-7663583058e9` concluíram em SUCCESS para `fe07f80`. Não houve mudança de variáveis, fonte, infraestrutura, migração nova ou conteúdo no R2 nesta publicação.
+- Domínio público verificado: HTML e bundle HTTP 200, bundle `index-8b516fe398d6f5f749b9298c16570410.js` correspondente ao build, ações Editar/Tirar/Remover foto presentes e viewport-fit=cover. `/health` respondeu 200, `/api/v1/auth/me` sem sessão respondeu 401 e `/sw.js` respondeu 200 com cache `trocalivros-static-9ee65d25c07c`.
+- Login, captura/envio de foto e safe areas físicas não foram aprovados por essas requisições anônimas; continuam dependentes de teste do usuário em iPhone/Android e Safari/PWA instalada. Expo Go consome a main local pelo Metro reiniciado (`npx expo start --clear` em `app/`); a alteração da descrição nativa de permissão requer novo binário próprio.
+
 ## 07/10/2026 — Foto de perfil ampliada e captura pela câmera
 
 - Implementação local em `codex/profile-photo-preview`, baseada em `3d5160d` (safe area ainda não publicada). Toque ou pressão longa no avatar abre uma foto circular ampliada com somente Editar foto, Tirar foto e Remover foto; paleta e componentes existentes preservados.
