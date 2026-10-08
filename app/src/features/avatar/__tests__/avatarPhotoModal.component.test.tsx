@@ -14,6 +14,14 @@ function props(overrides: Partial<AvatarPhotoModalProps> = {}): AvatarPhotoModal
 }
 afterEach(cleanup);
 describe('expanded profile photo', () => {
+  it('does not dismiss when the photo border itself is tapped', async () => {
+    const events: string[] = [];
+    render(<AvatarPhotoModal {...props({ onClose: () => events.push('close') })} />);
+    let surface = await screen.findByRole('img', { name: 'Foto de perfil de Leitora' });
+    while (!parseFloat(getComputedStyle(surface).borderTopWidth)) surface = surface.parentElement!;
+    fireEvent.click(surface);
+    expect(events).toEqual([]);
+  });
   it('keeps the photo viewer open while suppressing the browser image menu', async () => {
     const events: string[] = [];
     render(<AvatarPhotoModal {...props({ onClose: () => events.push('close') })} />);

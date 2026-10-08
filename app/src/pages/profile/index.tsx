@@ -3,7 +3,7 @@ import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppButton } from '../../components/AppButton';
@@ -14,6 +14,7 @@ import { AvatarEditor } from '../../components/AvatarEditor';
 import { AvatarPhotoModal } from '../../components/AvatarPhotoModal';
 import { useAvatarEditor } from '../../features/avatar/useAvatarEditor';
 import { avatarDescriptorOf } from '../../features/avatar/avatarTypes';
+import { avatarLongPressFeedback } from '../../features/avatar/avatarLongPressFeedback';
 import { Badge } from '../../components/Badge';
 import { BookCard } from '../../components/BookCard';
 import { ProfileMetricRow, type ProfileMetric } from '../../components/ProfileMetricRow';
@@ -47,6 +48,7 @@ export function Profile({ navigation }: Props) {
   const [activeTab, setActiveTab] = useState<ProfileTabKey>('shelf');
   const [editing, setEditing] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState(false);
+  const photoOpened = useRef(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [city, setCity] = useState('');
@@ -87,7 +89,8 @@ export function Profile({ navigation }: Props) {
     // Only a new source/error opens an editor; closing a modal must not reopen it.
   }, [avatarEditor.source, avatarEditor.error]);
 
-  useEffect(() => { setViewingPhoto(false); }, [session.user?.id]);
+  useEffect(() => { photoOpened.current = false; setViewingPhoto(false); }, [session.user?.id]);
+  useEffect(() => { photoOpened.current = viewingPhoto; }, [viewingPhoto]);
 
   const saveMutation = useMutation({
     mutationFn: async () => (await api.patch<ApiEnvelope<User>>('/api/v1/me', {
@@ -115,8 +118,10 @@ export function Profile({ navigation }: Props) {
     { value: stats.conversationCount, label: 'conversas', accessibilityLabel: `${stats.conversationCount} conversas` }
   ] : [];
 
-  function openPhoto() {
-    if (avatarEditor.busy || saveMutation.isPending || editing) return;
+  function openPhoto(longPress = false) {
+    if (avatarEditor.busy || saveMutation.isPending || editing || photoOpened.current) return;
+    photoOpened.current = true;
+    if (longPress) void avatarLongPressFeedback();
     setViewingPhoto(true);
   }
 
@@ -178,7 +183,7 @@ export function Profile({ navigation }: Props) {
       } />
       <View style={styles.identity}>
         <View style={[styles.identityRow, stackedIdentity && styles.identityStacked]}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Ver foto de perfil" accessibilityHint="Toque ou mantenha pressionado para ampliar a foto e abrir as opções." disabled={avatarEditor.busy || saveMutation.isPending} onPress={openPhoto} onLongPress={openPhoto} delayLongPress={500}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Ver foto de perfil" accessibilityHint="Toque ou mantenha pressionado para ampliar a foto e abrir as opções." disabled={avatarEditor.busy || saveMutation.isPending} onPress={() => openPhoto()} onLongPress={() => openPhoto(true)} delayLongPress={500}>
             <Avatar name={profile?.name || 'Leitor TrocaLivros'} url={profile?.avatarUrl} version={profile?.avatarVersion} onImageError={session.refreshAvatar} size={72} suppressBrowserActions />
           </Pressable>
           <View style={[styles.identityCopy, stackedIdentity && styles.identityCopyStacked]}>
