@@ -4,8 +4,8 @@ import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { FlatList, Platform, Pressable, RefreshControl, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { AppButton } from '../../components/AppButton';
 import { AppScreen } from '../../components/AppScreen';
 import { Avatar } from '../../components/Avatar';
@@ -23,6 +23,11 @@ import { ProfileSettingsModal } from '../../components/ProfileSettingsModal';
 import { ProfileEditForm } from '../../components/ProfileEditForm';
 import { AppearanceSettingsPanel } from '../../components/AppearanceSettingsPanel';
 import { NotificationSettingsPanel } from '../../components/NotificationSettingsPanel';
+import { AccountSettingsPanel } from '../../components/AccountSettingsPanel';
+import { PasswordChangeForm } from '../../components/PasswordChangeForm';
+import { ProfileHelpPanel } from '../../components/ProfileHelpPanel';
+import { AboutAppPanel } from '../../components/AboutAppPanel';
+import { useAccountSecurity } from '../../features/auth/useAccountSecurity';
 import { useAccountPreferences } from '../../features/settings/useAccountPreferences';
 import { useProfileSettings } from '../../features/settings/useProfileSettings';
 import { useProfileEditor } from '../../features/profile/useProfileEditor';
@@ -30,8 +35,7 @@ import type { SettingsRoute } from '../../features/settings/settingsTypes';
 import { PremiumStatusCard, usePremiumOffer } from '../../features/premium/PremiumOfferProvider';
 import { usePremiumStatus } from '../../features/premium/usePremiumStatus';
 import { useSession } from '../../providers/SessionProvider';
-import { api, apiErrorMessage } from '../../services/api';
-import { Alert } from '../../services/notice';
+import { api } from '../../services/api';
 import { useAppTheme } from '../../providers/ThemeProvider';
 import type { ApiEnvelope, Book, Paginated, User } from '../../types/api';
 import type { RootStackParamList } from '../../types/navigation';
@@ -53,9 +57,9 @@ export function Profile({ navigation }: Props) {
   const [activeTab, setActiveTab] = useState<ProfileTabKey>('shelf');
   const [viewingPhoto, setViewingPhoto] = useState(false);
   const photoOpened = useRef(false);
-  const [signOutPending, setSignOutPending] = useState(false);
-  const [signOutError, setSignOutError] = useState<string>();
   const menuButton = useRef<View>(null);
+  const [menuFocused, setMenuFocused] = useState(false);
+  const settingsOwner = useRef<ReturnType<typeof session.captureActor>>(null);
 
   const profileQuery = useQuery({
     queryKey: ['me'],
@@ -65,14 +69,34 @@ export function Profile({ navigation }: Props) {
     if (session.user) session.updateAvatar(avatar, session.user.id);
     setViewingPhoto(false);
   });
-  const editor = useProfileEditor(profileQuery.data, () => settings.openMenu());
+  const completedEdit = useRef<ReturnType<typeof session.captureActor>>(null);
+  const editor = useProfileEditor(profileQuery.data, () => { completedEdit.current = session.captureActor(); });
   const actor = session.captureActor();
   const accountPreferences = useAccountPreferences();
-  const settings = useProfileSettings({ actor, isBusy: avatarEditor.busy || editor.pending || signOutPending || accountPreferences.saving,
-    hasUnsavedChanges: editor.dirty, cropActive: Boolean(avatarEditor.source),
-    onCancelCrop: avatarEditor.cancel, onDiscard: editor.reset });
-  const editing = settings.visible && settings.route === 'editProfile';
+  const security = useAccountSecurity();
+  const busy = avatarEditor.busy || editor.pending || security.busy || accountPreferences.saving;
+  const settings = useProfileSettings({ actor, isBusy: busy,
+    hasUnsavedChanges: editor.dirty || security.dirty,
+    isDirtyForRoute: route => route === 'editProfile' ? editor.dirty : (route === 'password' || route === 'confirmSignOutAll') && security.dirty,
+    cropActive: Boolean(avatarEditor.source), onCancelCrop: avatarEditor.cancel,
+    onDiscard: () => { editor.reset(); security.reset(); } });
+  const wasSettingsOpen = useRef(false);
   useEffect(() => {
+    if (busy || !completedEdit.current) return;
+    const owner = completedEdit.current; completedEdit.current = null;
+    if (session.isActorCurrent(owner) && settings.visible) settings.openMenu();
+  }, [busy, settings.visible, actor?.userId, actor?.epoch]);
+  useEffect(() => {
+    if (settings.visible && !wasSettingsOpen.current) settingsOwner.current = actor;
+    if (!settings.visible && wasSettingsOpen.current) {
+      security.reset(); editor.reset(); avatarEditor.cancel();
+      if (Platform.OS === 'web' && settingsOwner.current && session.isActorCurrent(settingsOwner.current)) menuButton.current?.focus();
+      settingsOwner.current = null;
+    }
+    wasSettingsOpen.current = settings.visible;
+    if (settings.visible && !['password', 'confirmSignOutAll', 'confirmDiscard'].includes(settings.route)) security.reset();
+  }, [settings.visible, settings.route]);
+  useLayoutEffect(() => {
     premiumOffer.setPresentationBlocked('profile-overlay', settings.visible || viewingPhoto);
     return () => premiumOffer.setPresentationBlocked('profile-overlay', false);
   }, [premiumOffer.setPresentationBlocked, settings.visible, viewingPhoto]);
@@ -90,7 +114,7 @@ export function Profile({ navigation }: Props) {
     // Only a new source/error opens an editor; closing a modal must not reopen it.
   }, [avatarEditor.source, avatarEditor.error]);
 
-  useEffect(() => { photoOpened.current = false; setViewingPhoto(false); setSignOutError(undefined); }, [actor?.userId, actor?.epoch]);
+  useEffect(() => { photoOpened.current = false; setViewingPhoto(false); }, [actor?.userId, actor?.epoch]);
   useEffect(() => { photoOpened.current = viewingPhoto; }, [viewingPhoto]);
 
   const books = booksQuery.data?.pages.flatMap((page) => page.items) || [];
@@ -117,20 +141,12 @@ export function Profile({ navigation }: Props) {
 
   function openEditor() {
     if (viewingPhoto || editor.pending) return;
+    if (!settings.visible) settings.openMenu();
     editor.reset(); settings.openRoute('editProfile');
   }
   function openRoute(route: SettingsRoute) {
     if (route === 'editProfile') { openEditor(); return; }
-    setSignOutError(undefined); settings.openRoute(route);
-  }
-  async function signOut() {
-    if (signOutPending) return;
-    const owner = session.captureActor();
-    if (!owner) return;
-    setSignOutPending(true); setSignOutError(undefined);
-    try { await session.signOut(); }
-    catch (error) { if (session.isActorCurrent(owner)) setSignOutError(apiErrorMessage(error, 'Não foi possível sair. Confira a conexão e tente novamente.')); }
-    finally { setSignOutPending(false); }
+    settings.openRoute(route);
   }
 
   function refreshAll() {
@@ -140,7 +156,7 @@ export function Profile({ navigation }: Props) {
   const profileIntro = (
     <View style={styles.introStack}>
       <TopBar title="Meu perfil" action={
-        <Pressable ref={menuButton} accessibilityRole="button" accessibilityLabel="Abrir configurações" accessibilityState={{ expanded: settings.visible }} style={({ pressed }) => [styles.modalClose, pressed && styles.modalPressed]} onPress={() => { if (!viewingPhoto) settings.openMenu(); }}><MaterialIcons accessible={false} name="menu" size={26} color={theme.colors.foreground} /></Pressable>
+        <Pressable ref={menuButton} accessibilityRole="button" accessibilityLabel="Abrir configurações" accessibilityState={{ expanded: settings.visible }} onFocus={() => setMenuFocused(true)} onBlur={() => setMenuFocused(false)} style={({ pressed }) => [styles.modalClose, { borderWidth: 2, borderColor: menuFocused ? theme.colors.primary : 'transparent' }, pressed && styles.modalPressed]} onPress={() => { if (!viewingPhoto) settings.openMenu(); }}><MaterialIcons accessible={false} name="menu" size={26} color={theme.colors.foreground} /></Pressable>
       } />
       <View style={styles.identity}>
         <View style={[styles.identityRow, stackedIdentity && styles.identityStacked]}>
@@ -230,13 +246,17 @@ export function Profile({ navigation }: Props) {
           <View style={styles.aboutRow}><MaterialIcons name="menu-book" size={20} color={theme.colors.secondary} /><View style={styles.aboutCopy}><Text style={styles.aboutLabel}>Bio</Text><Text style={styles.aboutValue}>{profile.bio || 'Você ainda não escreveu uma bio.'}</Text></View></View>
         </View>
       </ScrollView>}
-      <ProfileSettingsModal visible={settings.visible} route={settings.route} busy={avatarEditor.busy || editor.pending || signOutPending || accountPreferences.saving} cropping={Boolean(avatarEditor.source)} onBack={settings.back} onClose={settings.requestClose} onRoute={openRoute} available={['editProfile', 'appearance', 'notifications', 'confirmSignOut']} appearanceLabel={preference === 'system' ? 'Dispositivo' : preference === 'dark' ? 'Escuro' : 'Claro'}>
+      <ProfileSettingsModal visible={settings.visible} route={settings.route} busy={busy} cropping={Boolean(avatarEditor.source)} onBack={settings.back} onClose={settings.requestClose} onRoute={openRoute} available={['editProfile', 'account', 'appearance', 'notifications', 'help', 'about', 'confirmSignOut', ...(accountPreferences.data?.capabilities.changePassword ? ['password' as const] : [])]} appearanceLabel={preference === 'system' ? 'Dispositivo' : preference === 'dark' ? 'Escuro' : 'Claro'}>
         {avatarEditor.source ? <AvatarEditor key={avatarEditor.source.uri} source={avatarEditor.source} busy={avatarEditor.busy} error={avatarEditor.error} statusLabel={avatarEditor.statusLabel} previewUri={avatarEditor.previewUri} onSave={avatarEditor.save} onCancel={avatarEditor.cancel} onChooseAnother={avatarEditor.choose} />
           : settings.route === 'editProfile' ? <ProfileEditForm editor={editor} avatarEditor={avatarEditor} profile={profile} />
           : settings.route === 'appearance' ? <AppearanceSettingsPanel />
           : settings.route === 'notifications' ? <NotificationSettingsPanel preferences={accountPreferences} />
+          : settings.route === 'account' ? <AccountSettingsPanel />
+          : settings.route === 'help' ? <ProfileHelpPanel />
+          : settings.route === 'about' ? <AboutAppPanel />
+          : settings.route === 'password' ? <PasswordChangeForm security={security} enabled={Boolean(accountPreferences.data?.capabilities.changePassword)} logoutAllEnabled={Boolean(accountPreferences.data?.capabilities.logoutAll)} onSignOutAll={() => settings.openRoute('confirmSignOutAll')} />
           : settings.route === 'confirmDiscard' ? <View style={styles.aboutSection}><Text style={styles.aboutValue}>As alterações ainda não foram salvas.</Text><AppButton label="Continuar editando" variant="outline" onPress={settings.back} /><AppButton label="Descartar alterações" onPress={settings.confirmDiscard} /></View>
-          : settings.route === 'confirmSignOut' ? <View style={styles.aboutSection}><Text style={styles.aboutValue}>Você precisará entrar novamente para acessar sua conta neste dispositivo.</Text>{signOutError ? <Text style={{ color: theme.colors.danger }} accessibilityLiveRegion="polite">{signOutError}</Text> : null}<AppButton label="Sair da conta" loading={signOutPending} onPress={() => { void signOut(); }} /><AppButton label="Cancelar" variant="outline" disabled={signOutPending} onPress={settings.back} /></View> : null}
+          : settings.route === 'confirmSignOut' || settings.route === 'confirmSignOutAll' ? <View style={styles.aboutSection}><Text style={styles.aboutValue}>{settings.route === 'confirmSignOutAll' ? 'Todos os dispositivos serão desconectados. Você precisará entrar novamente.' : 'Você precisará entrar novamente para acessar sua conta neste dispositivo.'}</Text>{security.error ? <Text style={{ color: theme.colors.danger }} accessibilityLiveRegion="polite">{security.error}</Text> : null}<AppButton label={settings.route === 'confirmSignOutAll' ? 'Sair de todos os dispositivos' : 'Sair da conta'} loading={security.busy} onPress={() => { void (settings.route === 'confirmSignOutAll' ? security.signOutAll() : security.signOut()); }} /><AppButton label="Cancelar" variant="outline" disabled={security.busy} onPress={settings.back} /></View> : null}
       </ProfileSettingsModal>
       <AvatarPhotoModal visible={viewingPhoto} name={profile.name} avatar={avatarDescriptorOf(profile)} source={avatarEditor.source} busy={avatarEditor.busy || editor.pending} error={avatarEditor.error} previewUri={avatarEditor.previewUri} statusLabel={avatarEditor.statusLabel} onClose={closePhoto} onEdit={avatarEditor.choose} onTakePhoto={avatarEditor.takePhoto} onRemove={avatarEditor.remove} onCancelCrop={avatarEditor.cancel} onSave={avatarEditor.save} onImageError={session.refreshAvatar} onOpenSettings={avatarEditor.permissionBlocked ? avatarEditor.openSettings : undefined} />
     </AppScreen>

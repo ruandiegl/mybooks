@@ -11,6 +11,7 @@ vi.mock('expo-secure-store', () => ({
 import { authApi } from '../authApi';
 import { loadTokens, saveTokens } from '../authStorage';
 import { sessionTransport } from '../authTransport';
+import * as SecureStore from 'expo-secure-store';
 import type { AuthSessionResponse } from '../../../types/api';
 
 const user = { id: 'reader-1', name: 'Leitora', interests: [], isActive: true };
@@ -22,6 +23,21 @@ beforeEach(() => {
 });
 
 describe('native session transport after the PWA merge', () => {
+  it('serializes old credential deletion before accepting a later login', async () => {
+    let release!: () => void, started!: () => void;
+    const gate = new Promise<void>(r => { release = r; });
+    const deleting = new Promise<void>(r => { started = r; });
+    vi.spyOn(SecureStore, 'deleteItemAsync').mockImplementation(async key => { started(); await gate; storage.delete(key); });
+    await saveTokens(previousTokens);
+    const clearing = sessionTransport.clear(); await deleting;
+    const accepting = sessionTransport.accept({ accessToken: 'later-access', refreshToken: 'later-refresh', expiresAt: '2030-01-01T00:00:00Z', user });
+    release(); await Promise.all([clearing, accepting]);
+    expect(await loadTokens()).toMatchObject({ accessToken: 'later-access', refreshToken: 'later-refresh' });
+  });
+  it('does not turn temporary refresh failure into a signed-out snapshot', async () => {
+    vi.spyOn(authApi, 'refresh').mockRejectedValue({ response: { status: 503 } });
+    await expect(sessionTransport.refresh(previousTokens)).rejects.toMatchObject({ response: { status: 503 } });
+  });
   it('coalesces HTTP and socket refreshes into one token rotation', async () => {
     let finishRefresh!: (response: AuthSessionResponse) => void;
     const pending = new Promise<AuthSessionResponse>((resolve) => { finishRefresh = resolve; });

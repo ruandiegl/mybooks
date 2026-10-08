@@ -59,7 +59,7 @@ export function Auth() {
   const styles = useThemedStyles(createStyles);
   const { theme } = useAppTheme();
 
-  const { establishSession } = useSession();
+  const { establishSession, sessionNotice } = useSession();
   const [step, setStep] = useState<AuthStep>('landing');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -73,6 +73,7 @@ export function Auth() {
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
   const [resendSeconds, setResendSeconds] = useState(0);
+  useEffect(() => { if (sessionNotice) { setNotice(sessionNotice); setStep('login'); } }, [sessionNotice]);
 
   useEffect(() => {
     if (resendSeconds <= 0) return undefined;

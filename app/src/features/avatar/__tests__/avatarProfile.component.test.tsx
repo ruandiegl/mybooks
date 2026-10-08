@@ -167,6 +167,7 @@ describe('profile and onboarding mounted avatar coordination',()=>{
   fireEvent.click(choose);
   expect(boundary.selections).toBe(0);
   await act(async()=>resolve({data:{data:person}}));
+  expect(await screen.findByRole('dialog',{name:'Configurações'})).toBeTruthy();
  });
  it('uses renewed session photo without resetting unsaved onboarding text',async()=>{
   const tree=host(<OnboardingProfile/>),mounted=render(tree);

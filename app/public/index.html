@@ -57,8 +57,9 @@
         const color = dark ? '#181318' : '#FFF8F7';
         document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
         document.documentElement.style.backgroundColor = color;
-        document.querySelector('meta[name="theme-color"]').content = color;
-        document.addEventListener('DOMContentLoaded', () => { document.body.style.backgroundColor = color; }, { once: true });
+        const updateChrome = () => document.querySelectorAll('meta[name="theme-color"]').forEach(tag => { tag.content = color; });
+        updateChrome();
+        document.addEventListener('DOMContentLoaded', () => { document.body.style.backgroundColor = color; updateChrome(); }, { once: true });
       })();
     </script>
   </head>

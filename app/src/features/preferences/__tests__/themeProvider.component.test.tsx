@@ -14,8 +14,15 @@ function Probe() {
     <button onClick={() => { void value.setPreference('dark'); }}>Escuro</button>
     <span>{value.persistenceError}</span></>;
 }
-afterEach(() => { cleanup(); vi.resetAllMocks(); io.scheme = 'dark'; });
+afterEach(() => { cleanup(); document.querySelectorAll('meta[name="theme-color"]').forEach(element => element.remove()); vi.resetAllMocks(); io.scheme = 'dark'; });
 describe('appearance provider', () => {
+  it('updates all exported browser-chrome metadata, including Expo injected tags', async () => {
+    for (let n = 0; n < 2; n++) { const tag = document.createElement('meta'); tag.name = 'theme-color'; tag.content = '#B90041'; document.head.append(tag); }
+    io.load.mockResolvedValue({ preference: 'dark' });
+    render(<ThemeProvider><Probe /></ThemeProvider>);
+    await screen.findByText('dark');
+    expect(Array.from(document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')).map(tag => tag.content)).toEqual(['#181318', '#181318']);
+  });
   it('uses the device and changes a mounted tree without resetting drafts', async () => {
     io.load.mockResolvedValue({ preference: 'system' }); io.save.mockResolvedValue(undefined);
     render(<ThemeProvider><Probe /></ThemeProvider>);

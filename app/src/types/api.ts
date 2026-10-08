@@ -159,4 +159,5 @@ export type AccountPreferencesDTO = {
   notifications: { showLikesBadge: boolean };
   capabilities: { changePassword: boolean; logoutAll: boolean; push: false };
 };
+export type ChangePasswordInput = { currentPassword: string; newPassword: string };
 

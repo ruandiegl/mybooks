@@ -1,21 +1,21 @@
 import { authApi } from './authApi';
 import type { SessionResponse, SessionSnapshot, SessionTransport } from './authTransport';
+import { accessSessionId, type SessionActor } from './sessionActor';
+import { withBrowserSessionLock, safeBrowserLocks, type BrowserLockManager } from './browserSessionLock.web';
+import type { ChangePasswordInput } from '../../types/api';
 
 const SIGNED_OUT_KEY = 'trocalivros.auth.signed-out.v1';
-const REFRESH_LOCK_NAME = 'trocalivros.auth.refresh.v1';
 
 type SessionMarkerStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
-type BrowserAuthApi = Pick<typeof authApi, 'refresh' | 'logout'>;
-type BrowserLockManager = {
-  request<T>(name: string, callback: () => Promise<T>): Promise<T>;
+type BrowserAuthApi = {
+  refresh(actor?: SessionActor): Promise<SessionResponse>;
+  logout(actor?: SessionActor): Promise<{ ok: boolean }>;
+  logoutAll?(token: string, actor: SessionActor): Promise<{ ok: boolean }>;
+  changePassword?(token: string, input: ChangePasswordInput, actor: SessionActor): Promise<{ ok: boolean }>;
 };
 
 function safeLocalStorage(): SessionMarkerStorage | null {
   try { return window.localStorage; } catch { return null; }
-}
-
-function safeLockManager(): BrowserLockManager | null {
-  try { return typeof navigator !== 'undefined' ? navigator.locks : null; } catch { return null; }
 }
 
 export function createWebSessionTransport(dependencies: {
@@ -23,11 +23,13 @@ export function createWebSessionTransport(dependencies: {
   storage?: () => SessionMarkerStorage | null;
   locks?: BrowserLockManager | null;
 } = {}): SessionTransport {
-  const api = dependencies.auth ?? authApi;
+  const api = dependencies.auth ?? (authApi as unknown as BrowserAuthApi);
   const getStorage = dependencies.storage ?? safeLocalStorage;
-  const locks = dependencies.locks === undefined ? safeLockManager() : dependencies.locks;
+  const locks = dependencies.locks === undefined ? safeBrowserLocks() : dependencies.locks;
   let memorySession: SessionSnapshot | null = null;
   let refreshPromise: Promise<SessionSnapshot | null> | null = null;
+  let refreshGeneration = -1;
+  let generation = 0;
 
   const signedOut = () => {
     try { return getStorage()?.getItem(SIGNED_OUT_KEY) === '1'; } catch { return false; }
@@ -46,6 +48,17 @@ export function createWebSessionTransport(dependencies: {
     return next;
   };
 
+  const markSignedOut = () => { memorySession = null; generation++; try { getStorage()?.setItem(SIGNED_OUT_KEY, '1'); } catch {} };
+  const terminal = (current: SessionSnapshot | null, actor: SessionActor | undefined, isCurrent: (() => boolean) | undefined, operation: (token: string) => Promise<unknown>) => {
+    const ticket = generation;
+    const guard = () => generation === ticket && (!isCurrent || isCurrent());
+    return withBrowserSessionLock(async () => {
+      const token = memorySession?.accessToken ?? current?.accessToken ?? '';
+      await operation(token);
+      if (guard()) markSignedOut();
+    }, guard, locks);
+  };
+
   return {
     async restore() {
       if (signedOut()) {
@@ -56,6 +69,7 @@ export function createWebSessionTransport(dependencies: {
       return this.refresh(null);
     },
     async accept(response) {
+      generation++;
       return remember(response);
     },
     async getToken(current) {
@@ -65,17 +79,27 @@ export function createWebSessionTransport(dependencies: {
       }
       return memorySession?.accessToken ?? current?.accessToken ?? null;
     },
-    async refresh() {
+    async refresh(current) {
       if (signedOut()) {
         memorySession = null;
         return null;
       }
       if (!locks) return null;
-      if (refreshPromise) return refreshPromise;
+      if (refreshPromise && refreshGeneration === generation) return refreshPromise;
+      const ticket = generation;
+      const origin = memorySession ?? current;
+      let actor: SessionActor | undefined;
+      if (origin?.user) {
+        const sessionId = accessSessionId(origin.accessToken, origin.user.id);
+        if (!sessionId) throw Error('Sessão de origem inválida. Entre novamente.');
+        actor = { userId: origin.user.id, sessionId, epoch: 0 };
+      }
 
       const rotateWithCookie = async () => {
         if (signedOut()) return null;
-        const response = await api.refresh();
+        if (generation !== ticket) return null;
+        const response = await api.refresh(actor);
+        if (generation !== ticket) return null;
         if (signedOut()) {
           memorySession = null;
           return null;
@@ -83,30 +107,30 @@ export function createWebSessionTransport(dependencies: {
         return remember(response);
       };
 
-      refreshPromise = (async () => {
+      const ownPromise = (async () => {
         try {
-          return await locks.request(REFRESH_LOCK_NAME, rotateWithCookie);
+          return await withBrowserSessionLock(rotateWithCookie, undefined, locks);
         } catch (error) {
           const status = (error as { response?: { status?: number } })?.response?.status;
           if (status === 401) return null;
           throw error;
         }
       })();
-
-      try { return await refreshPromise; }
-      finally { refreshPromise = null; }
+      refreshPromise = ownPromise; refreshGeneration = ticket;
+      try { return await ownPromise; }
+      finally { if (refreshPromise === ownPromise) { refreshPromise = null; refreshGeneration = -1; } }
     },
     async clear() {
-      memorySession = null;
+      generation++; memorySession = null;
     },
-    async signOut() {
-      const revokeCookieSession = async () => {
-        await api.logout();
-        memorySession = null;
-        try { getStorage()?.setItem(SIGNED_OUT_KEY, '1'); } catch { /* local storage can be unavailable */ }
-      };
-      if (locks) await locks.request(REFRESH_LOCK_NAME, revokeCookieSession);
-      else await revokeCookieSession();
+    async signOut(current, actor, isCurrent) {
+      await terminal(current, actor, isCurrent, () => api.logout(actor));
+    },
+    async signOutAll(current, actor, isCurrent) {
+      await terminal(current, actor, isCurrent, token => { if (!api.logoutAll) throw Error('Esta ação ainda não está disponível.'); return api.logoutAll(token, actor); });
+    },
+    async changePassword(current, input: ChangePasswordInput, actor, isCurrent) {
+      await terminal(current, actor, isCurrent, token => { if (!api.changePassword) throw Error('Esta ação ainda não está disponível.'); return api.changePassword(token, input, actor); });
     }
   };
 }

@@ -21,7 +21,7 @@ describe('secure web session transport', () => {
     const manager = { request: vi.fn(async (_name, _options, callback) => callback()) };
 
     await expect(withCookieRefreshLock(true, task, manager)).resolves.toBe('refreshed');
-    expect(manager.request).toHaveBeenCalledWith('trocalivros-auth-refresh', { mode: 'exclusive' }, task);
+    expect(manager.request).toHaveBeenCalledWith('trocalivros.auth.refresh.v1', { mode: 'exclusive' }, task);
   });
 
   it('does not refresh a cookie session when cross-tab locking is unavailable', async () => {

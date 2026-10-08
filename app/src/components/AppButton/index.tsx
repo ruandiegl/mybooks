@@ -15,16 +15,16 @@ type Props = PressableProps & {
   labelStyle?: StyleProp<TextStyle>;
 };
 
-export function AppButton({ label, variant = 'primary', icon, loading, disabled, style, labelStyle, ...props }: Props) {
+export function AppButton({ label, variant = 'primary', icon, loading, disabled, style, labelStyle, accessibilityLabel, ...props }: Props) {
   const styles = useThemedStyles(createStyles);
   const { theme } = useAppTheme();
 
-  const light = variant === 'primary' || variant === 'secondary';
   const color = variant === 'primary' ? theme.colors.onPrimary : variant === 'secondary' ? theme.colors.onSecondary : theme.colors.foreground;
 
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
       disabled={disabled || loading}
       style={({ pressed }) => [
         styles.base,
@@ -35,7 +35,7 @@ export function AppButton({ label, variant = 'primary', icon, loading, disabled,
       ]}
       {...props}
     >
-      {loading ? <ActivityIndicator color={color} /> : icon ? <MaterialIcons name={icon} size={20} color={color} /> : null}
+      {loading ? <ActivityIndicator accessible={false} color={color} /> : icon ? <MaterialIcons accessible={false} aria-hidden importantForAccessibility="no-hide-descendants" name={icon} size={20} color={color} /> : null}
       <Text style={[styles.label, { color }, labelStyle]}>{label}</Text>
     </Pressable>
   );

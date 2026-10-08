@@ -17,6 +17,8 @@ import { orderMessagePages, type MessagePages, updateMessageStatus, upsertMessag
 import { useSession } from '../../providers/SessionProvider';
 import { api } from '../../services/api';
 import { createChatSocket } from '../../services/socket';
+import { bindSocketSessionLifecycle } from '../../services/socketSessionLifecycle';
+import { accessSessionId } from '../../features/auth/sessionActor';
 import type { ApiEnvelope, Message as MessageType, Paginated, User } from '../../types/api';
 import type { RootStackParamList } from '../../types/navigation';
 import { createStyles } from './styles';
@@ -26,7 +28,8 @@ export function Chat({ route }: Props) {
   const styles = useThemedStyles(createStyles);
 
   const { conversationId } = route.params;
-  const { getToken, refreshSession } = useSession();
+  const session = useSession();
+  const { getToken, refreshSession, captureActor, isActorCurrent, endRevokedSession } = session;
   const queryClient = useQueryClient();
   const [body, setBody] = useState('');
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -47,38 +50,44 @@ export function Chat({ route }: Props) {
   useEffect(() => {
     let active = true;
     let current: Socket | null = null;
-    let recoveringAuth = false;
+    const actor = captureActor();
+    const ownConnection = () => active && Boolean(actor && isActorCurrent(actor));
+    let connectionSid: string | null = actor?.sessionId ?? null;
+    let unbindSession: (() => void) | undefined;
 
     setConnectionState('connecting');
-    createChatSocket({ getToken }).then((created) => {
+    createChatSocket({ getToken, onToken: token => { connectionSid = token && actor ? accessSessionId(token, actor.userId) : null; } }).then((created) => {
       if (!active) return created.close();
       current = created;
+      unbindSession = bindSocketSessionLifecycle(created, { isCurrent: () => Boolean(actor && isActorCurrent(actor)), refresh: refreshSession,
+        onRevoked: async () => { const latest = captureActor(); if (actor && latest?.sessionId === connectionSid && isActorCurrent(actor)) await endRevokedSession(latest); } });
       setSocket(created);
       created.on('connect', () => {
+        if (!ownConnection()) return;
         setConnectionState('connected');
         created.emit('conversation:join', { conversationId });
         created.emit('message:read', { conversationId });
         void queryClient.invalidateQueries({ queryKey });
       });
       created.on('connect_error', (error) => {
+        if (!ownConnection()) return;
         setConnectionState('offline');
-        if (error.message !== 'UNAUTHENTICATED' || recoveringAuth) return;
-        recoveringAuth = true;
-        void refreshSession().then((refreshed) => {
-          if (refreshed && active) created.connect();
-        }).catch(() => undefined).finally(() => { recoveringAuth = false; });
       });
       created.on('disconnect', () => {
+        if (!ownConnection()) return;
         setConnectionState('offline');
         setOtherUserTyping(false);
       });
       created.on('presence:typing', (payload: { conversationId: string; userId: string; isTyping: boolean }) => {
+        if (!ownConnection()) return;
         if (payload.conversationId === conversationId && payload.userId !== me.data?.id) setOtherUserTyping(payload.isTyping);
       });
       created.on('message:ack', (payload: { clientMessageId: string }) => {
+        if (!ownConnection()) return;
         queryClient.setQueryData<MessagePages>(queryKey, (old) => updateMessageStatus(old, payload.clientMessageId, 'sent'));
       });
       created.on('message:created', (message: MessageType) => {
+        if (!ownConnection() || message.conversationId !== conversationId) return;
         queryClient.setQueryData<MessagePages>(queryKey, (old) => upsertMessage(old, { ...message, localStatus: 'sent' }));
       });
       created.connect();
@@ -86,10 +95,11 @@ export function Chat({ route }: Props) {
 
     return () => {
       active = false;
+      unbindSession?.();
       if (typingTimer.current) clearTimeout(typingTimer.current);
       current?.close();
     };
-  }, [conversationId, getToken, me.data?.id, queryClient, refreshSession]);
+  }, [conversationId, getToken, me.data?.id, queryClient, refreshSession, captureActor, isActorCurrent, endRevokedSession]);
 
   const ordered = useMemo(() => orderMessagePages(messages.data), [messages.data]);
 
@@ -98,6 +108,8 @@ export function Chat({ route }: Props) {
   }
 
   async function deliver(message: MessageType) {
+    const owner = captureActor();
+    if (!owner || !isActorCurrent(owner)) return;
     setStatus(message.clientMessageId, 'sending');
     try {
       if (socket?.connected) {
@@ -109,12 +121,14 @@ export function Chat({ route }: Props) {
             else reject(new Error(response.error?.message || 'Mensagem recusada.'));
           });
         });
-        setStatus(message.clientMessageId, 'sent');
+        if (isActorCurrent(owner)) setStatus(message.clientMessageId, 'sent');
       } else {
         const saved = (await api.post<ApiEnvelope<MessageType>>('/api/v1/conversations/' + conversationId + '/messages', { clientMessageId: message.clientMessageId, body: message.body })).data.data;
+        if (!isActorCurrent(owner)) return;
         queryClient.setQueryData<MessagePages>(queryKey, (old) => upsertMessage(old, { ...saved, localStatus: 'sent' }));
       }
     } catch {
+      if (!isActorCurrent(owner)) return;
       queryClient.setQueryData<MessagePages>(queryKey, (old) => {
         const current = old?.pages.flatMap((page) => page.items).find((item) => item.clientMessageId === message.clientMessageId);
         return current?.localStatus === 'sent' ? old : updateMessageStatus(old, message.clientMessageId, 'failed');

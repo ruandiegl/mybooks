@@ -41,7 +41,7 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     document.documentElement.style.colorScheme = mode;
     document.documentElement.style.backgroundColor = color;
     document.body.style.backgroundColor = color;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
+    document.querySelectorAll('meta[name="theme-color"]').forEach(tag => tag.setAttribute('content', color));
   }, [preference, mode]);
   const value = useMemo(() => ({ preference, mode, theme: mode === 'dark' ? darkTheme : lightTheme, hydrated, persistenceError, setPreference }), [preference, mode, hydrated, persistenceError, setPreference]);
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

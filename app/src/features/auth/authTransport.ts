@@ -1,6 +1,7 @@
 import { authApi } from './authApi';
 import { clearTokens, loadTokens, saveTokens } from './authStorage';
-import type { AuthSessionResponse, AuthTokens, BrowserAuthSessionResponse, User } from '../../types/api';
+import type { AuthSessionResponse, BrowserAuthSessionResponse, ChangePasswordInput, User } from '../../types/api';
+import type { SessionActor } from './sessionActor';
 
 export type SessionResponse = AuthSessionResponse | BrowserAuthSessionResponse;
 
@@ -17,7 +18,9 @@ export type SessionTransport = {
   getToken: (current: SessionSnapshot | null) => Promise<string | null>;
   refresh: (current: SessionSnapshot | null) => Promise<SessionSnapshot | null>;
   clear: () => Promise<void>;
-  signOut: (current: SessionSnapshot | null) => Promise<void>;
+  signOut: (current: SessionSnapshot | null, actor?: SessionActor, isCurrent?: () => boolean) => Promise<void>;
+  signOutAll: (current: SessionSnapshot, actor: SessionActor, isCurrent: () => boolean) => Promise<void>;
+  changePassword: (current: SessionSnapshot, input: ChangePasswordInput, actor: SessionActor, isCurrent: () => boolean) => Promise<void>;
 };
 
 function snapshot(response: AuthSessionResponse): SessionSnapshot {
@@ -27,6 +30,8 @@ function snapshot(response: AuthSessionResponse): SessionSnapshot {
 }
 
 let refreshPromise: Promise<SessionSnapshot | null> | null = null;
+let refreshOwner: string | undefined;
+let generation = 0;
 
 export const sessionTransport: SessionTransport = {
   async restore() {
@@ -38,6 +43,7 @@ export const sessionTransport: SessionTransport = {
       throw new Error('Resposta de sessão nativa inválida.');
     }
     const next = snapshot(response);
+    generation++;
     await saveTokens({ accessToken: next.accessToken, refreshToken: next.refreshToken!, expiresAt: next.expiresAt });
     return next;
   },
@@ -46,23 +52,37 @@ export const sessionTransport: SessionTransport = {
   },
   async refresh(current) {
     if (!current?.refreshToken) return null;
-    if (refreshPromise) return refreshPromise;
-    refreshPromise = (async () => {
+    if (refreshPromise && refreshOwner === current.refreshToken) return refreshPromise;
+    const ticket = generation;
+    const ownPromise = (async () => {
       try {
-        return await this.accept(await authApi.refresh(current.refreshToken!));
-      } catch {
-        return null;
+        const response = await authApi.refresh(current.refreshToken!);
+        if (ticket !== generation) return null;
+        return await this.accept(response);
+      } catch (error) {
+        if ((error as { response?: { status?: number } })?.response?.status === 401) return null;
+        throw error;
       }
     })();
+    refreshPromise = ownPromise; refreshOwner = current.refreshToken;
     try {
-      return await refreshPromise;
+      return await ownPromise;
     } finally {
-      refreshPromise = null;
+      if (refreshPromise === ownPromise) { refreshPromise = null; refreshOwner = undefined; }
     }
   },
-  clear: clearTokens,
-  async signOut(current) {
+  async clear() { generation++; await clearTokens(); },
+  async signOut(current, actor, isCurrent) {
+    if (isCurrent && !isCurrent()) throw Error('A sessão mudou.');
     if (!current?.refreshToken) return;
-    await authApi.logout(current.refreshToken);
+    await authApi.logout(current.refreshToken, actor);
+  },
+  async signOutAll(current, actor, isCurrent) {
+    if (!isCurrent()) throw Error('A sessão mudou.');
+    await authApi.logoutAll(current.accessToken, actor);
+  },
+  async changePassword(current, input, actor, isCurrent) {
+    if (!isCurrent()) throw Error('A sessão mudou.');
+    await authApi.changePassword(current.accessToken, input, actor);
   }
 };

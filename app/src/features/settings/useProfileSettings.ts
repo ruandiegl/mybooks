@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { SessionActor } from '../auth/sessionActor';
 import type { SettingsRoute } from './settingsTypes';
-type Options = { actor: SessionActor | null; isBusy: boolean; hasUnsavedChanges: boolean; cropActive: boolean; onCancelCrop(): void; onDiscard(): void };
+type Options = { actor: SessionActor | null; isBusy: boolean; hasUnsavedChanges: boolean; isDirtyForRoute?: (route: SettingsRoute) => boolean; cropActive: boolean; onCancelCrop(): void; onDiscard(): void };
 export function useProfileSettings(options: Options) {
   const [visible, setVisible] = useState(false);
   const [history, setHistory] = useState<SettingsRoute[]>(['menu']);
@@ -14,7 +14,8 @@ export function useProfileSettings(options: Options) {
     if (options.isBusy) return;
     if (options.cropActive) { options.onCancelCrop(); return; }
     if (route === 'confirmDiscard') { setHistory(old => old.slice(0, -1)); return; }
-    if (options.hasUnsavedChanges && (route === 'editProfile' || route === 'password')) {
+    const dirty = options.isDirtyForRoute ? options.isDirtyForRoute(route) : options.hasUnsavedChanges && (route === 'editProfile' || route === 'password');
+    if (dirty && !(intent === 'back' && route === 'confirmSignOutAll' && history[history.length - 2] === 'password')) {
       discardIntent.current = intent; setHistory(old => [...old, 'confirmDiscard']); return;
     }
     if (intent === 'close' || history.length === 1) setVisible(false);

@@ -3,6 +3,8 @@ import { Platform } from 'react-native';
 import { appEnv } from '../../config/env';
 import { canUseWebAuthTransport, shouldUseCookieSession, withCookieRefreshLock } from './sessionTransport';
 import { api } from '../../services/api';
+import { settingsActorHeaders, type SessionActor } from './sessionActor';
+import type { ChangePasswordInput } from '../../types/api';
 import type {
   ApiEnvelope,
   AuthSessionResponse,
@@ -85,11 +87,17 @@ export const authApi = {
     );
     return data<AuthSessionResponse>(response);
   },
-  async logout(refreshToken: string | null = null) {
+  async logout(refreshToken: string | null = null, actor?: SessionActor) {
     assertAuthTransportAvailable();
     if (!usesCookieSession && !refreshToken) throw new Error('Token de sessão ausente.');
     const body = usesCookieSession ? {} : { refreshToken };
-    return data<{ ok: true }>(await publicApi.post('/api/v1/auth/logout', body, sessionRequestConfig));
+    return data<{ ok: true }>(await publicApi.post('/api/v1/auth/logout', body, { ...sessionRequestConfig, headers: { ...sessionRequestConfig.headers, ...(actor ? settingsActorHeaders(actor) : {}) } }));
+  },
+  async logoutAll(accessToken: string, actor: SessionActor) {
+    return data<{ ok: true }>(await publicApi.post('/api/v1/auth/logout-all', {}, { ...sessionRequestConfig, headers: { ...sessionRequestConfig.headers, ...settingsActorHeaders(actor), Authorization: 'Bearer ' + accessToken } }));
+  },
+  async changePassword(accessToken: string, input: ChangePasswordInput, actor: SessionActor) {
+    return data<{ ok: true }>(await publicApi.post('/api/v1/auth/change-password', input, { ...sessionRequestConfig, headers: { ...sessionRequestConfig.headers, ...settingsActorHeaders(actor), Authorization: 'Bearer ' + accessToken } }));
   },
   async forgotPassword(email: string) {
     assertAuthTransportAvailable();

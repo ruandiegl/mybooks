@@ -27,7 +27,7 @@ function PhotoAction({ label, icon, kind, disabled, onPress, stacked, maxLabelWi
 
 export function AvatarPhotoModal(props: AvatarPhotoModalProps) {
   const styles = useThemedStyles(createStyles);
-  const { theme } = useAppTheme();
+  const { theme, mode } = useAppTheme();
 
   const { width, height, fontScale } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -52,7 +52,7 @@ export function AvatarPhotoModal(props: AvatarPhotoModalProps) {
   }
   const disabled = props.busy || motion.closing;
   return <Modal visible transparent animationType="none" accessibilityLabel="Foto de perfil" presentationStyle="overFullScreen" onRequestClose={close} onShow={() => { focusClose(); motion.open(); }}>
-    <StatusBar style={props.source ? 'dark' : 'light'} />
+    <StatusBar style={props.source ? (mode === 'dark' ? 'light' : 'dark') : 'light'} />
     {props.source ? <SafeAreaView style={styles.crop}>
       <AvatarEditor key={props.source.uri} source={props.source} busy={props.busy} error={props.error} previewUri={props.previewUri} statusLabel={props.statusLabel} onSave={props.onSave} onCancel={props.onCancelCrop} onChooseAnother={props.onEdit} />
     </SafeAreaView> : <View style={styles.container}>
