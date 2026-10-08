@@ -1,5 +1,9 @@
 # Runbook de segurança da autenticação
 
+## Configurações — plano010
+
+Ao investigar erro de troca de senha, diferenciar403 CURRENT_PASSWORD_INVALID de401 de sessão e409 SETTINGS_SESSION_CHANGED; não pedir/exportar senha/token/cookie em logs. Verificar família e ordem User→sessão/código nas corridas de refresh/logout/reset. Falha local depois da revogação não restaura dados privados. Em múltiplas réplicas, não confiar em EventEmitter local como revogação distribuída. Migração/publicação/infra só após alvo confirmado e autorização, com evidências no [registro](../plans/plan-010-menu-perfil-configuracoes-execucao.md).
+
 ## Token ou aparelho comprometido
 
 Revogue todas as `AuthSession` ativas do usuário, force novo login, preserve request IDs relevantes e investigue IP hash/user-agent sem expor tokens. Se houver replay, a aplicação revoga automaticamente a família.

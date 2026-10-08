@@ -1,7 +1,7 @@
 import { settingsRepository } from './settings.repository.js';
 import { updatePreferencesSchema } from './settings.schemas.js';
 function dto(userId, value) {
-  return { schemaVersion: 1, userId, notifications: { showLikesBadge: value?.showLikesBadge ?? true }, capabilities: { changePassword: false, logoutAll: false, push: false } };
+  return { schemaVersion: 1, userId, notifications: { showLikesBadge: value?.showLikesBadge ?? true }, capabilities: { changePassword: true, logoutAll: true, push: false } };
 }
 export function createSettingsService({ repository = settingsRepository } = {}) {
   return {

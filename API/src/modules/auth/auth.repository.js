@@ -1,6 +1,34 @@
 import { prisma } from '../../shared/database/prisma.js';
 import { authUserSelect } from '../users/users.repository.js';
 import { finalAvatarKey, ownedLegacyAvatarKey } from '../media/avatar.keys.js';
+import { settingsSessionChanged } from './auth.actor.js';
+
+async function lockAccount(tx, userId) {
+  const rows = await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
+  return rows.length ? tx.user.findUnique({ where: { id: userId }, select: authUserSelect }) : null;
+}
+async function revokeMatching(tx, where, now) {
+  const sessions = await tx.authSession.findMany({ where: { ...where, revokedAt: null }, select: { id: true } });
+  await tx.authSession.updateMany({ where: { ...where, revokedAt: null }, data: { revokedAt: now } });
+  return sessions.map(session => session.id);
+}
+async function bindCorrelation(tx, current, correlation) {
+  if (!correlation) return;
+  if (!current || current.userId !== correlation.ownerId) throw settingsSessionChanged();
+  const anchor = await tx.authSession.findUnique({ where: { id: correlation.anchorSessionId } });
+  if (!anchor || anchor.userId !== current.userId || anchor.familyId !== current.familyId) throw settingsSessionChanged();
+  if (correlation.cookieHash) {
+    const cookie = await tx.authSession.findUnique({ where: { refreshTokenHash: correlation.cookieHash } });
+    if (!cookie || cookie.userId !== current.userId || cookie.familyId !== current.familyId) throw settingsSessionChanged();
+  }
+}
+async function liveFamilySession(tx, userId, sessionId, now) {
+  const captured = await tx.authSession.findUnique({ where: { id: sessionId } });
+  if (!captured || captured.userId !== userId) return null;
+  if (!captured.revokedAt && captured.expiresAt > now) return captured;
+  if (!captured.replacedById) return null;
+  return tx.authSession.findFirst({ where: { userId, familyId: captured.familyId, revokedAt: null, expiresAt: { gt: now } } });
+}
 
 const codeSelect = {
   id: true,
@@ -82,9 +110,9 @@ const evaluateCode = async (client, { userId, type, codeHash, now, maxAttempts }
   return consumed.count === 1 ? { status: 'VALID' } : { status: 'INVALID_CODE' };
 };
 
-export const authRepository = {
+export function createAuthRepository(database = prisma) { return {
   findActiveSession(sessionId, userId, now = new Date()) {
-    return prisma.authSession.findFirst({
+    return database.authSession.findFirst({
       where: {
         id: sessionId,
         userId,
@@ -114,9 +142,15 @@ export const authRepository = {
       }
     });
   },
+  async sessionRetirementReason(sessionId, userId) {
+    const retired = await database.authSession.findFirst({ where: { id: sessionId, userId }, select: { familyId: true, replacedById: true } });
+    if (!retired?.replacedById) return 'terminal';
+    const active = await database.authSession.findFirst({ where: { familyId: retired.familyId, userId, revokedAt: null, expiresAt: { gt: new Date() } }, select: { id: true } });
+    return active ? 'rotated' : 'terminal';
+  },
 
   deleteExpiredPendingAccounts(now) {
-    return prisma.$transaction(async (tx) => {
+    return database.$transaction(async (tx) => {
       const where = {
         email: { not: null },
         passwordHash: { not: null },
@@ -125,16 +159,25 @@ export const authRepository = {
         pendingRegistrationExpiresAt: { lte: now }
       };
       const users = await tx.user.findMany({ where, select: { id: true } });
-      await enqueueBookImageCleanup(tx, users.map((user) => user.id));
-      return tx.user.deleteMany({ where });
+      const expiredIds = [];
+      for (const candidate of users.sort((a, b) => a.id.localeCompare(b.id))) {
+        await lockAccount(tx, candidate.id);
+        if (await tx.user.findFirst({ where: { ...where, id: candidate.id }, select: { id: true } })) expiredIds.push(candidate.id);
+      }
+      await enqueueBookImageCleanup(tx, expiredIds);
+      return tx.user.deleteMany({ where: { ...where, id: { in: expiredIds } } });
     });
   },
 
   upsertPendingAccount({ user, code, now }) {
-    return prisma.$transaction(async (client) => {
-      const candidates = await client.user.findMany({
+    return database.$transaction(async (client) => {
+      let candidates = await client.user.findMany({
         where: { OR: [{ email: user.email }, { cpfHash: user.cpfHash }] },
         select: registrationCandidateSelect
+      });
+      for (const candidate of [...candidates].sort((a, b) => a.id.localeCompare(b.id))) await lockAccount(client, candidate.id);
+      if (candidates.length) candidates = await client.user.findMany({
+        where: { OR: [{ email: user.email }, { cpfHash: user.cpfHash }] }, select: registrationCandidateSelect
       });
       const pendingByEmail = candidates.find((candidate) => (
         candidate.email === user.email
@@ -179,11 +222,23 @@ export const authRepository = {
   },
 
   findUserByEmailForAuth(email) {
-    return prisma.user.findUnique({ where: { email }, select: authUserSelect });
+    return database.user.findUnique({ where: { email }, select: authUserSelect });
+  },
+  findUserByIdForAuth(id) {
+    return database.user.findUnique({ where: { id }, select: authUserSelect });
+  },
+  checkCorrelation(userId, sessionId, correlation) {
+    return database.$transaction(async tx => {
+      const user = await lockAccount(tx, userId);
+      const current = user ? await liveFamilySession(tx, userId, sessionId, new Date()) : null;
+      if (!current) throw settingsSessionChanged();
+      await bindCorrelation(tx, current, correlation);
+    });
   },
 
   replaceAuthCode({ userId, type, code, now, cooldownMs }) {
-    return prisma.$transaction(async (client) => {
+    return database.$transaction(async (client) => {
+      if (!await lockAccount(client, userId)) return { status: 'INVALID_CODE' };
       const previous = await latestCode(client, userId, type);
       if (previous && cooldownMs > 0 && now.getTime() - previous.lastSentAt.getTime() < cooldownMs) {
         return { status: 'COOLDOWN' };
@@ -199,9 +254,10 @@ export const authRepository = {
   },
 
   verifyEmailAndCreateSession({ email, codeHash, now, maxAttempts, session }) {
-    return prisma.$transaction(async (client) => {
+    return database.$transaction(async (client) => {
       const user = await client.user.findUnique({ where: { email }, select: authUserSelect });
       if (!user) return { status: 'INVALID_CODE' };
+      if (!await lockAccount(client, user.id)) return { status: 'INVALID_CODE' };
 
       const evaluated = await evaluateCode(client, { userId: user.id, type: 'EMAIL_VERIFY', codeHash, now, maxAttempts });
       if (evaluated.status !== 'VALID') return evaluated;
@@ -216,35 +272,40 @@ export const authRepository = {
     });
   },
 
-  createSession({ userId, session }) {
-    return prisma.authSession.create({ data: { userId, ...session } });
+  createSession({ userId, session, expectedPasswordHash, rehashedPasswordHash }) {
+    return database.$transaction(async (tx) => {
+      const user = await lockAccount(tx, userId);
+      if (!user?.isActive || !user.emailVerifiedAt || (expectedPasswordHash !== undefined && user.passwordHash !== expectedPasswordHash)) return null;
+      if (rehashedPasswordHash) await tx.user.update({ where: { id: userId }, data: { passwordHash: rehashedPasswordHash } });
+      return tx.authSession.create({ data: { userId, ...session } });
+    });
   },
 
   updatePasswordHash(userId, passwordHash) {
-    return prisma.user.update({ where: { id: userId }, data: { passwordHash }, select: authUserSelect });
+    return database.user.update({ where: { id: userId }, data: { passwordHash }, select: authUserSelect });
   },
 
-  rotateSession({ refreshTokenHash, now, replacement }) {
-    return prisma.$transaction(async (client) => {
+  rotateSession({ refreshTokenHash, now, replacement, correlation }) {
+    return database.$transaction(async (client) => {
+      const lookup = await client.authSession.findUnique({ where: { refreshTokenHash }, select: { userId: true } });
+      if (!lookup || !await lockAccount(client, lookup.userId)) return { status: 'INVALID' };
       const current = await client.authSession.findUnique({
         where: { refreshTokenHash },
         include: { user: { select: authUserSelect } }
       });
 
       if (!current) return { status: 'INVALID' };
+      await bindCorrelation(client, current, correlation);
       if (current.revokedAt) {
-        await client.authSession.updateMany({
-          where: { familyId: current.familyId, revokedAt: null },
-          data: { revokedAt: now }
-        });
-        return { status: 'REPLAYED' };
+        const sessionIds = await revokeMatching(client, { userId: current.userId, familyId: current.familyId }, now);
+        return { status: 'REPLAYED', userId: current.userId, sessionIds };
       }
       if (current.expiresAt <= now) {
         await client.authSession.updateMany({
           where: { id: current.id, revokedAt: null },
           data: { revokedAt: now }
         });
-        return { status: 'EXPIRED' };
+        return { status: 'EXPIRED', userId: current.userId, sessionIds: [current.id] };
       }
       if (!current.user.isActive || !current.user.emailVerifiedAt) return { status: 'INVALID' };
 
@@ -264,27 +325,52 @@ export const authRepository = {
         return { status: 'REPLAYED' };
       }
 
-      return { status: 'ROTATED', user: current.user, session: created };
+      return { status: 'ROTATED', user: current.user, session: created, retiredSessionIds: [current.id] };
     });
   },
 
-  revokeSession(refreshTokenHash, now) {
-    return prisma.authSession.updateMany({
-      where: { refreshTokenHash, revokedAt: null },
-      data: { revokedAt: now }
+  revokeSession(refreshTokenHash, now, correlation) {
+    return database.$transaction(async (tx) => {
+      const lookup = await tx.authSession.findUnique({ where: { refreshTokenHash } });
+      if (!lookup) { if (correlation) throw settingsSessionChanged(); return { sessionIds: [] }; }
+      if (!await lockAccount(tx, lookup.userId)) { if (correlation) throw settingsSessionChanged(); return { sessionIds: [] }; }
+      const current = await tx.authSession.findUnique({ where: { id: lookup.id } });
+      await bindCorrelation(tx, current, correlation);
+      const sessionIds = await revokeMatching(tx, { userId: current.userId, familyId: current.familyId }, now);
+      return { userId: current.userId, sessionIds };
     });
   },
 
-  revokeAllSessions(userId, now) {
-    return prisma.authSession.updateMany({
-      where: { userId, revokedAt: null },
-      data: { revokedAt: now }
+  revokeAllSessions(userId, now, { sessionId, correlation } = {}) {
+    return database.$transaction(async (tx) => {
+      const user = await lockAccount(tx, userId);
+      if (!user) throw settingsSessionChanged();
+      if (sessionId) {
+        const current = await liveFamilySession(tx, userId, sessionId, now);
+        if (!current) throw settingsSessionChanged();
+        await bindCorrelation(tx, current, correlation);
+      } else if (correlation) throw settingsSessionChanged();
+      return { userId, sessionIds: await revokeMatching(tx, { userId }, now) };
+    });
+  },
+
+  changePasswordAndRevokeSessions({ userId, sessionId, expectedPasswordHash, newPasswordHash, now = new Date(), correlation }) {
+    return database.$transaction(async (tx) => {
+      const user = await lockAccount(tx, userId);
+      const current = user ? await liveFamilySession(tx, userId, sessionId, now) : null;
+      if (!user?.isActive || !user.emailVerifiedAt || !current || user.passwordHash !== expectedPasswordHash) return { status: 'CHANGED_SESSION' };
+      await bindCorrelation(tx, current, correlation);
+      await tx.user.update({ where: { id: userId }, data: { passwordHash: newPasswordHash } });
+      await tx.authCode.updateMany({ where: { userId, type: 'PASSWORD_RESET', consumedAt: null }, data: { consumedAt: now } });
+      return { status: 'CHANGED', userId, sessionIds: await revokeMatching(tx, { userId }, now) };
     });
   },
 
   resetPasswordWithCode({ email, codeHash, passwordHash, now, maxAttempts }) {
-    return prisma.$transaction(async (client) => {
-      const user = await client.user.findUnique({ where: { email }, select: authUserSelect });
+    return database.$transaction(async (client) => {
+      let user = await client.user.findUnique({ where: { email }, select: authUserSelect });
+      if (!user) return { status: 'INVALID_CODE' };
+      user = await lockAccount(client, user.id);
       if (!user) return { status: 'INVALID_CODE' };
 
       const evaluated = await evaluateCode(client, { userId: user.id, type: 'PASSWORD_RESET', codeHash, now, maxAttempts });
@@ -299,11 +385,10 @@ export const authRepository = {
         },
         select: authUserSelect
       });
-      await client.authSession.updateMany({
-        where: { userId: user.id, revokedAt: null },
-        data: { revokedAt: now }
-      });
-      return { status: 'RESET', user: updated };
+      const sessionIds = await revokeMatching(client, { userId: user.id }, now);
+      await client.authCode.updateMany({ where: { userId: user.id, type: 'PASSWORD_RESET', consumedAt: null }, data: { consumedAt: now } });
+      return { status: 'RESET', user: updated, userId: user.id, sessionIds };
     });
   }
-};
+}; }
+export const authRepository = createAuthRepository();

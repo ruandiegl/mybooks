@@ -10,8 +10,8 @@ const ids = [];
 integration('UserPreferences with PostgreSQL', () => {
   afterAll(async () => { await client.user.deleteMany({ where: { id: { in: ids } } }); await client.$disconnect(); });
   it('upserts one row, survives a new connection, isolates owners and cascades on deletion', async () => {
-    const a = await client.user.create({ data: { name: 'Fixture A', email: `settings-${randomUUID()}@example.test` } }); ids.push(a.id);
-    const b = await client.user.create({ data: { name: 'Fixture B', email: `settings-${randomUUID()}@example.test` } }); ids.push(b.id);
+    const a = await client.user.create({ data: { name: 'Fixture A', email: `settings-${randomUUID()}@example.test`, passwordHash: 'test-only-hash' } }); ids.push(a.id);
+    const b = await client.user.create({ data: { name: 'Fixture B', email: `settings-${randomUUID()}@example.test`, passwordHash: 'test-only-hash' } }); ids.push(b.id);
     const repository = createSettingsRepository(client);
     expect(await repository.find(a.id)).toBeNull();
     await repository.upsert(a.id, { showLikesBadge: false });
