@@ -1,5 +1,9 @@
 # 5. Contrato HTTP
 
+## Configurações de conta (plano010, branch de implementação)
+
+`GET /me/preferences` e `PATCH /me/preferences` são autenticados, privados e `no-store`. PATCH aceita somente `{showLikesBadge:boolean}`; ownership vem da sessão. O DTO contém `schemaVersion:1`, `userId`, `notifications.showLikesBadge` e `capabilities` (senha/logout global conforme rotas instaladas; push:false). Ausência de linha usa true sem criar registro. `X-Settings-Owner` é correlação, não autorização; divergência retorna409 `SETTINGS_SESSION_CHANGED`. API antiga404 mantém o badge legado e não oferece um switch falsamente funcional. Sobrenome opcional em PATCH/me aceita null/vazio para limpeza; máximo80, nome obrigatório1–50 quando enviado.
+
 Base: `/api/v1`. `/health` e as rotas públicas abaixo não exigem bearer. Rotas privadas exigem `Authorization: Bearer <accessToken>`. Os endpoints de sessão web são protegidos por cookie first-party e validação exata de `Origin`; nenhum cliente pode fornecer um cabeçalho de identidade local.
 
 ## Autenticação

@@ -22,6 +22,8 @@ import { TopBar } from '../../components/TopBar';
 import { ProfileSettingsModal } from '../../components/ProfileSettingsModal';
 import { ProfileEditForm } from '../../components/ProfileEditForm';
 import { AppearanceSettingsPanel } from '../../components/AppearanceSettingsPanel';
+import { NotificationSettingsPanel } from '../../components/NotificationSettingsPanel';
+import { useAccountPreferences } from '../../features/settings/useAccountPreferences';
 import { useProfileSettings } from '../../features/settings/useProfileSettings';
 import { useProfileEditor } from '../../features/profile/useProfileEditor';
 import type { SettingsRoute } from '../../features/settings/settingsTypes';
@@ -65,7 +67,8 @@ export function Profile({ navigation }: Props) {
   });
   const editor = useProfileEditor(profileQuery.data, () => settings.openMenu());
   const actor = session.captureActor();
-  const settings = useProfileSettings({ actor, isBusy: avatarEditor.busy || editor.pending || signOutPending,
+  const accountPreferences = useAccountPreferences();
+  const settings = useProfileSettings({ actor, isBusy: avatarEditor.busy || editor.pending || signOutPending || accountPreferences.saving,
     hasUnsavedChanges: editor.dirty, cropActive: Boolean(avatarEditor.source),
     onCancelCrop: avatarEditor.cancel, onDiscard: editor.reset });
   const editing = settings.visible && settings.route === 'editProfile';
@@ -227,10 +230,11 @@ export function Profile({ navigation }: Props) {
           <View style={styles.aboutRow}><MaterialIcons name="menu-book" size={20} color={theme.colors.secondary} /><View style={styles.aboutCopy}><Text style={styles.aboutLabel}>Bio</Text><Text style={styles.aboutValue}>{profile.bio || 'Você ainda não escreveu uma bio.'}</Text></View></View>
         </View>
       </ScrollView>}
-      <ProfileSettingsModal visible={settings.visible} route={settings.route} busy={avatarEditor.busy || editor.pending || signOutPending} cropping={Boolean(avatarEditor.source)} onBack={settings.back} onClose={settings.requestClose} onRoute={openRoute} available={['editProfile', 'appearance', 'confirmSignOut']} appearanceLabel={preference === 'system' ? 'Dispositivo' : preference === 'dark' ? 'Escuro' : 'Claro'}>
+      <ProfileSettingsModal visible={settings.visible} route={settings.route} busy={avatarEditor.busy || editor.pending || signOutPending || accountPreferences.saving} cropping={Boolean(avatarEditor.source)} onBack={settings.back} onClose={settings.requestClose} onRoute={openRoute} available={['editProfile', 'appearance', 'notifications', 'confirmSignOut']} appearanceLabel={preference === 'system' ? 'Dispositivo' : preference === 'dark' ? 'Escuro' : 'Claro'}>
         {avatarEditor.source ? <AvatarEditor key={avatarEditor.source.uri} source={avatarEditor.source} busy={avatarEditor.busy} error={avatarEditor.error} statusLabel={avatarEditor.statusLabel} previewUri={avatarEditor.previewUri} onSave={avatarEditor.save} onCancel={avatarEditor.cancel} onChooseAnother={avatarEditor.choose} />
           : settings.route === 'editProfile' ? <ProfileEditForm editor={editor} avatarEditor={avatarEditor} profile={profile} />
           : settings.route === 'appearance' ? <AppearanceSettingsPanel />
+          : settings.route === 'notifications' ? <NotificationSettingsPanel preferences={accountPreferences} />
           : settings.route === 'confirmDiscard' ? <View style={styles.aboutSection}><Text style={styles.aboutValue}>As alterações ainda não foram salvas.</Text><AppButton label="Continuar editando" variant="outline" onPress={settings.back} /><AppButton label="Descartar alterações" onPress={settings.confirmDiscard} /></View>
           : settings.route === 'confirmSignOut' ? <View style={styles.aboutSection}><Text style={styles.aboutValue}>Você precisará entrar novamente para acessar sua conta neste dispositivo.</Text>{signOutError ? <Text style={{ color: theme.colors.danger }} accessibilityLiveRegion="polite">{signOutError}</Text> : null}<AppButton label="Sair da conta" loading={signOutPending} onPress={() => { void signOut(); }} /><AppButton label="Cancelar" variant="outline" disabled={signOutPending} onPress={settings.back} /></View> : null}
       </ProfileSettingsModal>

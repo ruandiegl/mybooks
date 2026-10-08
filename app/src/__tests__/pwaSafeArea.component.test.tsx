@@ -31,6 +31,8 @@ vi.mock('@react-navigation/native-stack', async () => {
   }) };
 });
 vi.mock('@tanstack/react-query', () => ({ useQuery: () => ({ data: { count: 0 } }) }));
+// This suite tests OS/navigation inset options, not account preferences (covered by real hook suites).
+vi.mock('../features/settings/useAccountPreferences', () => ({ useAccountPreferences: () => ({ showLikesBadge: true }) }));
 vi.mock('@expo/vector-icons/MaterialIcons', () => ({ default: () => null }));
 vi.mock('../features/likes/likesApi', () => ({ likesApi: { fetchReceivedLikesCount: () => {} } }));
 vi.mock('../pages/Discover', () => ({ Discover: () => null }));

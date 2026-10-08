@@ -7,6 +7,7 @@ import { Likes } from '../pages/Likes';
 import { Messages } from '../pages/Messages';
 import { Profile } from '../pages/profile';
 import { likesApi } from '../features/likes/likesApi';
+import { useAccountPreferences } from '../features/settings/useAccountPreferences';
 import { useAppTheme } from '../providers/ThemeProvider';
 import type { MainTabParamList } from '../types/navigation';
 import { MainTabs as CustomMainTabs } from './main-tabs.custom';
@@ -16,6 +17,7 @@ const hasNativeTabView = Boolean(UIManager.getViewManagerConfig?.('RNCTabView'))
 
 export function MainTabs() {
   const { theme } = useAppTheme();
+  const { showLikesBadge } = useAccountPreferences();
 
   const { data } = useQuery({
     queryKey: ['likes', 'received', 'count'],
@@ -35,6 +37,7 @@ export function MainTabs() {
     <Tab.Navigator
       tabBarActiveTintColor={theme.colors.primary}
       tabBarInactiveTintColor={theme.colors.mutedForeground}
+      tabBarStyle={{ backgroundColor: theme.colors.surface }}
       tabLabelStyle={{ fontFamily: theme.typography.medium, fontSize: 11 }}
       scrollEdgeAppearance="transparent"
       translucent
@@ -63,7 +66,7 @@ export function MainTabs() {
         options={{
           title: 'Curtidas',
           tabBarIcon: () => ({ sfSymbol: 'heart.fill' }),
-          tabBarBadge: likesCount > 0 ? likesCount.toString() : undefined
+          tabBarBadge: showLikesBadge && likesCount > 0 ? likesCount.toString() : undefined
         }}
       />
       <Tab.Screen
