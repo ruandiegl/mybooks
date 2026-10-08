@@ -1,9 +1,10 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Image, Pressable, Text, View } from 'react-native';
 import type { BookPhotoDraft } from '../../features/books/bookPhotos';
 import { MAX_BOOK_PHOTOS } from '../../features/books/bookPhotos';
-import { theme } from '../../styles/theme';
-import { styles } from './styles';
+import { useAppTheme } from '../../providers/ThemeProvider';
+import { createStyles } from './styles';
 
 type Props = {
   photos: BookPhotoDraft[];
@@ -14,6 +15,9 @@ type Props = {
 };
 
 export function BookPhotoPicker({ photos, onAdd, onMove, onRemove, disabled = false }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   return (
     <View style={styles.container}>
       <View style={styles.heading}>

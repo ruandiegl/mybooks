@@ -1,3 +1,4 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import { useIsFocused } from '@react-navigation/native';
 import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -17,14 +18,17 @@ import { TopBar } from '../../components/TopBar';
 import { getBookGalleryPhotos } from '../../features/books/bookPresentation';
 import { api, apiErrorMessage } from '../../services/api';
 import { Alert } from '../../services/notice';
-import { theme } from '../../styles/theme';
+import { useAppTheme } from '../../providers/ThemeProvider';
 import type { ApiEnvelope, Book, Match, Paginated } from '../../types/api';
 import type { RootStackParamList } from '../../types/navigation';
-import { styles } from './styles';
+import { createStyles } from './styles';
 
 type InteractionResult = { interaction: { id: string }; match?: Match | null };
 
 export function Discover() {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const queryClient = useQueryClient();
   const { width, height } = useWindowDimensions();
@@ -131,7 +135,7 @@ export function Discover() {
           </View>
           <View style={styles.actions}>
             <Pressable accessibilityRole="button" accessibilityLabel="Passar livro" accessibilityState={{ disabled: mutation.isPending }} disabled={mutation.isPending} style={({ pressed }) => [styles.action, mutation.isPending && styles.disabled, pressed && !mutation.isPending && styles.pressed]} onPress={() => mutation.mutate('PASS')}><MaterialIcons name="close" size={30} color={theme.colors.mutedForeground} /></Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="Gostei do livro" accessibilityState={{ disabled: mutation.isPending }} disabled={mutation.isPending} style={({ pressed }) => [styles.action, styles.like, mutation.isPending && styles.disabled, pressed && !mutation.isPending && styles.likePressed]} onPress={() => mutation.mutate('LIKE')}><MaterialIcons name="favorite" size={29} color={theme.colors.white} /></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Gostei do livro" accessibilityState={{ disabled: mutation.isPending }} disabled={mutation.isPending} style={({ pressed }) => [styles.action, styles.like, mutation.isPending && styles.disabled, pressed && !mutation.isPending && styles.likePressed]} onPress={() => mutation.mutate('LIKE')}><MaterialIcons name="favorite" size={29} color={theme.colors.onPrimary} /></Pressable>
           </View>
         </>}
       </ScrollView>

@@ -1,10 +1,14 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import { Text, TextInput, type TextInputProps, View } from 'react-native';
-import { theme } from '../../styles/theme';
-import { styles } from './styles';
+import { useAppTheme } from '../../providers/ThemeProvider';
+import { createStyles } from './styles';
 
 type Props = TextInputProps & { label: string; error?: string; help?: string };
 
 export function TextField({ label, error, help, multiline, style, accessibilityLabel, ...props }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   return (
     <View style={styles.group}>
       <Text style={styles.label}>{label}</Text>

@@ -1,8 +1,9 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useState } from 'react';
 import { Pressable, TextInput, View, type TextInputProps } from 'react-native';
-import { theme } from '../../styles/theme';
-import { styles } from './styles';
+import { useAppTheme } from '../../providers/ThemeProvider';
+import { createStyles } from './styles';
 
 type Props = Omit<TextInputProps, 'value' | 'onChangeText'> & {
   value: string;
@@ -10,6 +11,9 @@ type Props = Omit<TextInputProps, 'value' | 'onChangeText'> & {
 };
 
 export function SearchField({ value, onChangeText, onFocus, onBlur, ...props }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   const [focused, setFocused] = useState(false);
   return (
     <View style={[styles.group, focused && styles.focused]}>

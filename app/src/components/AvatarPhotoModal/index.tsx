@@ -1,3 +1,4 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { StatusBar } from 'expo-status-bar';
@@ -5,23 +6,29 @@ import { Animated, Modal, Platform, Pressable, ScrollView, Text, View, useWindow
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '../Avatar';
 import { AvatarEditor } from '../AvatarEditor';
-import { theme } from '../../styles/theme';
+import { useAppTheme } from '../../providers/ThemeProvider';
 import type { AvatarPhotoModalProps } from './AvatarPhotoModal.types';
-import { styles } from './styles';
+import { createStyles } from './styles';
 import { useAvatarPhotoMotion } from './useAvatarPhotoMotion';
 
 const AnimatedPhoto = Animated.createAnimatedComponent(Pressable);
 
 type ActionProps = { label: string; icon: keyof typeof MaterialIcons.glyphMap; kind?: 'edit' | 'remove'; disabled: boolean; onPress: () => void; stacked: boolean; maxLabelWidth: number; onLabelOverflow: () => void };
 function PhotoAction({ label, icon, kind, disabled, onPress, stacked, maxLabelWidth, onLabelOverflow }: ActionProps) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   const [focused, setFocused] = useState(false);
   return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} style={({ pressed }) => [styles.action, stacked && styles.actionRow, disabled && styles.disabled, pressed && styles.pressed]}>
-    <View style={[styles.circle, kind === 'edit' && styles.edit, kind === 'remove' && styles.remove, focused && styles.focused]}><MaterialIcons name={icon} size={24} color={theme.colors.white} accessible={false} /></View>
+    <View style={[styles.circle, kind === 'edit' && styles.edit, kind === 'remove' && styles.remove, focused && styles.focused]}><MaterialIcons name={icon} size={24} color={kind === 'edit' ? theme.colors.onPrimary : kind === 'remove' ? theme.colors.onDanger : theme.colors.onSecondary} accessible={false} /></View>
     <Text onLayout={event => { if (!stacked && event.nativeEvent.layout.width > maxLabelWidth + 1) onLabelOverflow(); }} style={[styles.label, stacked && styles.stackedLabel]}>{label}</Text>
   </Pressable>;
 }
 
 export function AvatarPhotoModal(props: AvatarPhotoModalProps) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   const { width, height, fontScale } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const motion = useAvatarPhotoMotion(props.visible, props.busy, Boolean(props.source));

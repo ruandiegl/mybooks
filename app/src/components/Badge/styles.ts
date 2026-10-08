@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
-import { theme } from '../../styles/theme';
+import type { AppTheme } from '../../styles/theme';
 
-export const styles = StyleSheet.create({
+export const createStyles = (theme: AppTheme) => StyleSheet.create({
   badge: { alignSelf: 'flex-start', borderRadius: theme.radius.pill, paddingHorizontal: 10, paddingVertical: 5 },
   default: { backgroundColor: theme.colors.surfaceMuted },
   success: { backgroundColor: theme.colors.successSoft },

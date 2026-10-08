@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
-import { theme } from '../../styles/theme';
+import type { AppTheme } from '../../styles/theme';
 
-export const styles = StyleSheet.create({
+export const createStyles = (theme: AppTheme) => StyleSheet.create({
   wrapper: { alignItems: 'center', gap: theme.spacing.xs },
   avatar: { width: 104, height: 104, borderRadius: 52, backgroundColor: theme.colors.secondarySoft, alignItems: 'center', justifyContent: 'center' },
   image: { width: '100%', height: '100%', borderRadius: 52 },

@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
-import { theme } from '../../styles/theme';
-export const styles = StyleSheet.create({
+import type { AppTheme } from '../../styles/theme';
+export const createStyles = (theme: AppTheme) => StyleSheet.create({
   list: { paddingBottom: theme.spacing.xxl, gap: theme.spacing.md },
   row: { gap: theme.spacing.md },
   item: { width: '47.7%' },

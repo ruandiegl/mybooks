@@ -1,12 +1,16 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useState } from 'react';
 import { Image, Text, View } from 'react-native';
-import { theme } from '../../styles/theme';
-import { styles } from './styles';
+import { useAppTheme } from '../../providers/ThemeProvider';
+import { createStyles } from './styles';
 
 type Props = { url?: string | null; title: string; label: string; compact?: boolean; hasPhoto?: boolean };
 
 export function BookPhoto({ url, title, label, compact = false, hasPhoto = false }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   if (url && url !== failedUrl) {
     return <Image source={{ uri: url }} accessibilityLabel={label} resizeMode="contain" style={styles.image} onError={() => setFailedUrl(url)} />;

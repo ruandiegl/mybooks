@@ -1,11 +1,12 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Pressable, Text, useWindowDimensions, View } from 'react-native';
-import { theme } from '../../styles/theme';
+import { useAppTheme } from '../../providers/ThemeProvider';
 import { Avatar } from '../Avatar';
 import { BookPhoto } from '../BookPhoto';
 import { Card } from '../Card';
 import { getLikeActionAccessibility } from './likeActionAccessibility';
-import { styles } from './styles';
+import { createStyles } from './styles';
 
 type LikeCardProps = {
   userName: string;
@@ -30,6 +31,9 @@ export function LikeCard({
   userName, userAvatar, avatarVersion, onAvatarError, userCity, bookTitle, bookCoverUrl, variant,
   onLikeBack, onDismiss, onUnlike, onPress, relatedBookTitle, onOpenRelatedBook, disabled
 }: LikeCardProps) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   const { width } = useWindowDimensions();
   const gridWidth = Math.min(width - theme.spacing.md * 2, 560);
   const cardWidth = Math.max(0, (gridWidth - theme.spacing.sm) / 2);
@@ -89,7 +93,7 @@ export function LikeCard({
                 <MaterialIcons name="close" size={24} color={theme.colors.mutedForeground} accessible={false} />
               </Pressable>
               <Pressable {...actionAccessibility.likeBack} accessibilityState={{ disabled: Boolean(disabled) }} onPress={onLikeBack} disabled={disabled} style={({ pressed }) => [styles.actionButton, styles.likeButton, disabled && styles.disabled, pressed && styles.pressed]}>
-                <MaterialIcons name="favorite" size={24} color={theme.colors.white} accessible={false} />
+                <MaterialIcons name="favorite" size={24} color={theme.colors.onPrimary} accessible={false} />
               </Pressable>
             </>
           ) : <Text style={styles.unavailableActions}>Sem livro para troca</Text>

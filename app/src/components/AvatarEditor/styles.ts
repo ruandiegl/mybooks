@@ -1,1 +1,1 @@
-export { editorStyles as styles } from './editorStyles.shared';
+export { createEditorStyles as createStyles } from './editorStyles.shared';

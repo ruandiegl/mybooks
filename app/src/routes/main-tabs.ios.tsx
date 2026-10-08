@@ -7,7 +7,7 @@ import { Likes } from '../pages/Likes';
 import { Messages } from '../pages/Messages';
 import { Profile } from '../pages/profile';
 import { likesApi } from '../features/likes/likesApi';
-import { theme } from '../styles/theme';
+import { useAppTheme } from '../providers/ThemeProvider';
 import type { MainTabParamList } from '../types/navigation';
 import { MainTabs as CustomMainTabs } from './main-tabs.custom';
 
@@ -15,6 +15,8 @@ const Tab = createNativeBottomTabNavigator<MainTabParamList>();
 const hasNativeTabView = Boolean(UIManager.getViewManagerConfig?.('RNCTabView'));
 
 export function MainTabs() {
+  const { theme } = useAppTheme();
+
   const { data } = useQuery({
     queryKey: ['likes', 'received', 'count'],
     queryFn: () => likesApi.fetchReceivedLikesCount(),

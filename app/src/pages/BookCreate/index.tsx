@@ -1,3 +1,4 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Crypto from 'expo-crypto';
@@ -32,16 +33,19 @@ import { uploadBookPhoto } from '../../features/books/bookPhotoUpload';
 import { api, apiErrorMessage } from '../../services/api';
 import { Alert } from '../../services/notice';
 import { preparePickedImage, releasePreparedImage, type PreparedUploadImage } from '../../features/media/preparePickedImage';
-import { theme } from '../../styles/theme';
+import { useAppTheme } from '../../providers/ThemeProvider';
 import type { ApiEnvelope, Book, IsbnLookup } from '../../types/api';
 import type { RootStackParamList } from '../../types/navigation';
-import { styles } from './styles';
+import { createStyles } from './styles';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BookCreate'>;
 
 const initialForm: BookDraft = { isbn: '', title: '', authors: '', publisher: '', synopsis: '', year: '', pageCount: '', subjects: '' };
 const splitList = (value: string) => value.split(',').map((item) => item.trim()).filter(Boolean);
 export function BookCreate({ navigation }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   const queryClient = useQueryClient();
   const [form, setForm] = useState(initialForm);
   const [lookup, setLookup] = useState<IsbnLookup | null>(null);

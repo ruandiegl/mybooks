@@ -1,3 +1,4 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import { useIsFocused } from '@react-navigation/native';
 import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -18,10 +19,12 @@ import { api } from '../../services/api';
 import { createChatSocket } from '../../services/socket';
 import type { ApiEnvelope, Message as MessageType, Paginated, User } from '../../types/api';
 import type { RootStackParamList } from '../../types/navigation';
-import { styles } from './styles';
+import { createStyles } from './styles';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Chat'>;
 export function Chat({ route }: Props) {
+  const styles = useThemedStyles(createStyles);
+
   const { conversationId } = route.params;
   const { getToken, refreshSession } = useSession();
   const queryClient = useQueryClient();

@@ -1,14 +1,18 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import type { BookImage } from '../../types/api';
-import { theme } from '../../styles/theme';
+import { useAppTheme } from '../../providers/ThemeProvider';
 import { BookPhoto } from '../BookPhoto';
-import { styles } from './styles';
+import { createStyles } from './styles';
 
 type Props = { title: string; photos: BookImage[]; onRefresh: () => void; refreshing: boolean; refreshVersion: number };
 
 export function BookGallery({ title, photos, onRefresh, refreshing, refreshVersion }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   const { width, height } = useWindowDimensions();
   const pager = useRef<ScrollView>(null);
   const [pageWidth, setPageWidth] = useState(0);

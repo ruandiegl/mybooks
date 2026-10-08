@@ -1,10 +1,13 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import { Image, Pressable, Text, View, type ViewStyle } from 'react-native';
 import type { Book } from '../../types/api';
 import { IsbnBadge } from '../IsbnBadge';
 import { getBookCoverUrl } from '../../features/books/bookPhotos';
-import { styles } from './styles';
+import { createStyles } from './styles';
 type Props = { book: Book; onPress?: () => void; style?: ViewStyle };
 export function BookCard({ book, onPress, style }: Props) {
+  const styles = useThemedStyles(createStyles);
+
   const coverUrl = getBookCoverUrl(book);
 
   return (

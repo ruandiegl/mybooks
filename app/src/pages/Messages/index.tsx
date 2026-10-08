@@ -1,3 +1,4 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import { useIsFocused } from '@react-navigation/native';
 import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -10,11 +11,14 @@ import { Avatar } from '../../components/Avatar';
 import { StateView } from '../../components/StateView';
 import { TopBar } from '../../components/TopBar';
 import { api } from '../../services/api';
-import { theme } from '../../styles/theme';
+import { useAppTheme } from '../../providers/ThemeProvider';
 import type { ApiEnvelope, Conversation } from '../../types/api';
 import type { RootStackParamList } from '../../types/navigation';
-import { styles } from './styles';
+import { createStyles } from './styles';
 export function Messages() {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const query = useQuery({ queryKey: ['conversations'], queryFn: async () => (await api.get<ApiEnvelope<Conversation[]>>('/api/v1/conversations')).data.data });
   const refreshAvatar = useAvatarRefresh(query.data, query.refetch, useIsFocused());

@@ -1,5 +1,6 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import { Pressable, Text, View } from 'react-native';
-import { styles } from './styles';
+import { createStyles } from './styles';
 
 export type ProfileTabKey = 'shelf' | 'about';
 type Props = { value: ProfileTabKey; onChange: (value: ProfileTabKey) => void };
@@ -10,6 +11,8 @@ const tabs: Array<{ key: ProfileTabKey; label: string }> = [
 ];
 
 export function ProfileTabs({ value, onChange }: Props) {
+  const styles = useThemedStyles(createStyles);
+
   return (
     <View style={styles.container}>
       {tabs.map((tab) => {

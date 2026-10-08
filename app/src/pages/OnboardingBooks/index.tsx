@@ -1,3 +1,4 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -10,14 +11,17 @@ import { OnboardingProgress } from '../../components/OnboardingProgress';
 import { useSession } from '../../providers/SessionProvider';
 import { api, apiErrorMessage } from '../../services/api';
 import { Alert } from '../../services/notice';
-import { theme } from '../../styles/theme';
+import { useAppTheme } from '../../providers/ThemeProvider';
 import type { ApiEnvelope, Book, Paginated } from '../../types/api';
 import type { RootStackParamList } from '../../types/navigation';
-import { styles } from './styles';
+import { createStyles } from './styles';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OnboardingBooks'>;
 
 export function OnboardingBooks({ navigation }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   const { refreshUser } = useSession();
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);

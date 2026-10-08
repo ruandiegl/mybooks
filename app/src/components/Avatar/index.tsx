@@ -1,10 +1,13 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import { useState } from 'react';
 import { Image, Platform, Text, View } from 'react-native';
-import { styles } from './styles';
+import { createStyles } from './styles';
 
 type Props = { name: string; url?: string | null; size?: number; version?: number; onImageError?: () => void; suppressBrowserActions?: boolean };
 function preventBrowserAction(event: { preventDefault(): void }) { event.preventDefault(); }
 export function Avatar({ name, url, size = 44, version = 0, onImageError, suppressBrowserActions = false }: Props) {
+  const styles = useThemedStyles(createStyles);
+
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const initials = name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
   const guardBrowserImage = suppressBrowserActions && Platform.OS === 'web';

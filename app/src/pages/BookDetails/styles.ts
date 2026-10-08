@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
-import { theme } from '../../styles/theme';
-export const styles = StyleSheet.create({
+import type { AppTheme } from '../../styles/theme';
+export const createStyles = (theme: AppTheme) => StyleSheet.create({
   page: { flex: 1, backgroundColor: theme.colors.background },
   content: { width: '100%', maxWidth: 680, alignSelf: 'center', padding: theme.spacing.md, gap: theme.spacing.lg },
   heading: { gap: theme.spacing.sm },

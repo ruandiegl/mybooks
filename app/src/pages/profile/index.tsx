@@ -1,3 +1,4 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import { useIsFocused } from '@react-navigation/native';
 import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -28,15 +29,18 @@ import { usePremiumStatus } from '../../features/premium/usePremiumStatus';
 import { useSession } from '../../providers/SessionProvider';
 import { api, apiErrorMessage } from '../../services/api';
 import { Alert } from '../../services/notice';
-import { theme } from '../../styles/theme';
+import { useAppTheme } from '../../providers/ThemeProvider';
 import type { ApiEnvelope, Book, Paginated, User } from '../../types/api';
 import type { RootStackParamList } from '../../types/navigation';
-import { styles } from './styles';
+import { createStyles } from './styles';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 type Props = { navigation: Navigation };
 
 export function Profile({ navigation }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   const session = useSession();
   const premiumOffer = usePremiumOffer();
   const premiumQuery = usePremiumStatus(session.user?.id, session.isSignedIn);

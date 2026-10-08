@@ -2,12 +2,16 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Image, PanResponder, StyleSheet, View, useWindowDimensions, type GestureResponderEvent } from 'react-native';
 import { clampAvatarTransform,getAvatarCropRect,reframeAvatarTransform,stepAvatarTransform,zoomAvatarAtPoint } from '../../features/avatar/avatarCrop';
 import type { AvatarTransform } from '../../features/avatar/avatarTypes';
-import { theme } from '../../styles/theme';
+import { useAppTheme } from '../../providers/ThemeProvider';
 import { AvatarEditorControls } from './AvatarEditorControls';
 import type { AvatarEditorProps } from './AvatarEditor.types';
-import { styles } from './styles';
+import { createStyles } from './styles';
+import { useThemedStyles } from '../../styles/useThemedStyles';
 
 export function AvatarEditor(props:AvatarEditorProps) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
  const {source,busy,previewUri}=props;
  const {width,height}=useWindowDimensions();
  const diameter=Math.max(128,Math.min(320,width-64,height-300)),stageSize=diameter+32;

@@ -1,3 +1,4 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Crypto from 'expo-crypto';
@@ -31,7 +32,7 @@ import { Alert } from '../../services/notice';
 import { preparePickedImage, releasePreparedImage, type PreparedUploadImage } from '../../features/media/preparePickedImage';
 import type { ApiEnvelope, Book } from '../../types/api';
 import type { RootStackParamList } from '../../types/navigation';
-import { styles } from './styles';
+import { createStyles } from './styles';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BookEdit'>;
 type Form = { title: string; authors: string; publisher: string; synopsis: string; year: string; pageCount: string; subjects: string; isbn: string };
@@ -41,6 +42,8 @@ const empty: Form = { title: '', authors: '', publisher: '', synopsis: '', year:
 const split = (value: string) => value.split(',').map((item) => item.trim()).filter(Boolean);
 
 export function BookEdit({ route, navigation }: Props) {
+  const styles = useThemedStyles(createStyles);
+
   const queryClient = useQueryClient();
   const [form, setForm] = useState<Form>(empty);
   const [photos, setPhotos] = useState<BookPhotoDraft[]>([]);

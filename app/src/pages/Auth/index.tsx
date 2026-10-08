@@ -1,3 +1,4 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
@@ -11,27 +12,38 @@ import { authApi, authErrorMessage } from '../../features/auth/authApi';
 import { maskBrazilianPhone, maskCpf } from '../../features/auth/inputMasks';
 import { passwordIssues, validatePasswordConfirmation } from '../../features/auth/passwordRules';
 import { useSession } from '../../providers/SessionProvider';
-import { theme } from '../../styles/theme';
-import { styles } from './styles';
+import { useAppTheme } from '../../providers/ThemeProvider';
+import { createStyles } from './styles';
 
 type AuthStep = 'landing' | 'register' | 'verify' | 'login' | 'forgot' | 'reset';
 const validEmail = (value: string) => /^\S+@\S+\.\S+$/.test(value.trim());
 
 function ErrorBanner({ message }: { message?: string }) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   if (!message) return null;
   return <View accessibilityRole="alert" style={styles.errorBanner}><MaterialIcons name="error-outline" size={19} color={theme.colors.danger} /><Text style={styles.errorBannerText}>{message}</Text></View>;
 }
 
 function NoticeBanner({ message }: { message?: string }) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   if (!message) return null;
   return <View accessibilityRole="alert" style={styles.noticeBanner}><MaterialIcons name="check-circle-outline" size={19} color={theme.colors.success} /><Text style={styles.noticeBannerText}>{message}</Text></View>;
 }
 
 function InlineLink({ label, onPress, disabled = false }: { label: string; onPress: () => void; disabled?: boolean }) {
+  const styles = useThemedStyles(createStyles);
+
   return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={styles.inlineLink}><Text style={[styles.inlineLinkText, disabled && styles.disabledLink]}>{label}</Text></Pressable>;
 }
 
 function PasswordInput({ label, value, onChangeText }: { label: string; value: string; onChangeText: (value: string) => void }) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   const [visible, setVisible] = useState(false);
   return (
     <View style={styles.passwordField}>
@@ -44,6 +56,9 @@ function PasswordInput({ label, value, onChangeText }: { label: string; value: s
 }
 
 export function Auth() {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   const { establishSession } = useSession();
   const [step, setStep] = useState<AuthStep>('landing');
   const [email, setEmail] = useState('');
@@ -115,7 +130,7 @@ export function Auth() {
   }, 'Aguarde e tente reenviar novamente.');
 
   if (step === 'landing') {
-    return <SafeAreaView style={styles.safe}><View style={styles.body}><Text style={styles.brand}>TrocaLivros</Text><View style={styles.hero}><View style={styles.mark}><MaterialIcons name="auto-stories" size={42} color={theme.colors.white} /></View><Text style={styles.title}>Livros parados.{"\n"}<Text style={styles.accent}>Histórias circulando.</Text></Text><Text style={styles.description}>Crie sua conta para cadastrar livros, descobrir novas leituras e combinar trocas com segurança.</Text></View><View style={styles.actions}><AppButton label="Criar minha conta" onPress={() => go('register')} /><AppButton label="Já tenho uma conta" variant="outline" onPress={() => go('login')} /></View></View></SafeAreaView>;
+    return <SafeAreaView style={styles.safe}><View style={styles.body}><Text style={styles.brand}>TrocaLivros</Text><View style={styles.hero}><View style={styles.mark}><MaterialIcons name="auto-stories" size={42} color={theme.colors.onPrimary} /></View><Text style={styles.title}>Livros parados.{"\n"}<Text style={styles.accent}>Histórias circulando.</Text></Text><Text style={styles.description}>Crie sua conta para cadastrar livros, descobrir novas leituras e combinar trocas com segurança.</Text></View><View style={styles.actions}><AppButton label="Criar minha conta" onPress={() => go('register')} /><AppButton label="Já tenho uma conta" variant="outline" onPress={() => go('login')} /></View></View></SafeAreaView>;
   }
 
   return (

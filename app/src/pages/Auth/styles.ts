@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
-import { theme } from '../../styles/theme';
-export const styles = StyleSheet.create({
+import type { AppTheme } from '../../styles/theme';
+export const createStyles = (theme: AppTheme) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.background },
   body: { flexGrow: 1, padding: theme.spacing.lg, justifyContent: 'space-between' },
   brand: { color: theme.colors.primary, fontFamily: theme.typography.extraBold, fontSize: 18, letterSpacing: -0.5 },

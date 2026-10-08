@@ -1,12 +1,13 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useMemo, useRef } from 'react';
 import { ActivityIndicator, Animated, Modal, PanResponder, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppButton } from '../../components/AppButton';
-import { theme } from '../../styles/theme';
+import { useAppTheme } from '../../providers/ThemeProvider';
 import type { PremiumStatus } from './premium.types';
 import { shouldDismissPremiumSheet } from './premiumSheetGesture';
-import { styles } from './premiumStyles';
+import { createStyles } from './premiumStyles';
 
 type Props = {
   visible: boolean;
@@ -32,6 +33,8 @@ function formatEndDate(value: string | null | undefined) {
 }
 
 function PlanCard({ label }: { label: string }) {
+  const styles = useThemedStyles(createStyles);
+
   return (
     <View accessible accessibilityLabel={'Plano ' + label + ', em breve'} style={styles.planCard}>
       <Text style={styles.planTitle}>{label}</Text>
@@ -52,6 +55,9 @@ export function PremiumOfferModal({
   onActivate,
   onRetry
 }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   const insets = useSafeAreaInsets();
   const dragY = useRef(new Animated.Value(0)).current;
   const scrollOffsetY = useRef(0);
@@ -95,7 +101,7 @@ export function PremiumOfferModal({
             <View style={styles.sheetHandle} />
           </View>
           <View style={styles.header}>
-            <View style={styles.brandIcon}><MaterialIcons name="auto-awesome" size={25} color={theme.colors.white} /></View>
+            <View style={styles.brandIcon}><MaterialIcons name="auto-awesome" size={25} color={theme.colors.onSecondary} /></View>
             <Pressable accessibilityRole="button" accessibilityLabel="Fechar oferta Premium" style={styles.closeButton} onPress={onClose}>
               <MaterialIcons name="close" size={24} color={theme.colors.mutedForeground} />
             </Pressable>

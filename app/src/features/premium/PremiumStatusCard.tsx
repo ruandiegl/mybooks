@@ -1,10 +1,11 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Text, View } from 'react-native';
 import { AppButton } from '../../components/AppButton';
 import { Card } from '../../components/Card';
-import { theme } from '../../styles/theme';
+import { useAppTheme } from '../../providers/ThemeProvider';
 import type { PremiumStatus } from './premium.types';
-import { styles } from './premiumStyles';
+import { createStyles } from './premiumStyles';
 
 function formatEndDate(value: string | null | undefined) {
   if (!value) return null;
@@ -22,6 +23,9 @@ type Props = {
 };
 
 export function PremiumStatusCard({ status, loading, unavailable = false, verified, onPress }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   const activeUntil = formatEndDate(status?.trialEndsAt);
   const active = status?.trialState === 'ACTIVE';
   const expired = status?.trialState === 'EXPIRED';

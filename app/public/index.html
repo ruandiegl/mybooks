@@ -46,6 +46,21 @@
         }
       }
     </style>
+    <script>
+      (() => {
+        let preference = 'system';
+        try {
+          const value = JSON.parse(localStorage.getItem('trocalivros.appearance.v1'));
+          if (value && value.version === 1 && ['light', 'dark', 'system'].includes(value.theme)) preference = value.theme;
+        } catch {}
+        const dark = preference === 'dark' || (preference === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+        const color = dark ? '#181318' : '#FFF8F7';
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        document.documentElement.style.backgroundColor = color;
+        document.querySelector('meta[name="theme-color"]').content = color;
+        document.addEventListener('DOMContentLoaded', () => { document.body.style.backgroundColor = color; }, { once: true });
+      })();
+    </script>
   </head>
 
   <body>

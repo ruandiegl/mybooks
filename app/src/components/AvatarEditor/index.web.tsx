@@ -1,3 +1,4 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import { useEffect,useRef,useState } from 'react';
 import { useWindowDimensions } from 'react-native';
 import Cropper from 'react-easy-crop';
@@ -6,9 +7,11 @@ import { getAvatarCropRect,reframeAvatarTransform,zoomAvatarAtPoint } from '../.
 import type { AvatarTransform,AvatarCropRect } from '../../features/avatar/avatarTypes';
 import { AvatarEditorControls } from './AvatarEditorControls';
 import type { AvatarEditorProps } from './AvatarEditor.types';
-import { webStyles } from './styles.web';
+import { createWebStyles } from './styles.web';
 
 export function AvatarEditor(props:AvatarEditorProps) {
+  const webStyles = useThemedStyles(createWebStyles);
+
  const {source,busy}=props,{width,height}=useWindowDimensions();
  const diameter=Math.max(128,Math.min(320,width-64,height-300));
  const [view,setView]=useState({diameter,transform:{zoom:1,offsetX:0,offsetY:0} as AvatarTransform});

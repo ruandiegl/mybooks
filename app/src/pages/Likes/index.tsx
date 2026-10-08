@@ -1,3 +1,4 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import { useIsFocused } from '@react-navigation/native';
 import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -15,13 +16,13 @@ import { api, apiErrorMessage } from '../../services/api';
 import type { ApiEnvelope, Match, Paginated } from '../../types/api';
 import { likesApi } from '../../features/likes/likesApi';
 import type { LikeBook, ReceivedLike, SentLike } from '../../types/likes';
-import { theme } from '../../styles/theme';
+import { useAppTheme } from '../../providers/ThemeProvider';
 import { PremiumLikesGate } from '../../features/premium/PremiumLikesGate';
 import { usePremiumOffer } from '../../features/premium/PremiumOfferProvider';
 import { canSeeReceivedLikeIdentities } from '../../features/premium/premiumEntitlements';
 import { usePremiumStatus } from '../../features/premium/usePremiumStatus';
 import { useSession } from '../../providers/SessionProvider';
-import { styles } from './styles';
+import { createStyles } from './styles';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -34,6 +35,9 @@ type TabType = 'received' | 'sent';
 type SortType = 'desc' | 'asc';
 
 export function Likes({ navigation }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   const queryClient = useQueryClient();
   const session = useSession();
   const premiumStatusQuery = usePremiumStatus(session.user?.id, session.isSignedIn);

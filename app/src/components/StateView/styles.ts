@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
-import { theme } from '../../styles/theme';
-export const styles = StyleSheet.create({
+import type { AppTheme } from '../../styles/theme';
+export const createStyles = (theme: AppTheme) => StyleSheet.create({
   box: { flex: 1, minHeight: 240, alignItems: 'center', justifyContent: 'center', padding: theme.spacing.xl, gap: theme.spacing.sm },
   compact: { flex: 0, minHeight: 0, paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.lg },
   compactIcon: { width: 56, height: 56, borderRadius: theme.radius.md },

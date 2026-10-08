@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
-import { theme } from '../../styles/theme';
+import type { AppTheme } from '../../styles/theme';
 
-export const styles = StyleSheet.create({
+export const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: { gap: theme.spacing.sm },
   heading: { gap: theme.spacing.xxs },
   title: { color: theme.colors.foreground, fontFamily: theme.typography.bold, fontSize: 17 },
@@ -14,7 +14,7 @@ export const styles = StyleSheet.create({
   orderBadge: { position: 'absolute', left: 6, top: 6, minWidth: 25, height: 25, paddingHorizontal: 6, borderRadius: theme.radius.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surface },
   coverBadge: { backgroundColor: theme.colors.primary },
   orderText: { color: theme.colors.foreground, fontFamily: theme.typography.bold, fontSize: 11 },
-  coverText: { color: theme.colors.white },
+  coverText: { color: theme.colors.onPrimary },
   remove: { position: 'absolute', right: 4, top: 4, width: 44, height: 44, borderRadius: theme.radius.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surface },
   controls: { flexDirection: 'row', justifyContent: 'center' },
   control: { width: 44, height: 44, borderRadius: theme.radius.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surface },

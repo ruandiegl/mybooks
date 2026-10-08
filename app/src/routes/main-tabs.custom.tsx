@@ -9,7 +9,7 @@ import { Likes } from '../pages/Likes';
 import { Messages } from '../pages/Messages';
 import { Profile } from '../pages/profile';
 import { likesApi } from '../features/likes/likesApi';
-import { theme } from '../styles/theme';
+import { useAppTheme } from '../providers/ThemeProvider';
 import type { MainTabParamList } from '../types/navigation';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -23,6 +23,8 @@ const tabIcons: Record<keyof MainTabParamList, keyof typeof MaterialIcons.glyphM
 };
 
 export function MainTabs() {
+  const { theme } = useAppTheme();
+
   const insets = useSafeAreaInsets();
   const bottomInset = Platform.OS === 'web' ? Math.max(0, insets.bottom) : 0;
   const { data } = useQuery({

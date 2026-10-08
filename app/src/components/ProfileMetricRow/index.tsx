@@ -1,11 +1,14 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import { Fragment } from 'react';
 import { Text, View } from 'react-native';
-import { styles } from './styles';
+import { createStyles } from './styles';
 
 export type ProfileMetric = { value: number; label: string; accessibilityLabel: string };
 type Props = { metrics: ProfileMetric[] };
 
 export function ProfileMetricRow({ metrics }: Props) {
+  const styles = useThemedStyles(createStyles);
+
   return (
     <View style={styles.row}>
       {metrics.map((metric, index) => (
