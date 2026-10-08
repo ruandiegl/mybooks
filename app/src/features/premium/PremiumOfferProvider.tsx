@@ -13,6 +13,7 @@ import { usePremiumStatus } from './usePremiumStatus';
 
 type PremiumOfferContextValue = {
   openOffer: () => void;
+  setPresentationBlocked: (key: string, blocked: boolean) => void;
 };
 
 const PremiumOfferContext = createContext<PremiumOfferContextValue | null>(null);
@@ -28,6 +29,14 @@ export function PremiumOfferProvider({ children }: PropsWithChildren) {
   const queryClient = useQueryClient();
   const statusQuery = usePremiumStatus(user?.id, isSignedIn);
   const [modalVisible, setModalVisible] = useState(false);
+  const [blockers, setBlockers] = useState<Set<string>>(() => new Set());
+  const blocked = blockers.size > 0;
+  const setPresentationBlocked = useCallback((key: string, value: boolean) => {
+    setBlockers(old => {
+      if (old.has(key) === value) return old;
+      const next = new Set(old); if (value) next.add(key); else next.delete(key); return next;
+    });
+  }, []);
   const promptedUserId = useRef<string | null>(null);
   const previousTrialState = useRef<PremiumStatus['trialState'] | undefined>(undefined);
 
@@ -51,10 +60,11 @@ export function PremiumOfferProvider({ children }: PropsWithChildren) {
   });
 
   const openOffer = useCallback(() => {
+    if (blocked) return;
     setModalVisible(true);
     if (user?.id) promptedUserId.current = user.id;
     if (statusQuery.data?.eligible) markPrompted.mutate();
-  }, [markPrompted, statusQuery.data?.eligible, user?.id]);
+  }, [blocked, markPrompted, statusQuery.data?.eligible, user?.id]);
 
   const closeOffer = useCallback(() => {
     setModalVisible(false);
@@ -78,7 +88,7 @@ export function PremiumOfferProvider({ children }: PropsWithChildren) {
     }
     previousTrialState.current = status.trialState;
 
-    if (promptedUserId.current === user.id) return;
+    if (blocked || promptedUserId.current === user.id) return;
     const { nextStep } = deriveOnboardingState(user);
     const presentation = resolvePremiumPrompt(status, nextStep, false);
     if (!presentation) return;
@@ -86,7 +96,7 @@ export function PremiumOfferProvider({ children }: PropsWithChildren) {
     promptedUserId.current = user.id;
     if (presentation === 'MODAL') setModalVisible(true);
     markPrompted.mutate();
-  }, [isSignedIn, markPrompted, queryClient, statusQuery.data, statusQuery.isError, user]);
+  }, [blocked, isSignedIn, markPrompted, queryClient, statusQuery.data, statusQuery.isError, user]);
 
   const statusError = statusQuery.isError
     ? apiErrorMessage(statusQuery.error, 'Não foi possível consultar o Premium agora.')
@@ -96,11 +106,11 @@ export function PremiumOfferProvider({ children }: PropsWithChildren) {
     : undefined;
 
   return (
-    <PremiumOfferContext.Provider value={{ openOffer }}>
+    <PremiumOfferContext.Provider value={{ openOffer, setPresentationBlocked }}>
       <View style={{ flex: 1 }}>
         {children}
         <PremiumOfferModal
-          visible={isSignedIn && modalVisible}
+          visible={isSignedIn && modalVisible && !blocked}
           status={statusQuery.data}
           loadingStatus={statusQuery.isLoading}
           statusError={statusError}

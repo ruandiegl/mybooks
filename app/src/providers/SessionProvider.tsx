@@ -16,6 +16,7 @@ import { mergeAvatarVersion } from '../features/avatar/avatarRefresh';
 import { avatarDescriptorOf } from '../features/avatar/avatarTypes';
 import { useAvatarRefresh } from '../features/avatar/useAvatarRefresh';
 import type { AvatarDescriptor, User } from '../types/api';
+import { accessSessionId, type SessionActor } from '../features/auth/sessionActor';
 
 type SessionContextValue = {
   isLoaded: boolean;
@@ -27,6 +28,9 @@ type SessionContextValue = {
   refreshUser: () => Promise<User | null>;
   refreshAvatar: () => void;
   updateAvatar: (avatar: AvatarDescriptor, userId: string) => void;
+  captureActor: () => SessionActor | null;
+  isActorCurrent: (actor: SessionActor) => boolean;
+  updateUser: (user: User, actor: SessionActor) => void;
   signOut: () => Promise<void>;
 };
 
@@ -40,6 +44,15 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
   const userRef = useRef(user); userRef.current = user;
   const epoch = useRef(0);
   const [isLoaded, setIsLoaded] = useState(false);
+
+  const captureActor = useCallback((): SessionActor | null => {
+    const current = sessionRef.current;
+    const owner = userRef.current;
+    if (!current || !owner) return null;
+    const sessionId = accessSessionId(current.accessToken, owner.id);
+    return sessionId ? { userId: owner.id, epoch: epoch.current, sessionId } : null;
+  }, []);
+  const isActorCurrent = useCallback((actor: SessionActor) => Boolean(sessionRef.current && userRef.current?.id === actor.userId && epoch.current === actor.epoch), []);
 
   const replaceSession = useCallback((next: SessionSnapshot | null) => {
     sessionRef.current = next;
@@ -96,6 +109,13 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
     void queryClient.cancelQueries({ queryKey: ['me'] });
     queryClient.setQueryData<User>(['me'], old => mergeAvatarVersion(old, { ...(old?.id === next.id ? old : next), ...avatarDescriptorOf(next) }));
   }, [queryClient, replaceSession]);
+  const updateUser = useCallback((incoming: User, actor: SessionActor) => {
+    if (!isActorCurrent(actor) || incoming.id !== actor.userId) return;
+    const next = mergeAvatarVersion(userRef.current, incoming);
+    userRef.current = next; setUser(next);
+    if (sessionRef.current) replaceSession({ ...sessionRef.current, user: next });
+    queryClient.setQueryData(['me'], next);
+  }, [isActorCurrent, queryClient, replaceSession]);
   const refreshAvatar = useAvatarRefresh(user, refreshUser, isLoaded && Boolean(session));
 
   const signOut = useCallback(async () => {
@@ -152,8 +172,9 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
     refreshUser,
     refreshAvatar,
     updateAvatar,
+    captureActor, isActorCurrent, updateUser,
     signOut
-  }), [establishSession, getToken, isLoaded, refreshSession, refreshUser, refreshAvatar, updateAvatar, session, signOut, user]);
+  }), [establishSession, getToken, isLoaded, refreshSession, refreshUser, refreshAvatar, updateAvatar, captureActor, isActorCurrent, updateUser, session, signOut, user]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
