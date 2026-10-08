@@ -1,5 +1,9 @@
 # 4. Backend e API
 
+## Configurações — plano010 (local)
+
+O módulo settings expõe preferências autenticadas/private no-store. Auth possui troca de senha e alias browser de logout global. Alterações de credencial/emissão/rotação/revogação usam lock User→sessão/código e rechecagem; publicar eventos apenas depois do commit. Não adicionar identidade de usuário vinda do body ou tratar headers de correlação como autorização.
+
 A API usa JavaScript ESM, Express 5, Zod e Prisma. O ponto de composição HTTP é `API/src/app.js`; `API/src/index.js` cria o servidor e registra Socket.IO.
 
 ## Pipeline HTTP

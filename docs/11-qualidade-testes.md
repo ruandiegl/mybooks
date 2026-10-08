@@ -1,5 +1,9 @@
 # 11. Qualidade e testes
 
+## Plano010
+
+Cobrir providers/componentes reais, I/O simulado somente nas fronteiras; ownership/epoch, hydrate/write atrasados, cookie Web Lock não recursivo e pendências do modal. `SETTINGS_TEST_DATABASE_URL` exige loopback/banco `plan010_test`; integrações verificam concorrência, rollback, família, FK e HTTP/cookies. Sockets usam cliente real. Export/browsertests não são aceite físico; [execução](../plans/plan-010-menu-perfil-configuracoes-execucao.md) separa evidências e limitações.
+
 Antes de uma entrega, executar os checks abaixo na versão integrada e registrar os resultados. Esta conciliação documental não executou esses comandos:
 
 ```bash

@@ -1,5 +1,9 @@
 # 9. Design system e componentes
 
+## Configurações e temas — plano010 (local)
+
+Perfil clean mantém uma identidade e usa hambúrguer48; edição/saída migram ao modal de configurações. Lista com divisores, ícones24, labels16 e linhas56; nenhuma nova dupla de cards ou drawer. Novo tema escuro adapta magenta/violeta, usando onPrimary/onSecondary/onDanger/onSuccess em fills claros. Viewer mantém fundo escuro absoluto e fotos não são invertidas. Usar createStyles(AppTheme)/useThemedStyles e useAppTheme, não constantes de cor congeladas. Safe area pertence a um componente por borda; redução de movimento evita slide.
+
 A direção “biblioteca social de bolso” usa papel quente como fundo, capas em destaque, magenta para ações e violeta para conexão. O selo verde de ISBN verificado é a assinatura funcional da experiência.
 
 ## Tokens

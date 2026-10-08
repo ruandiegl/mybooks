@@ -1,5 +1,9 @@
 # Documentação do TrocaLivros
 
+## Menu e configurações — plano010
+
+Implementação local na branch `codex/profile-settings`, ainda sem liberação: menu no perfil, temas reativos, preferências, conta/senha e logout seguro. Estado e aceites em [execução do plano010](../plans/plan-010-menu-perfil-configuracoes-execucao.md). Não interpretar evidências locais como deploy ou aceite físico.
+
 Este diretório é a fonte de verdade das guidelines, decisões técnicas e contratos do TrocaLivros. O projeto é um aplicativo mobile e PWA de troca de livros, retomado como MVP de TCC. Identificadores técnicos legados que usam `mybooks` permanecem inalterados para evitar impacto em banco, pacotes e integrações.
 
 ## Estado do MVP

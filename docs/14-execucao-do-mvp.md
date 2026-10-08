@@ -1,5 +1,9 @@
 # 14. Execução do MVP
 
+## Plano010 — ordem de liberação
+
+Validar schema/integrações em banco descartável primeiro. Após autorização, aplicar `20261008140000_user_preferences` e publicar API com rotas/capacidades antes do cliente. Só então validar login/cookies/PWA e novo binário em dispositivos. Não reutilizar URLs de testes, não abrir túnel/SSH/backup por iniciativa do plano. Branch/execution e comandos verificados ficam no [registro](../plans/plan-010-menu-perfil-configuracoes-execucao.md).
+
 ## Entregue nesta retomada
 
 - arquitetura modular da API e remoção do backend JWT/Multer legado;

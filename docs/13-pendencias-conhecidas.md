@@ -1,5 +1,9 @@
 # 13. Pendências conhecidas
 
+## Plano010
+
+Código de menu/tema/conta está na branch local, não em produção. Publicação depende de aprovação, migração UserPreferences no alvo confirmado e API antes do cliente. Aceites físicos/VoiceOver/TalkBack/chrome/splash permanecem necessários; ExpoSystemUI/config pode exigir novo development build. Push, exclusão, e-mail/CPF/MFA e links legais/suporte ainda não possuem fluxo aprovado. Revogação distribuída e alertas preexistentes de dependências requerem trabalho específico; não usar upgrades forçados.
+
 ## Produção
 
 - validar finalidade, base legal, retenção, exportação e exclusão de CPF/celular com o responsável jurídico/LGPD;
