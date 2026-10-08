@@ -2,6 +2,14 @@
 
 Os resultados abaixo pertencem às execuções e branches indicadas em cada registro; não comprovam testes, deploy ou aceite da integração em curso.
 
+## 08/10/2026 — Publicação da animação da foto na main/PWA
+
+- Após autorização explícita, push da main confirmou `417d363` em origin/main, incluindo `ebb5172` (animação/feedback háptico/layout adaptativo). Seed SQL e rascunho local do plano008 permaneceram fora do envio.
+- Verificação pré-push: 46 arquivos/221 testes, TypeScript e smoke PWA aprovados. O runtime é o mesmo dos exports Web/Android e da revisão independente registrados na implementação. Nenhuma mudança de API, variáveis, infraestrutura, migrações novas ou conteúdo R2; nenhum APK/IPA ou atualização EAS enviado.
+- Deploys automáticos Railway da PWA `7d4739b4-8701-48c1-9376-4cba1b9ee10e` e API `92e64f1f-4aab-4cd5-9b39-0bf6d265fc4b` concluíram em SUCCESS para `417d363`.
+- HTTPS público: `/auth` com Accept text/html e bundle HTTP200; `index-b0ca361a614503a01dfdeb84098de42e.js` coincide com o build Railway e contém tempos250/180, escala0.82, pulso12ms, opções adaptativas e proteção de callout Safari. Viewport-fit=cover preservado, `/health`200, `/api/v1/auth/me` anônimo401 e `/sw.js`200 com cache `trocalivros-static-72e6c5e9486c`.
+- As consultas anônimas não validam login, upload ou háptico físico. Atualizar e fechar/reabrir a PWA instalada; reiniciar Metro no checkout main com `npx expo start --clear` em app/ para Expo Go. Safari/PWA do iPhone permanece sem Vibration API; captura, haptics nativo e acessibilidade física ainda exigem aceite em aparelho real.
+
 ## 08/10/2026 — Integração local da animação na main
 
 - Após escolha do usuário, a main local avançou de `5b32ff4` para `ebb5172` por fast-forward, sem conflitos. Origin/main permaneceu em `5b32ff4`; push, PR e deploy não foram executados neste registro. Os dois arquivos locais não rastreados do usuário (seed SQL e rascunho do plano008) foram preservados e não incluídos.
