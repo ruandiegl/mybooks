@@ -2,6 +2,12 @@
 
 Os resultados abaixo pertencem às execuções e branches indicadas em cada registro; não comprovam testes, deploy ou aceite da integração em curso.
 
+## 08/10/2026 — Integração local da animação na main
+
+- Após escolha do usuário, a main local avançou de `5b32ff4` para `ebb5172` por fast-forward, sem conflitos. Origin/main permaneceu em `5b32ff4`; push, PR e deploy não foram executados neste registro. Os dois arquivos locais não rastreados do usuário (seed SQL e rascunho do plano008) foram preservados e não incluídos.
+- Na main integrada: 46 arquivos/221 testes, TypeScript, export Web e smoke PWA aprovados. O código de runtime é o mesmo já revisado e validado no export Android da implementação; haptics, Safari/PWA e acessibilidade física ainda dependem de aceite em aparelho.
+- Nenhuma mudança de API, variáveis, infraestrutura ou conteúdo R2; nenhum APK/IPA ou atualização EAS gerado. A nova foto animada ainda não está no PWA público neste registro. Para testar o checkout no Expo Go, reiniciar o Metro em app/ com `npx expo start --clear`.
+
 ## 08/10/2026 — Animação da foto ampliada e feedback de pressão longa (local)
 
 - Desenho aprovado em chat e implementação em `codex/avatar-photo-motion`, no checkout atual conforme escolha do usuário. Expansão/fade de 250 ms e saída inversa de 180 ms; opções atuais, safe area, paleta e fluxo privado R2 preservados. Driver nativo anima somente transform/opacity.
