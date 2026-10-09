@@ -11,7 +11,7 @@ export function RemoteMediaImage(props: RemoteMediaImageProps) {
   const callbacks = useRef(props); callbacks.current = props;
   return <View style={[props.style, { overflow: 'hidden' }]} pointerEvents="none">
     {display.activeUrl ? <Image key={activeAttempt.current ?? display.attempt} source={{ uri: display.activeUrl }} cachePolicy="memory" contentFit={props.fit} accessibilityLabel={props.accessibilityLabel} style={StyleSheet.absoluteFill} transition={props.transitionMs} /> : null}
-    {display.pendingUrl && display.identity ? <Image key={display.attempt} source={{ uri: display.pendingUrl }} cachePolicy="memory" contentFit={props.fit} style={[StyleSheet.absoluteFill, { opacity: 0 }]} transition={props.transitionMs} onDisplay={() => {
+    {display.pendingUrl && display.identity ? <Image key={display.attempt} source={{ uri: display.pendingUrl }} cachePolicy="memory" contentFit={props.fit} style={[StyleSheet.absoluteFill, { opacity: 0 }]} transition={display.activeUrl ? 0 : props.transitionMs} onDisplay={() => {
       if (!accepts(display.identity!, display.attempt)) return;
       if (settled.current === display.identity + ':' + display.attempt) return;
       settled.current = display.identity + ':' + display.attempt;

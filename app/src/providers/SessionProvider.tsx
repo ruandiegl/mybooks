@@ -14,6 +14,7 @@ import { sessionTransport, type SessionResponse, type SessionSnapshot } from '..
 import { configureApiSession } from '../services/api';
 import { mergeAvatarVersion } from '../features/avatar/avatarRefresh';
 import { avatarDescriptorOf } from '../features/avatar/avatarTypes';
+import { disposeMediaScope } from '../features/media/mediaPrefetch';
 import { useAvatarRefresh } from '../features/avatar/useAvatarRefresh';
 import type { AvatarDescriptor, User } from '../types/api';
 
@@ -50,14 +51,19 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
   }, []);
 
   const establishSession = useCallback(async (response: SessionResponse) => {
+    const previous = userRef.current ? { userId: userRef.current.id, epoch: epoch.current } : null;
     epoch.current++;
     const next = await sessionTransport.accept(response);
+    if (previous) await disposeMediaScope(previous);
     replaceSession(next);
     setUser(next.user ?? response.user);
-  }, [replaceSession]);
+    queryClient.clear();
+  }, [replaceSession, queryClient]);
 
   const clearSession = useCallback(async () => {
+    const previous = userRef.current ? { userId: userRef.current.id, epoch: epoch.current } : null;
     epoch.current++;
+    if (previous) await disposeMediaScope(previous);
     await sessionTransport.clear();
     replaceSession(null);
     setUser(null);

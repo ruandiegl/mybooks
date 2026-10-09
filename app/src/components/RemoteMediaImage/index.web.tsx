@@ -6,9 +6,18 @@ import type { RemoteMediaImageProps } from './RemoteMediaImage.types';
 export function RemoteMediaImage(props: RemoteMediaImageProps) {
   const { display, dispatch, accepts } = useMediaDisplay(props.media, props.scope, props.getScope, props.retryToken, props.onError);
   const host = useRef<HTMLDivElement>(null);
+  const reveal = useRef<Animation | null>(null);
   const callbacks = useRef(props); callbacks.current = props;
   const identity = props.media?.identity ?? null;
-  useLayoutEffect(() => { host.current?.replaceChildren(); }, [identity, props.scope.userId, props.scope.epoch]);
+  useLayoutEffect(() => {
+    host.current?.replaceChildren();
+    return () => { reveal.current?.cancel(); reveal.current = null; };
+  }, [identity, props.scope.userId, props.scope.epoch]);
+  useLayoutEffect(() => {
+    const image = host.current?.querySelector('img');
+    if (image) { image.alt = props.accessibilityLabel ?? ''; image.style.objectFit = props.fit; }
+    if (props.transitionMs === 0) { reveal.current?.cancel(); reveal.current = null; }
+  }, [props.accessibilityLabel, props.fit, props.transitionMs]);
   useLayoutEffect(() => {
     if (!display.pendingUrl || !display.identity) return;
     const image = new Image();
@@ -17,11 +26,13 @@ export function RemoteMediaImage(props: RemoteMediaImageProps) {
     const finish = () => {
       if (cancelled || settled || !accepts(identity, attempt) || !host.current) return;
       settled = true;
+      const duration = display.activeUrl ? 0 : callbacks.current.transitionMs;
       image.alt = callbacks.current.accessibilityLabel ?? '';
       image.draggable = false;
-      Object.assign(image.style, { width: '100%', height: '100%', display: 'block', objectFit: callbacks.current.fit, borderRadius: 'inherit', userSelect: 'none', animationDuration: callbacks.current.transitionMs + 'ms' });
+      Object.assign(image.style, { width: '100%', height: '100%', display: 'block', objectFit: callbacks.current.fit, borderRadius: 'inherit', userSelect: 'none', animationDuration: duration + 'ms' });
       // Keep the exact decoded node. Two consumers each own their own node.
-      image.animate?.([{ opacity: 0 }, { opacity: 1 }], { duration: callbacks.current.transitionMs, easing: 'ease-out' });
+      reveal.current?.cancel();
+      reveal.current = duration ? image.animate?.([{ opacity: 0 }, { opacity: 1 }], { duration, easing: 'ease-out' }) ?? null : null;
       host.current.replaceChildren(image);
       dispatch({ type: 'loaded', identity, attempt });
       callbacks.current.onReady?.();

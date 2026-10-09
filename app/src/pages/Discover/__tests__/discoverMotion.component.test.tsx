@@ -59,6 +59,17 @@ beforeEach(() => {
 afterEach(() => { cleanup(); clients.splice(0).forEach(client => client.clear()); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe('animação dos cards Descobrir', () => {
+  it('resets the outgoing snapshot when the same viewer establishes a new epoch', async () => {
+    const { client, mounted } = await host();
+    fireEvent.click(screen.getByRole('button', { name: 'Passar livro' }));
+    await frames(100); expect(x()).toBeLessThan(0);
+    device.epoch++;
+    mounted.rerender(tree(client));
+    await act(async () => {});
+    expect(x()).toBe(0);
+    expect(screen.queryByTestId('discover-pass-feedback')).toBeNull();
+    reject(new Error('old request')); await act(async () => {});
+  });
   it('keeps the same decoded cover through twenty refetches without interfering with the card', async () => {
     vi.stubGlobal('Image', function () { const image = document.createElement('img'); image.decode = async () => {}; return image; });
     const photo = { id: 'photo1', sortOrder: 0, isCover: true, url: 'https://fixture.invalid/cover?sig=1', expiresAt: null };

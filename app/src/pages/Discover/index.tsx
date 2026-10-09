@@ -1,4 +1,5 @@
 import { useMediaBinding } from '../../features/media/useMediaBinding';
+import { useDiscoverMediaPrefetch } from '../../features/media/useDiscoverMediaPrefetch';
 import { useIsFocused } from '@react-navigation/native';
 import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -56,12 +57,14 @@ export function Discover() {
   const books = query.data?.pages.flatMap((page) => page.items) || [];
   const book = outgoingBook || books[0];
   const photos = book ? getBookGalleryPhotos(book) : [];
+  const prefetchBooks = outgoingBook && books[0]?.id !== outgoingBook.id ? [outgoingBook, ...books.filter(item => item.id !== outgoingBook.id)] : books;
+  useDiscoverMediaPrefetch({ books: prefetchBooks, focused, scope: mediaBinding.scope, getScope: mediaBinding.getScope });
 
   useEffect(() => {
     alive.current = true;
     return () => { alive.current = false; run.current = null; };
   }, []);
-  useLayoutEffect(() => { run.current = null; entrancePending.current = false; setOutgoingBook(null); motion.reset(); }, [user?.id, motion.reset]);
+  useLayoutEffect(() => { run.current = null; entrancePending.current = false; setOutgoingBook(null); motion.reset(); }, [user?.id, mediaBinding.scope?.epoch, motion.reset]);
   useLayoutEffect(() => {
     if (!outgoingBook && book && entrancePending.current) { entrancePending.current = false; motion.enter(); }
   }, [book?.id, outgoingBook, motion.enter]);

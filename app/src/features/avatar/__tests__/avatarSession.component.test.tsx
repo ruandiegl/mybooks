@@ -13,6 +13,16 @@ import { toMediaScope } from '../../media/mediaIdentity';
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
 const response=(id:string)=>({accessToken:id,expiresAt:'2026-10-06T18:00:00Z',user:{id,name:id,interests:[],isActive:true,avatarUrl:null,avatarVersion:0}});
 describe('avatar receipt belongs to the current snapshot, not an older React render',()=>{
+ it('does not rebind the previous account book cache into a newly established session',async()=>{
+  const client=new QueryClient();
+  const wrapper=({children}:React.PropsWithChildren)=><QueryClientProvider client={client}><SessionProvider>{children}</SessionProvider></QueryClientProvider>;
+  const hook=renderHook(()=>useSession(),{wrapper});
+  await act(async()=>{await hook.result.current.establishSession(response('first'));});
+  client.setQueryData(['books','mine'],{privatePhoto:'owned-by-first'});
+  await act(async()=>{await hook.result.current.establishSession(response('second'));});
+  expect(client.getQueryData(['books','mine'])).toBeUndefined();
+  client.clear();
+ });
  it('rejects a late decoded photo using the real SessionProvider epoch getter',async()=>{
   const client=new QueryClient();
   const wrapper=({children}:React.PropsWithChildren)=><QueryClientProvider client={client}><SessionProvider>{children}</SessionProvider></QueryClientProvider>;

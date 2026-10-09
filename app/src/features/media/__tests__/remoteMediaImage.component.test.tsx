@@ -24,6 +24,30 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe('Web media frame continuity', () => {
+  it('cancels only its own reveal when reduced motion becomes enabled', async () => {
+    const mounted = render(<RemoteMediaImage {...props} />);
+    let cancelled = 0;
+    requests[0].image.animate = () => ({ cancel: () => { cancelled++; } }) as Animation;
+    await act(async () => requests[0].resolve());
+    mounted.rerender(<RemoteMediaImage {...props} transitionMs={0} />);
+    expect(cancelled).toBe(1);
+  });
+  it('updates an active frame text alternative and fit without reloading pixels', async () => {
+    const mounted = render(<RemoteMediaImage {...props} />);
+    await act(async () => requests[0].resolve());
+    const frame = mounted.container.querySelector('img')!;
+    mounted.rerender(<RemoteMediaImage {...props} accessibilityLabel="Foto 2, não é a capa" fit="cover" />);
+    expect(mounted.container.querySelector('img')).toBe(frame);
+    expect(frame.alt).toBe('Foto 2, não é a capa');
+    expect(frame.style.objectFit).toBe('cover');
+  });
+  it('does not repeat a fade when an already-ready frame is explicitly retried', async () => {
+    const mounted = render(<RemoteMediaImage {...props} />);
+    await act(async () => requests[0].resolve());
+    mounted.rerender(<RemoteMediaImage {...props} retryToken={1} />);
+    await act(async () => requests[1].resolve());
+    expect(mounted.container.querySelector('img')?.style.animationDuration).toBe('0ms');
+  });
   it('does not replace a ready frame on load while decode is still pending', async () => {
     const mounted = render(<RemoteMediaImage {...props} />);
     await act(async () => requests[0].resolve());
