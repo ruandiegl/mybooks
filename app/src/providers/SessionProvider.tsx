@@ -53,7 +53,9 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
   const establishSession = useCallback(async (response: SessionResponse) => {
     const previous = userRef.current ? { userId: userRef.current.id, epoch: epoch.current } : null;
     epoch.current++;
+    const ticket = epoch.current;
     const next = await sessionTransport.accept(response);
+    if (ticket !== epoch.current || !scopeActive.current) return;
     if (previous) await disposeMediaScope(previous);
     replaceSession(next);
     setUser(next.user ?? response.user);
@@ -71,7 +73,12 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
   }, [queryClient, replaceSession]);
 
   const refreshSession = useCallback(async () => {
-    const next = await sessionTransport.refresh(sessionRef.current);
+    const ticket = epoch.current;
+    const current = () => scopeActive.current && ticket === epoch.current;
+    let next: SessionSnapshot | null;
+    try { next = await sessionTransport.refresh(sessionRef.current); }
+    catch (error) { if (!current()) return false; throw error; }
+    if (!current()) return false;
     if (!next) {
       await clearSession();
       return false;
@@ -88,7 +95,9 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
   const refreshUser = useCallback(async () => {
     if (!sessionRef.current) return null;
     const ticket = epoch.current;
-    const fetched = await queryClient.fetchQuery({ queryKey: ['me'], queryFn: authApi.me, staleTime: 0 });
+    let fetched: User;
+    try { fetched = await queryClient.fetchQuery({ queryKey: ['me'], queryFn: authApi.me, staleTime: 0 }); }
+    catch (error) { if (ticket !== epoch.current || !scopeActive.current) return null; throw error; }
     if (ticket !== epoch.current || !sessionRef.current) return null;
     const currentUser = mergeAvatarVersion(userRef.current, fetched);
     setUser(currentUser);
@@ -123,9 +132,11 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
     scopeActive.current = true;
 
     const hydrate = async () => {
+      const ticket = epoch.current;
+      const current = () => active && ticket === epoch.current;
       try {
         const restored = await sessionTransport.restore();
-        if (!restored || !active) return;
+        if (!restored || !current()) return;
         replaceSession(restored);
         if (restored.user) setUser(restored.user);
 
@@ -138,12 +149,12 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
         }
         if (!restored.user) {
           const currentUser = await authApi.me();
-          if (!active) return;
+          if (!current()) return;
           setUser(currentUser);
           replaceSession({ ...sessionRef.current!, user: currentUser });
         }
       } catch {
-        if (active) await clearSession();
+        if (current()) await clearSession();
       } finally {
         if (active) setIsLoaded(true);
       }

@@ -33,6 +33,8 @@ type InteractionRun = { id: number; ownerId: string | undefined; book: Book; exi
 
 export function Discover() {
   const mediaBinding = useMediaBinding();
+  const [imageRetryToken, setImageRetryToken] = useState(0);
+  const retryImages = () => { setImageRetryToken(value => value + 1); void query.refetch(); };
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const queryClient = useQueryClient();
   const { width, height } = useWindowDimensions();
@@ -136,7 +138,7 @@ export function Discover() {
     <AppScreen>
       <TopBar eyebrow="Trocas possíveis" title="Descobrir" />
       <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
-        {query.isLoading && !outgoingBook ? <StateView loading title="Buscando novas histórias" /> : query.isError && !outgoingBook ? <StateView title="A descoberta falhou" icon="cloud-off" actionLabel="Tentar novamente" onAction={() => query.refetch()} /> : !book ? <StateView title="Você chegou ao fim por agora" description="Novos livros aparecem aqui quando outros leitores publicam." icon="done-all" actionLabel="Atualizar" onAction={() => query.refetch()} /> : <>
+        {query.isLoading && !outgoingBook ? <StateView loading title="Buscando novas histórias" /> : query.isError && !outgoingBook ? <StateView title="A descoberta falhou" icon="cloud-off" actionLabel="Tentar novamente" onAction={retryImages} /> : !book ? <StateView title="Você chegou ao fim por agora" description="Novos livros aparecem aqui quando outros leitores publicam." icon="done-all" actionLabel="Atualizar" onAction={retryImages} /> : <>
           <View style={styles.deck}>
             {outgoingBook && motion.exited ? <View style={styles.saving}><ActivityIndicator color={theme.colors.primary} /><Text style={styles.savingText} accessibilityLiveRegion="polite">Salvando sua escolha…</Text></View> : null}
             <Animated.View style={[styles.gesture, landscape && styles.gestureLandscape, cardStyle]} {...panResponder.panHandlers}>
@@ -151,7 +153,7 @@ export function Discover() {
               >
                 <Card style={styles.card}>
                   <View style={styles.ownerRow}>
-                    <Avatar subjectId={book.owner?.id ?? null} binding={mediaBinding} name={book.owner?.name || 'Leitor TrocaLivros'} url={book.owner?.avatarUrl} version={book.owner?.avatarVersion} onImageError={refreshAvatar} size={44} />
+                    <Avatar retryToken={imageRetryToken} subjectId={book.owner?.id ?? null} binding={mediaBinding} name={book.owner?.name || 'Leitor TrocaLivros'} url={book.owner?.avatarUrl} version={book.owner?.avatarVersion} onImageError={refreshAvatar} size={44} />
                     <View style={styles.ownerInfo}>
                       <Text style={styles.ownerName} numberOfLines={1}>{book.owner?.name || 'Leitor TrocaLivros'}</Text>
                       <Text style={styles.ownerCity} numberOfLines={1}>{book.owner?.city || 'Livro em circulação'}</Text>
@@ -160,7 +162,7 @@ export function Discover() {
                   </View>
                   <View style={[styles.cardContent, landscape && styles.cardLandscape]}>
                     <View style={[styles.cover, landscape && styles.coverLandscape]}>
-                      <BookPhoto media={mediaBinding.scope && photos[0] ? createBookMedia(mediaBinding.scope, book.id, photos[0]) : null} binding={mediaBinding} onImageError={refreshAvatar} hasPhoto={Boolean(photos[0])} title={book.title} label={`Capa de ${book.title}`} />
+                      <BookPhoto retryToken={imageRetryToken} media={mediaBinding.scope && photos[0] ? createBookMedia(mediaBinding.scope, book.id, photos[0]) : null} binding={mediaBinding} onImageError={refreshAvatar} hasPhoto={Boolean(photos[0])} title={book.title} label={`Capa de ${book.title}`} />
                       {book.hasIsbnBadge ? <View style={styles.badge}><IsbnBadge /></View> : null}
                       {photos.length > 1 ? <View style={styles.photoCount}><MaterialIcons name="photo-library" size={16} color={theme.colors.foreground} accessible={false} /><Text style={styles.photoCountText}>{photos.length} fotos</Text></View> : null}
                     </View>

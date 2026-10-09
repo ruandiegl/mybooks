@@ -57,7 +57,7 @@ export function AvatarPhotoModal(props: AvatarPhotoModalProps) {
         </View>
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
           <Pressable style={styles.portrait} accessible={false} focusable={false} tabIndex={-1} disabled={disabled} onPress={close}>
-            <AnimatedPhoto accessible accessibilityRole="image" accessibilityLabel={'Foto de perfil de ' + props.name} focusable={false} tabIndex={-1} onPress={event => event.stopPropagation()} style={[styles.photo, { opacity: motion.opacity, transform: [{ scale: motion.scale }] }]}><Avatar decorative subjectId={props.subjectId} binding={props.binding} name={props.name} url={props.avatar.avatarUrl} version={props.avatar.avatarVersion} size={size} onImageError={props.onImageError} suppressBrowserActions /></AnimatedPhoto>
+            <AnimatedPhoto accessible accessibilityRole="image" accessibilityLabel={'Foto de perfil de ' + props.name} focusable={false} tabIndex={-1} onPress={event => event.stopPropagation()} style={[styles.photo, { opacity: motion.opacity, transform: [{ scale: motion.scale }] }]}><Avatar retryToken={props.retryToken} decorative subjectId={props.subjectId} binding={props.binding} name={props.name} url={props.avatar.avatarUrl} version={props.avatar.avatarVersion} size={size} onImageError={props.onImageError} suppressBrowserActions /></AnimatedPhoto>
             <Animated.View style={{ opacity: motion.opacity }}><Text style={styles.name}>{props.name}</Text></Animated.View>
           </Pressable>
           {props.error ? <Text accessibilityLiveRegion="polite" style={styles.notice}>{props.error}</Text> : null}

@@ -6,11 +6,11 @@ import type { AvatarDescriptor } from '../../types/api';
 import { theme } from '../../styles/theme';
 import { styles } from './styles';
 import type { MediaBinding } from '../../features/media/mediaTypes';
-type Props={subjectId:string|null;binding?:MediaBinding;avatar?:AvatarDescriptor;name:string;busy:boolean;error?:string;onChoose:()=>void;onTakePhoto?:()=>void;onRemove:()=>void;onOpenSettings?:()=>void};
-export function AvatarPicker({subjectId,binding,avatar,name,busy,error,onChoose,onTakePhoto,onRemove,onOpenSettings}:Props){
+type Props={subjectId:string|null;retryToken?:number;binding?:MediaBinding;avatar?:AvatarDescriptor;name:string;busy:boolean;error?:string;onChoose:()=>void;onTakePhoto?:()=>void;onRemove:()=>void;onOpenSettings?:()=>void};
+export function AvatarPicker({subjectId,binding,retryToken,avatar,name,busy,error,onChoose,onTakePhoto,onRemove,onOpenSettings}:Props){
  return <View style={styles.wrapper}>
   <Pressable accessibilityRole="button" accessibilityLabel="Escolher ou alterar foto de perfil" accessibilityState={{disabled:busy,busy}} disabled={busy} onPress={onChoose} style={({pressed})=>[styles.avatar,pressed&&styles.pressed]}>
-   <Avatar subjectId={subjectId} binding={binding} name={name} url={avatar?.avatarUrl} version={avatar?.avatarVersion} size={104} suppressBrowserActions/>
+   <Avatar retryToken={retryToken} subjectId={subjectId} binding={binding} name={name} url={avatar?.avatarUrl} version={avatar?.avatarVersion} size={104} suppressBrowserActions/>
    <View style={styles.edit}><MaterialIcons name="photo-camera" size={16} color={theme.colors.white} accessible={false}/></View>
   </Pressable>
   <Text style={styles.help}>{busy?'Aguarde a foto terminar de salvar…':'Toque para escolher uma foto e ajustar o círculo.'}</Text>

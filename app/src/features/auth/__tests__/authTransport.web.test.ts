@@ -45,6 +45,17 @@ async function loadFreshTransport() {
 }
 
 describe('browser session transport', () => {
+  it.each(['user-2', 'user-1'])('does not remember an old refresh after a newer login for %s', async id => {
+    let started!: () => void, finish!: (value: unknown) => void;
+    const gate = new Promise<void>(resolve => { started = resolve; });
+    vi.mocked(authApi.refresh).mockImplementation(() => { started(); return new Promise(resolve => { finish = value => resolve(value as Awaited<ReturnType<typeof authApi.refresh>>); }); });
+    const { sessionTransport: transport } = await loadFreshTransport();
+    const previous = await transport.accept(session);
+    const pending = transport.refresh(previous); await gate;
+    await transport.accept({ ...session, accessToken: 'new-login', user: { ...session.user, id } });
+    finish({ ...session, accessToken: 'old-refresh' }); await pending;
+    expect(await transport.getToken(null)).toBe('new-login');
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal('window', { sessionStorage: makeSessionStorage(), localStorage: makeSessionStorage() });

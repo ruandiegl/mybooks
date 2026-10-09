@@ -16,6 +16,7 @@ type LikeCardProps = {
   coverImageId?: string | null;
   bookCoverUrlExpiresAt?: string | null;
   binding?: MediaBinding;
+  retryToken?: number;
   userName: string;
   userAvatar?: string | null;
   avatarVersion?: number;
@@ -35,7 +36,7 @@ type LikeCardProps = {
 };
 
 export function LikeCard({
-  binding, userId, bookId, coverImageId, bookCoverUrlExpiresAt, userName, userAvatar, avatarVersion, onAvatarError, userCity, bookTitle, bookCoverUrl, variant,
+  binding, retryToken, userId, bookId, coverImageId, bookCoverUrlExpiresAt, userName, userAvatar, avatarVersion, onAvatarError, userCity, bookTitle, bookCoverUrl, variant,
   onLikeBack, onDismiss, onUnlike, onPress, relatedBookTitle, onOpenRelatedBook, disabled
 }: LikeCardProps) {
   const { width } = useWindowDimensions();
@@ -56,14 +57,14 @@ export function LikeCard({
         style={({ pressed }) => [pressed && styles.pressed]}
       >
         <View style={styles.topRow}>
-          <Avatar subjectId={userId} binding={binding} name={userName} url={userAvatar} version={avatarVersion} onImageError={onAvatarError} size={28} />
+          <Avatar retryToken={retryToken} subjectId={userId} binding={binding} name={userName} url={userAvatar} version={avatarVersion} onImageError={onAvatarError} size={28} />
           <View style={styles.userSection}>
             <Text style={styles.userName} numberOfLines={1}>{userName}</Text>
             <Text style={styles.userCaption} numberOfLines={1}>{variant === 'received' ? 'Curtiu seu livro' : userCity || 'Dono do livro'}</Text>
           </View>
         </View>
         <View style={[styles.cover, { height: coverHeight }]}>
-          <BookPhoto media={binding?.scope ? createBookMedia(binding.scope, bookId, { id: coverImageId, url: bookCoverUrl ?? null, expiresAt: bookCoverUrlExpiresAt }) : null} binding={binding} title={bookTitle} label={'Capa de ' + bookTitle} compact />
+          <BookPhoto onImageError={onAvatarError} retryToken={retryToken} media={binding?.scope ? createBookMedia(binding.scope, bookId, { id: coverImageId, url: bookCoverUrl ?? null, expiresAt: bookCoverUrlExpiresAt }) : null} binding={binding} title={bookTitle} label={'Capa de ' + bookTitle} compact />
         </View>
         <View style={styles.infoContainer}>
           <Text style={styles.bookTitle} numberOfLines={2}>{bookTitle}</Text>

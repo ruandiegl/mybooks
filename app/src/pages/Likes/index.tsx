@@ -36,6 +36,7 @@ type SortType = 'desc' | 'asc';
 
 export function Likes({ navigation }: Props) {
   const mediaBinding = useMediaBinding();
+  const [imageRetryToken, setImageRetryToken] = useState(0);
   const queryClient = useQueryClient();
   const session = useSession();
   const premiumStatusQuery = usePremiumStatus(session.user?.id, session.isSignedIn);
@@ -186,6 +187,7 @@ export function Likes({ navigation }: Props) {
   const isRefreshing = false; // We can use react-query's isRefetching but simple pull-to-refresh works
 
   const onRefresh = useCallback(() => {
+    setImageRetryToken(value => value + 1);
     if (activeTab === 'received') {
       void premiumStatusQuery.refetch();
       if (canShowReceivedIdentities) void refetchReceived();
@@ -200,7 +202,7 @@ export function Likes({ navigation }: Props) {
     return (
       <LikeCard
         variant="received"
-        binding={mediaBinding} userId={item.actor.id} bookId={item.book.id} coverImageId={item.book.coverImageId} bookCoverUrlExpiresAt={item.book.coverUrlExpiresAt}
+        retryToken={imageRetryToken} binding={mediaBinding} userId={item.actor.id} bookId={item.book.id} coverImageId={item.book.coverImageId} bookCoverUrlExpiresAt={item.book.coverUrlExpiresAt}
         userName={item.actor.name}
         userAvatar={item.actor.avatarUrl} avatarVersion={item.actor.avatarVersion} onAvatarError={refreshReceivedAvatars}
         userCity={item.actor.city}
@@ -224,7 +226,7 @@ export function Likes({ navigation }: Props) {
   const renderSentItem = ({ item }: { item: SentLike }) => (
     <LikeCard
       variant="sent"
-      binding={mediaBinding} userId={item.owner.id} bookId={item.book.id} coverImageId={item.book.coverImageId} bookCoverUrlExpiresAt={item.book.coverUrlExpiresAt}
+      retryToken={imageRetryToken} binding={mediaBinding} userId={item.owner.id} bookId={item.book.id} coverImageId={item.book.coverImageId} bookCoverUrlExpiresAt={item.book.coverUrlExpiresAt}
       userName={item.owner.name}
       userAvatar={item.owner.avatarUrl} avatarVersion={item.owner.avatarVersion} onAvatarError={refreshSentAvatars}
       userCity={item.owner.city}
@@ -295,9 +297,9 @@ export function Likes({ navigation }: Props) {
           <ActivityIndicator color={theme.colors.primary} />
         </View>
       ) : likesViewState === 'receivedError' ? (
-        <StateView title="Não foi possível carregar as curtidas" description="Confira a conexão e tente novamente." icon="cloud-off" actionLabel="Tentar novamente" onAction={() => refetchReceived()} />
+        <StateView title="Não foi possível carregar as curtidas" description="Confira a conexão e tente novamente." icon="cloud-off" actionLabel="Tentar novamente" onAction={onRefresh} />
       ) : likesViewState === 'sentError' ? (
-        <StateView title="Não foi possível carregar suas curtidas" description="Confira a conexão e tente novamente." icon="cloud-off" actionLabel="Tentar novamente" onAction={() => refetchSent()} />
+        <StateView title="Não foi possível carregar suas curtidas" description="Confira a conexão e tente novamente." icon="cloud-off" actionLabel="Tentar novamente" onAction={onRefresh} />
       ) : likesViewState === 'received' ? (
         <FlatList<ReceivedLike>
           key="received-grid-2"

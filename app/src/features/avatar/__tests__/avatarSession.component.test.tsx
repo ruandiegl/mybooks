@@ -2,17 +2,51 @@
 import React from 'react';
 import { act,cleanup,render,renderHook } from '@testing-library/react';
 import { QueryClient,QueryClientProvider } from '@tanstack/react-query';
-import { afterEach,describe,expect,it,vi } from 'vitest';
+import { afterEach,beforeEach,describe,expect,it,vi } from 'vitest';
+const boundary=vi.hoisted(()=>({refresh:vi.fn(),me:vi.fn()}));
 vi.mock('react-native',async()=>await import('react-native-web'));
-vi.mock('../../auth/authApi',()=>({authApi:{me:async()=>null}}));
-vi.mock('../../auth/authTransport',()=>({sessionTransport:{restore:async()=>null,accept:async(response:any)=>({accessToken:response.accessToken,expiresAt:Date.parse(response.expiresAt),user:response.user}),clear:async()=>{},getToken:async()=>null,signOut:async()=>{}}}));
+vi.mock('../../auth/authApi',()=>({authApi:{me:boundary.me}}));
+vi.mock('../../auth/authTransport',()=>({sessionTransport:{restore:async()=>null,accept:async(response:any)=>({accessToken:response.accessToken,expiresAt:Date.parse(response.expiresAt),user:response.user}),refresh:boundary.refresh,clear:async()=>{},getToken:async(current:any)=>current?.accessToken??null,signOut:async()=>{}}}));
 vi.mock('../../../services/api',()=>({configureApiSession:()=>{}}));
 import { SessionProvider,useSession } from '../../../providers/SessionProvider';
 import { RemoteMediaImage } from '../../../components/RemoteMediaImage/index.web';
 import { toMediaScope } from '../../media/mediaIdentity';
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
+beforeEach(()=>{boundary.refresh.mockReset();boundary.me.mockReset();boundary.me.mockResolvedValue(null);});
 const response=(id:string)=>({accessToken:id,expiresAt:'2026-10-06T18:00:00Z',user:{id,name:id,interests:[],isActive:true,avatarUrl:null,avatarVersion:0}});
 describe('avatar receipt belongs to the current snapshot, not an older React render',()=>{
+ it.each([['second',false],['first',false],['second',true]] as const)('rejects old refresh after login %s (null=%s)',async(nextUser,missing)=>{
+  const client=new QueryClient();
+  const wrapper=({children}:React.PropsWithChildren)=><QueryClientProvider client={client}><SessionProvider>{children}</SessionProvider></QueryClientProvider>;
+  const hook=renderHook(()=>useSession(),{wrapper});
+  await act(async()=>{await hook.result.current.establishSession(response('first'));});
+  let finish!:(value:unknown)=>void;
+  boundary.refresh.mockReturnValue(new Promise(resolve=>{finish=resolve;}));
+  const pending=hook.result.current.refreshSession();
+  await act(async()=>{await hook.result.current.establishSession(response(nextUser));});
+  const epoch=hook.result.current.getSessionScope().epoch;
+  client.setQueryData(['books'],{owner:nextUser});
+  await act(async()=>{finish(missing?null:{accessToken:'old-refresh',expiresAt:Date.now()+60000,user:response('first').user});await pending;});
+  expect(hook.result.current.user?.id).toBe(nextUser);
+  expect(await hook.result.current.getToken()).toBe(nextUser);
+  expect(hook.result.current.getSessionScope().epoch).toBe(epoch);
+  expect(client.getQueryData(['books'])).toEqual({owner:nextUser});
+  client.clear();
+ });
+ it('does not apply a delayed avatar/user refresh to the next viewer',async()=>{
+  const client=new QueryClient();
+  const wrapper=({children}:React.PropsWithChildren)=><QueryClientProvider client={client}><SessionProvider>{children}</SessionProvider></QueryClientProvider>;
+  const hook=renderHook(()=>useSession(),{wrapper});
+  await act(async()=>{await hook.result.current.establishSession(response('first'));});
+  let finish!:(value:unknown)=>void;
+  boundary.me.mockReturnValue(new Promise(resolve=>{finish=resolve;}));
+  const pending=hook.result.current.refreshUser();
+  await act(async()=>{await hook.result.current.establishSession(response('second'));});
+  await act(async()=>{finish({...response('first').user,avatarUrl:'old-photo',avatarVersion:8});await pending;});
+  expect(hook.result.current.user?.id).toBe('second');
+  expect(hook.result.current.user?.avatarUrl).not.toBe('old-photo');
+  client.clear();
+ });
  it('does not rebind the previous account book cache into a newly established session',async()=>{
   const client=new QueryClient();
   const wrapper=({children}:React.PropsWithChildren)=><QueryClientProvider client={client}><SessionProvider>{children}</SessionProvider></QueryClientProvider>;

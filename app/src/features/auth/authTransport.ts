@@ -26,11 +26,22 @@ function snapshot(response: AuthSessionResponse): SessionSnapshot {
   return { accessToken: response.accessToken, refreshToken: response.refreshToken, expiresAt, user: response.user };
 }
 
-let refreshPromise: Promise<SessionSnapshot | null> | null = null;
+let generation = 0;
+let storageTail: Promise<unknown> = Promise.resolve();
+let refreshRun: { generation: number; token: string; promise: Promise<SessionSnapshot | null> } | null = null;
+function storeCurrent<T>(ticket: number, operation: () => Promise<T>): Promise<T | null> {
+  const work = storageTail.catch(() => {}).then(async () => {
+    if (ticket !== generation) return null;
+    const value = await operation();
+    return ticket === generation ? value : null;
+  });
+  storageTail = work.catch(() => {});
+  return work;
+}
 
 export const sessionTransport: SessionTransport = {
   async restore() {
-    const tokens = await loadTokens();
+    const tokens = await storeCurrent(generation, loadTokens);
     return tokens ? { ...tokens } : null;
   },
   async accept(response) {
@@ -38,7 +49,8 @@ export const sessionTransport: SessionTransport = {
       throw new Error('Resposta de sessão nativa inválida.');
     }
     const next = snapshot(response);
-    await saveTokens({ accessToken: next.accessToken, refreshToken: next.refreshToken!, expiresAt: next.expiresAt });
+    const ticket = ++generation;
+    await storeCurrent(ticket, async () => { await saveTokens({ accessToken: next.accessToken, refreshToken: next.refreshToken!, expiresAt: next.expiresAt }); return true; });
     return next;
   },
   async getToken(current) {
@@ -46,21 +58,27 @@ export const sessionTransport: SessionTransport = {
   },
   async refresh(current) {
     if (!current?.refreshToken) return null;
-    if (refreshPromise) return refreshPromise;
-    refreshPromise = (async () => {
+    const ticket = generation, token = current.refreshToken;
+    if (refreshRun?.generation === ticket && refreshRun.token === token) return refreshRun.promise;
+    const promise = (async () => {
       try {
-        return await this.accept(await authApi.refresh(current.refreshToken!));
+        const response = await authApi.refresh(token);
+        if (ticket !== generation) return null;
+        const next = snapshot(response);
+        const saved = await storeCurrent(ticket, async () => { await saveTokens({ accessToken: next.accessToken, refreshToken: next.refreshToken!, expiresAt: next.expiresAt }); return true; });
+        return saved ? next : null;
       } catch {
         return null;
       }
     })();
+    const run = { generation: ticket, token, promise }; refreshRun = run;
     try {
-      return await refreshPromise;
+      return await promise;
     } finally {
-      refreshPromise = null;
+      if (refreshRun === run) refreshRun = null;
     }
   },
-  clear: clearTokens,
+  async clear() { const ticket = ++generation; await storeCurrent(ticket, async () => { await clearTokens(); return true; }); },
   async signOut(current) {
     if (!current?.refreshToken) return;
     await authApi.logout(current.refreshToken);

@@ -1,6 +1,7 @@
 import { useMediaBinding } from '../../features/media/useMediaBinding';
+import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useDeferredValue, useState } from 'react';
@@ -20,6 +21,7 @@ import { styles } from './styles';
 
 export function Library() {
   const mediaBinding = useMediaBinding();
+  const [imageRetryToken, setImageRetryToken] = useState(0);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<'recent' | 'title'>('recent');
@@ -32,21 +34,23 @@ export function Library() {
     refetchInterval: (currentQuery) => getSignedBookImageRefreshDelay(currentQuery.state.data?.pages.flatMap((page) => page.items) ?? [])
   });
   const books = query.data?.pages.flatMap((page) => page.items) || [];
+  const refreshBookImages = useAvatarRefresh(query.data, () => query.refetch({ cancelRefetch: false }), useIsFocused(), false);
+  const retryImages = () => { setImageRetryToken(value => value + 1); void query.refetch(); };
 
   return (
     <AppScreen>
       <TopBar eyebrow="Meu espaço" title="Biblioteca" action={<Pressable accessibilityRole="button" accessibilityLabel="Cadastrar livro" style={({ pressed }) => [styles.add, pressed && styles.addPressed]} onPress={() => navigation.navigate('BookCreate')}><MaterialIcons name="add" size={26} color={theme.colors.white} /></Pressable>} />
-      {query.isLoading ? <StateView loading title="Organizando sua estante" /> : query.isError ? <StateView title="Não foi possível abrir sua estante" description="Confira a conexão e tente novamente." icon="cloud-off" actionLabel="Tentar novamente" onAction={() => query.refetch()} /> : <FlatList
+      {query.isLoading ? <StateView loading title="Organizando sua estante" /> : query.isError ? <StateView title="Não foi possível abrir sua estante" description="Confira a conexão e tente novamente." icon="cloud-off" actionLabel="Tentar novamente" onAction={retryImages} /> : <FlatList
         data={books}
         numColumns={2}
         keyExtractor={(item) => item.id}
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.list}
         ListHeaderComponent={<View style={styles.controls}><SearchField value={search} onChangeText={setSearch} placeholder="Título, autor ou ISBN" /><ToggleGroup accessibilityLabel="Ordenar biblioteca" value={sort} onValueChange={setSort} options={[{ value: 'recent', label: 'Mais recentes' }, { value: 'title', label: 'Título A–Z' }]} /></View>}
-        refreshControl={<RefreshControl refreshing={query.isRefetching && !query.isFetchingNextPage} onRefresh={query.refetch} tintColor={theme.colors.primary} />}
+        refreshControl={<RefreshControl refreshing={query.isRefetching && !query.isFetchingNextPage} onRefresh={retryImages} tintColor={theme.colors.primary} />}
         onEndReached={() => { if (query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage(); }}
         onEndReachedThreshold={0.4}
-        renderItem={({ item }) => <BookCard binding={mediaBinding} book={item} style={styles.item} onPress={() => navigation.navigate('BookDetails', { bookId: item.id })} />}
+        renderItem={({ item }) => <BookCard retryToken={imageRetryToken} onImageError={refreshBookImages} binding={mediaBinding} book={item} style={styles.item} onPress={() => navigation.navigate('BookDetails', { bookId: item.id })} />}
         ListFooterComponent={query.isFetchingNextPage ? <View style={styles.footer}><ActivityIndicator color={theme.colors.primary} /></View> : null}
         ListEmptyComponent={<StateView title={search ? 'Nenhum livro encontrado' : 'Sua estante está vazia'} description={search ? 'Tente outro título, autor ou ISBN.' : 'Cadastre o primeiro livro e coloque uma nova história em circulação.'} actionLabel={search ? 'Limpar busca' : 'Cadastrar livro'} onAction={() => search ? setSearch('') : navigation.navigate('BookCreate')} />}
       />}

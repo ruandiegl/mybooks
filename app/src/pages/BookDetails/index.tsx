@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useMediaBinding } from '../../features/media/useMediaBinding';
 import { useIsFocused } from '@react-navigation/native';
 import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
@@ -22,6 +23,7 @@ const availabilityLabels = { AVAILABLE: 'Disponível para troca', RESERVED: 'Res
 
 export function BookDetails({ route, navigation }: Props) {
   const mediaBinding = useMediaBinding();
+  const [imageRetryToken, setImageRetryToken] = useState(0);
   const insets = useSafeAreaInsets();
   const query = useQuery({
     queryKey: ['book', route.params.bookId],
@@ -41,11 +43,11 @@ export function BookDetails({ route, navigation }: Props) {
     <ScrollView style={styles.page} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
       {book.owner ? (
         <View style={styles.owner}>
-          <Avatar subjectId={book.owner.id} binding={mediaBinding} name={book.owner.name} url={book.owner.avatarUrl} version={book.owner.avatarVersion} onImageError={refreshAvatar} />
+          <Avatar retryToken={imageRetryToken} subjectId={book.owner.id} binding={mediaBinding} name={book.owner.name} url={book.owner.avatarUrl} version={book.owner.avatarVersion} onImageError={refreshAvatar} />
           <View style={styles.ownerInfo}><Text style={styles.ownerCaption}>Na estante de</Text><Text style={styles.ownerName}>{book.owner.name}</Text><Text style={styles.ownerCity}>{book.owner.city || 'Localização não informada'}</Text></View>
         </View>
       ) : null}
-      <BookGallery key={book.id} bookId={book.id} binding={mediaBinding} onImageError={refreshAvatar} title={book.title} photos={photos} refreshing={query.isFetching} onRefresh={() => { void query.refetch(); }} />
+      <BookGallery retryToken={imageRetryToken} key={book.id} bookId={book.id} binding={mediaBinding} onImageError={refreshAvatar} title={book.title} photos={photos} refreshing={query.isFetching} onRefresh={() => { setImageRetryToken(value => value + 1); void query.refetch(); }} />
       <View style={styles.heading}>
         <View style={styles.meta}><Badge label={availabilityLabels[book.availability]} variant={book.availability === 'AVAILABLE' ? 'success' : 'default'} />{book.hasIsbnBadge ? <IsbnBadge /> : null}</View>
         <Text style={styles.title} accessibilityRole="header">{book.title}</Text>

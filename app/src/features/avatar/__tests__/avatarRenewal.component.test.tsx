@@ -8,6 +8,12 @@ let visible=true;
 beforeEach(()=>{vi.useFakeTimers();vi.setSystemTime(new Date('2026-10-05T16:00:00Z'));visible=true;Object.defineProperty(document,'visibilityState',{configurable:true,get:()=>visible?'visible':'hidden'});});
 afterEach(()=>{cleanup();vi.useRealTimers();});
 describe('mounted renewal clocks and foreground',()=>{
+ it('provides a coalesced error callback without adding a second periodic timer',async()=>{
+  let requests=0;
+  const hook=renderHook(()=>useAvatarRefresh({avatarUrlExpiresAt:new Date(Date.now()+30000).toISOString()},async()=>{requests++;},true,false));
+  await act(async()=>{await vi.advanceTimersByTimeAsync(24000);});expect(requests).toBe(0);
+  await act(async()=>{hook.result.current();hook.result.current();});expect(requests).toBe(1);
+ });
  it('renews successive 30-second grants before they expire, without success backoff',async()=>{
   let requests=0;
   renderHook(()=>{const[data,setData]=useState({avatarUrlExpiresAt:new Date(Date.now()+30000).toISOString()});useAvatarRefresh(data,async()=>{requests++;setData({avatarUrlExpiresAt:new Date(Date.now()+30000).toISOString()});});});

@@ -28,6 +28,7 @@ export function createWebSessionTransport(dependencies: {
   const locks = dependencies.locks === undefined ? safeLockManager() : dependencies.locks;
   let memorySession: SessionSnapshot | null = null;
   let refreshPromise: Promise<SessionSnapshot | null> | null = null;
+  let generation = 0, refreshGeneration = -1;
 
   const signedOut = () => {
     try { return getStorage()?.getItem(SIGNED_OUT_KEY) === '1'; } catch { return false; }
@@ -56,6 +57,7 @@ export function createWebSessionTransport(dependencies: {
       return this.refresh(null);
     },
     async accept(response) {
+      generation++;
       return remember(response);
     },
     async getToken(current) {
@@ -71,37 +73,43 @@ export function createWebSessionTransport(dependencies: {
         return null;
       }
       if (!locks) return null;
-      if (refreshPromise) return refreshPromise;
+      const ticket = generation;
+      if (refreshPromise && refreshGeneration === ticket) return refreshPromise;
 
       const rotateWithCookie = async () => {
-        if (signedOut()) return null;
+        if (signedOut() || ticket !== generation) return null;
         const response = await api.refresh();
-        if (signedOut()) {
-          memorySession = null;
+        if (signedOut() || ticket !== generation) {
           return null;
         }
         return remember(response);
       };
 
-      refreshPromise = (async () => {
+      const pending = (async () => {
         try {
           return await locks.request(REFRESH_LOCK_NAME, rotateWithCookie);
         } catch (error) {
+          if (ticket !== generation) return null;
           const status = (error as { response?: { status?: number } })?.response?.status;
           if (status === 401) return null;
           throw error;
         }
       })();
+      refreshPromise = pending; refreshGeneration = ticket;
 
-      try { return await refreshPromise; }
-      finally { refreshPromise = null; }
+      try { return await pending; }
+      finally { if (refreshPromise === pending) refreshPromise = null; }
     },
     async clear() {
+      generation++;
       memorySession = null;
     },
     async signOut() {
+      const ticket = generation;
       const revokeCookieSession = async () => {
         await api.logout();
+        if (ticket !== generation) return;
+        generation++;
         memorySession = null;
         try { getStorage()?.setItem(SIGNED_OUT_KEY, '1'); } catch { /* local storage can be unavailable */ }
       };

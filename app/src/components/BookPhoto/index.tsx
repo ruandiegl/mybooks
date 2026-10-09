@@ -1,5 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useState, type ReactNode } from 'react';
+import { useLayoutEffect, useState, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { MediaBinding, MediaDescriptor } from '../../features/media/mediaTypes';
 import { theme } from '../../styles/theme';
@@ -10,6 +10,7 @@ type Props = { media?: MediaDescriptor | null; binding?: MediaBinding; title: st
 export function BookPhoto({ media = null, binding, title, label, compact = false, hasPhoto = false, fit = 'contain', retryToken, onImageError, fallback }: Props) {
   const [ready, setReady] = useState<string | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
+  useLayoutEffect(() => { setReady(null); setFailed(null); }, [media?.identity]);
   const unavailable = Boolean(media || hasPhoto);
   const loadFailed = failed === media?.identity || (unavailable && !media?.url);
   return (

@@ -23,6 +23,37 @@ const photo = (signature: number, id = 'photo1', sortOrder = 0) => ({ id, sortOr
 const book = (signature: number) => ({ id: 'book1', title: 'Mesmo título', authors: [], images: [photo(signature)], availability: 'AVAILABLE', subjects: [] }) as unknown as Book;
 
 describe('real book and avatar consumers', () => {
+  it('routes an expired cover to the query owner in Likes and Library', async () => {
+    let renewals = 0;
+    const expired = book(1); expired.images[0].expiresAt = '2000-01-01T00:00:00Z';
+    const library = render(<BookCard {...{ book: expired, binding, onImageError: () => renewals++ }} />);
+    await loaded(); expect(renewals).toBe(1); library.unmount();
+    render(<LikeCard {...{ userId: 'reader', bookId: 'book1', userName: 'Ana', bookTitle: 'Livro', bookCoverUrl: photo(1).url, bookCoverUrlExpiresAt: '2000-01-01T00:00:00Z', coverImageId: 'photo1', variant: 'sent' as const, likedAt: '2026-10-09', binding, onAvatarError: () => renewals++ }} />);
+    await loaded(); expect(renewals).toBe(2);
+  });
+  it('retries a failed stable avatar and cover only when explicitly requested', async () => {
+    let failing = true;
+    vi.stubGlobal('Image', function () { const image = document.createElement('img'); image.decode = async () => { await Promise.resolve(); if (failing) { image.dispatchEvent(new Event('error')); throw Error('opaque image error'); } }; return image; });
+    const avatar = { subjectId: 'reader', binding, name: 'Ana', url: 'https://fixture.invalid/stable-avatar', version: 1 };
+    const mounted = render(<Avatar {...avatar} />); await loaded();
+    expect(mounted.container.querySelector('img')).toBeNull();
+    failing = false; mounted.rerender(<Avatar {...{ ...avatar, retryToken: 1 }} />); await loaded();
+    expect(mounted.container.querySelector('img')?.getAttribute('src')).toBe('https://fixture.invalid/stable-avatar');
+    mounted.unmount(); failing = true;
+    const library = render(<BookCard {...{ book: book(1), binding }} />); await loaded();
+    expect(library.container.querySelector('img')).toBeNull();
+    failing = false; library.rerender(<BookCard {...{ book: book(1), binding, retryToken: 1 }} />); await loaded();
+    expect(library.container.querySelector('img')?.getAttribute('src')).toBe('https://fixture.invalid/photo1?sig=1');
+  });
+  it('restores the static fallback when revisiting photo1 while photo2 is still pending', async () => {
+    const mounted = render(<BookCard {...{ book: book(1), binding }} />); await loaded();
+    vi.stubGlobal('Image', function () { const image = document.createElement('img'); image.decode = () => new Promise<void>(() => {}); return image; });
+    const second = { ...book(1), images: [photo(1, 'photo2')] };
+    mounted.rerender(<BookCard {...{ book: second, binding }} />);
+    mounted.rerender(<BookCard {...{ book: book(1), binding }} />);
+    expect(mounted.container.querySelector('img')).toBeNull();
+    expect(mounted.container.textContent).toContain('MB');
+  });
   it('retains the Library cover node through twenty signature changes', async () => {
     const mounted = render(<BookCard {...{ book: book(1), binding }} />);
     await loaded();
