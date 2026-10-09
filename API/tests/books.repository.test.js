@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  findMany: vi.fn()
+  findMany: vi.fn(),
+  env: { NODE_ENV: 'development' }
 }));
 
 vi.mock('../src/shared/database/prisma.js', () => ({
@@ -9,7 +10,7 @@ vi.mock('../src/shared/database/prisma.js', () => ({
 }));
 
 vi.mock('../src/config/env.js', () => ({
-  env: { NODE_ENV: 'development' }
+  env: mocks.env
 }));
 
 const { booksRepository } = await import('../src/modules/books/books.repository.js');
@@ -20,6 +21,7 @@ const book = { id: '20000000-0000-4000-8000-000000000001' };
 describe('booksRepository.listDiscovery', () => {
   beforeEach(() => {
     mocks.findMany.mockReset();
+    mocks.env.NODE_ENV = 'development';
   });
 
   it('retorna livros inéditos sem consultar a fila de repetição', async () => {
@@ -51,6 +53,32 @@ describe('booksRepository.listDiscovery', () => {
       ownerId: { not: ownerId },
       availability: 'AVAILABLE',
       interactions: { some: { actorId: ownerId, action: 'PASS' } }
+    });
+  });
+
+  it('reabre livros com curtida removida também em produção', async () => {
+    mocks.env.NODE_ENV = 'production';
+    mocks.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([book]);
+
+    const result = await booksRepository.listDiscovery(ownerId, { limit: 20 });
+
+    expect(result).toEqual([book]);
+    expect(mocks.findMany.mock.calls[1][0].where).toEqual({
+      ownerId: { not: ownerId },
+      availability: 'AVAILABLE',
+      interactions: { some: { actorId: ownerId, action: 'PASS' } }
+    });
+  });
+
+  it('mantém cursor e ordem da fila reciclada sem incluir curtidas ativas', async () => {
+    mocks.env.NODE_ENV = 'production';
+    mocks.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([book]);
+
+    expect(await booksRepository.listDiscovery(ownerId, { limit: 2, cursor: 'previous-book' })).toEqual([book]);
+    expect(mocks.findMany.mock.calls[1][0]).toMatchObject({
+      where: { ownerId: { not: ownerId }, availability: 'AVAILABLE', interactions: { some: { actorId: ownerId, action: 'PASS' } } },
+      cursor: { id: 'previous-book' }, skip: 1, take: 3,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }]
     });
   });
 });

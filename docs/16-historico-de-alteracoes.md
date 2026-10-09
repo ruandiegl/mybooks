@@ -2,6 +2,16 @@
 
 Os resultados abaixo pertencem às execuções e branches indicadas em cada registro; não comprovam testes, deploy ou aceite da integração em curso.
 
+## 09/10/2026 — Retorno de livros após remover curtidas
+
+- Correção isolada a partir de `0c93552` na branch `codex/discover-unlike-pwa`, sem incluir o menu de perfil, conforme escolha explícita do usuário. Os arquivos locais e a branch de configurações foram preservados.
+- A API reapresenta `PASS` quando os inéditos acabam também em produção. Livros com `LIKE` ativo, próprios ou indisponíveis continuam excluídos. Remover curtida mantém o upsert existente e não devolve cota diária. Sem novo schema, migração, variável ou alteração R2.
+- Curtidas invalida Descobrir após confirmação da API; Descobrir invalida Curtidas após interação. Falhas de remoção preservam a lista anterior. Testes cobrem a fila montada e o retorno à aba com cache vazio.
+- Regressões observadas em RED e corrigidas em GREEN. Revisão independente encontrou corrida entre refetch e curtida pendente: reproduzida removendo o card errado; agora a mutação captura ação/ID e filtra o ID enviado, não o card atual. A regressão com respostas adiadas passou. O mock também valida endpoint/alvo/ação. Suítes completas repetidas na árvore final: app47 arquivos/226 testes; API43 arquivos/267 testes, com12 testes condicionais pulados. TypeScript, lint API, Prisma validate com URL sintética, export Web, smoke PWA e ensaio Edge repetidos/aprovados. Docker desligado: as integrações PostgreSQL condicionais não foram executadas nesta entrega.
+- Edge headless375×812 com o bundle exportado, sessão e livros fictícios somente em loopback: remover → Descobrir → curtir → Curtidas, sem reload e com zero erros de página. Não foram modificadas contas/curtidas reais nem objetos R2. Safari/PWA instalado e aparelho físico dependem de aceite do usuário. As vulnerabilidades preexistentes dos lockfiles não foram atualizadas fora deste escopo.
+- Publicação da correção na API/PWA autorizada neste chat; confirmar o SHA e os deploys Railway antes de declarar a versão pública atualizada.
+- Limites da revisão mantidos: paginação PostgreSQL real sem aceite nesta rodada; unlike em reservados/trocados e encerramento de matches/conversas permanecem nas regras anteriores; Safari/aparelho físico requer teste do usuário. Menu e atualizações de dependências excluídos por escopo. A verificação pública de deploy/cache é responsabilidade desta entrega após o push, não da revisão somente leitura.
+
 ## 08/10/2026 — Publicação da animação da foto na main/PWA
 
 - Após autorização explícita, push da main confirmou `417d363` em origin/main, incluindo `ebb5172` (animação/feedback háptico/layout adaptativo). Seed SQL e rascunho local do plano008 permaneceram fora do envio.

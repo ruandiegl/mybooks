@@ -23,6 +23,7 @@ import type { RootStackParamList } from '../../types/navigation';
 import { styles } from './styles';
 
 type InteractionResult = { interaction: { id: string }; match?: Match | null };
+type InteractionInput = { targetBookId: string; action: 'LIKE' | 'PASS' };
 
 export function Discover() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -56,13 +57,14 @@ export function Discover() {
   }
 
   const mutation = useMutation({
-    mutationFn: async (action: 'LIKE' | 'PASS') => (await api.post<ApiEnvelope<InteractionResult>>('/api/v1/interactions', { targetBookId: book?.id, action, clientActionId: Crypto.randomUUID() })).data.data,
-    onSuccess: (data) => {
-      queryClient.setQueryData<InfiniteData<Paginated<Book>, string>>(queryKey, (old) => old ? { ...old, pages: old.pages.map((page) => ({ ...page, items: page.items.filter((item) => item.id !== book?.id) })) } : old);
+    mutationFn: async (input: InteractionInput) => (await api.post<ApiEnvelope<InteractionResult>>('/api/v1/interactions', { ...input, clientActionId: Crypto.randomUUID() })).data.data,
+    onSuccess: (data, input) => {
+      queryClient.setQueryData<InfiniteData<Paginated<Book>, string>>(queryKey, (old) => old ? { ...old, pages: old.pages.map((page) => ({ ...page, items: page.items.filter((item) => item.id !== input.targetBookId) })) } : old);
       pan.setValue({ x: 0, y: 0 });
       if (data.match) Alert.alert('Deu match!', 'Vocês gostaram dos livros um do outro. A conversa já está disponível.');
       void queryClient.invalidateQueries({ queryKey: ['conversations'] });
       void queryClient.invalidateQueries({ queryKey: ['matches'] });
+      void queryClient.invalidateQueries({ queryKey: ['likes'] });
       if (books.length <= 1) void query.refetch();
     },
     onError: (error) => {
@@ -70,6 +72,11 @@ export function Discover() {
       Alert.alert('A ação não foi salva', apiErrorMessage(error, 'O livro continua na fila. Tente novamente.'));
     }
   });
+
+  function interact(action: InteractionInput['action']) {
+    if (!book || mutation.isPending) return;
+    mutation.mutate({ targetBookId: book.id, action });
+  }
 
   useEffect(() => {
     if (books.length < 5 && query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();
@@ -80,8 +87,8 @@ export function Discover() {
     onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], { useNativeDriver: false }),
     onPanResponderRelease: (_, gesture) => {
       if (mutation.isPending) return;
-      if (gesture.dx > 82) mutation.mutate('LIKE');
-      else if (gesture.dx < -82) mutation.mutate('PASS');
+      if (gesture.dx > 82) interact('LIKE');
+      else if (gesture.dx < -82) interact('PASS');
       else resetCard();
     },
     onPanResponderTerminate: resetCard
@@ -130,8 +137,8 @@ export function Discover() {
             </Animated.View>
           </View>
           <View style={styles.actions}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Passar livro" accessibilityState={{ disabled: mutation.isPending }} disabled={mutation.isPending} style={({ pressed }) => [styles.action, mutation.isPending && styles.disabled, pressed && !mutation.isPending && styles.pressed]} onPress={() => mutation.mutate('PASS')}><MaterialIcons name="close" size={30} color={theme.colors.mutedForeground} /></Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="Gostei do livro" accessibilityState={{ disabled: mutation.isPending }} disabled={mutation.isPending} style={({ pressed }) => [styles.action, styles.like, mutation.isPending && styles.disabled, pressed && !mutation.isPending && styles.likePressed]} onPress={() => mutation.mutate('LIKE')}><MaterialIcons name="favorite" size={29} color={theme.colors.white} /></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Passar livro" accessibilityState={{ disabled: mutation.isPending }} disabled={mutation.isPending} style={({ pressed }) => [styles.action, mutation.isPending && styles.disabled, pressed && !mutation.isPending && styles.pressed]} onPress={() => interact('PASS')}><MaterialIcons name="close" size={30} color={theme.colors.mutedForeground} /></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Gostei do livro" accessibilityState={{ disabled: mutation.isPending }} disabled={mutation.isPending} style={({ pressed }) => [styles.action, styles.like, mutation.isPending && styles.disabled, pressed && !mutation.isPending && styles.likePressed]} onPress={() => interact('LIKE')}><MaterialIcons name="favorite" size={29} color={theme.colors.white} /></Pressable>
           </View>
         </>}
       </ScrollView>

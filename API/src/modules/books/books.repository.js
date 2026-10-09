@@ -1,5 +1,4 @@
 import { prisma } from '../../shared/database/prisma.js';
-import { env } from '../../config/env.js';
 
 const includeBook = {
   images: {
@@ -58,7 +57,7 @@ export const booksRepository = {
       ...pagination
     });
 
-    if (unseen.length || env.NODE_ENV !== 'development') return unseen;
+    if (unseen.length) return unseen;
 
     return prisma.book.findMany({
       where: {

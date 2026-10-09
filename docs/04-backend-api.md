@@ -51,6 +51,12 @@ O bucket de imagens de livros é privado. Serializadores assinam GET em tempo de
 
 A rota de Curtidas mantém o contrato já registrado em docs/05-contrato-api.md: a API retorna nextCursor e hasMore; o app adapta esses campos ao pageInfo usado nas outras listas paginadas.
 
+## Fila Descobrir e remoção de curtidas
+
+`GET /discover` prioriza livros disponíveis de outros usuários sem interação prévia. Quando essa fila termina, reapresenta os livros disponíveis com interação `PASS`, tanto em desenvolvimento quanto em produção. Remover uma curtida converte `LIKE` em `PASS` pelo upsert existente, tornando o livro elegível para essa fila de repetição. Livros ainda curtidos, próprios, reservados ou trocados não entram na repetição. A consulta mantém a ordenação por criação/ID e a paginação por cursor; não apaga interações nem restaura a cota diária de likes.
+
+As telas Curtidas e Descobrir invalidam as listas afetadas após uma interação confirmada pela API: remoção atualiza Descobrir, e uma nova curtida atualiza Minhas curtidas. Uma requisição que falha não modifica a fila em cache.
+
 ## Premium de teste
 
 O módulo `premium` centraliza a regra de trial de 30 × 24 horas, elegibilidade por conta verificada, registro de apresentação e ativação idempotente. `GET /premium/status` inclui `serverNow` para o cliente esconder benefícios exatamente no término com base em uma referência do servidor; a API continua sendo a autoridade de acesso. Curtidas recebidas com identidades passam pelo gate no service antes da consulta ao repositório.
