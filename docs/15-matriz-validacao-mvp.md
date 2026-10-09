@@ -1,5 +1,11 @@
 # 15. Matriz de validação do MVP
 
+## Plano011 — validação local (09/10/2026)
+
+Branch `codex/media-image-continuity`, base bbca847; sem publicação/merge ou alterações R2/DB. [Registro de execução](../plans/plan-011-carregamento-imagens-sem-piscadas-execucao.md): até a tarefa4, app57 arquivos/291 testes e types aprovados; API43 arquivos/268 testes,12 condicionais pulados e lint aprovado. Export Web, worker/smoke comportamental e Hermes iOS/Android aprovados na validação final inicial. Revisão/ensaio browser e repetição após eventuais fixes são registrados separadamente; estes resultados não aprovam hardware, Safari/PWA instalada ou deploy.
+
+Rodada final após revisão: app58 arquivos/303 testes e types; exportsWeb/worker/smoke/Hermes iOS/Android repetidos/aprovados. Edge loopback com duas imagens sintéticas e20 renovações por latência50/250/1000ms: controle por keyURI fez40 downloads adicionais; continuidade fez0, manteve os nós e0 amostras DOM vazias. Zero pageerrors, landscape sem overflow, actor B sem imagens de A. Não equivale a medições R2/fotos reais, RAM/p50/p95 ou aceite físico; parecer e limites no registro011.
+
 Revisão documental: 05/10/2026. Integração em curso na branch `codex/main-pwa-integration`, entre main `249751e8d135a1380e7cd4fc4891dcfc1abaa975` e PWA `89733efb662985a73c492efe85afb7cab4a7df30`.
 
 A conciliação documental inicial não executou testes. A validação local posterior da integração está registrada abaixo; os registros históricos seguintes não se somam. Migração no banco alvo, alteração de deploy e aceite físico não foram executados nesta integração.

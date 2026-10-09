@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runInNewContext } from 'node:vm';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../app/dist');
 const read = (file) => readFile(path.join(root, file), 'utf8');
@@ -67,4 +68,31 @@ for (const localUrl of new Set(localUrls.filter(Boolean))) {
   assert.ok(!files.includes(localUrl), 'the production web bundle must not include URLs from app/.env');
 }
 
-process.stdout.write('PWA build smoke test passed.\n');
+// Exercise the exported worker, not just its source text.
+const handlers = new Map();
+let cacheWrites = 0, cacheReads = 0;
+const origin = 'https://fixture.invalid';
+runInNewContext(worker, {
+  URL,
+  self: { location: { origin }, addEventListener: (type, handler) => handlers.set(type, handler) },
+  caches: { open: async () => ({
+    match: async request => { cacheReads++; return typeof request === 'string' ? undefined : request.url.includes('?') ? undefined : new Response('public static asset'); },
+    put: async () => { cacheWrites++; }, addAll: async () => { cacheWrites++; }
+  }) },
+  fetch: async () => new Response('network-only fixture')
+});
+for (const url of [origin + '/api/v1/me', origin + '/api/v1/books', 'https://private-r2.invalid/books/photo?X-Amz-Signature=fixture']) {
+  let handled = false;
+  handlers.get('fetch')({ request: new Request(url), respondWith: () => { handled = true; } });
+  assert.equal(handled, false, 'private API/R2 media must bypass the worker');
+}
+const publicAsset = precacheUrls.find(url => url !== '/offline.html');
+let publicResponse;
+handlers.get('fetch')({ request: new Request(origin + publicAsset), respondWith: promise => { publicResponse = promise; } });
+assert.equal(await (await publicResponse).text(), 'public static asset');
+let signedResponse;
+handlers.get('fetch')({ request: new Request(origin + publicAsset + '?X-Amz-Signature=fixture'), respondWith: promise => { signedResponse = promise; } });
+assert.equal(await (await signedResponse).text(), 'network-only fixture');
+assert.equal(cacheWrites, 0, 'runtime requests must never persist private responses');
+assert.equal(cacheReads, 2, 'only the public-asset candidates may reach cache lookup');
+process.stdout.write('PWA build smoke test passed, including runtime private-media bypass.\n');

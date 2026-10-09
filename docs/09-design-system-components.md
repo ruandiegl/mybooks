@@ -1,5 +1,11 @@
 # 9. Design system e componentes
 
+## Apresentação de mídia — plano011
+
+Avatar/BookPhoto continuam responsáveis por fallback, paleta, dimensões e acessibilidade; RemoteMediaImage apenas apresenta a mídia. Reservar o slot e usar fallback estático, sem shimmer. Revelação nova recebe120 ms quando permitida; redução de movimento/desconhecida recebe0 ms. Não repetir a revelação em assinatura renovada/retry com frame pronto. Na Web, texto alternativo/fit atualizam sem recarregar os pixels e o movimento próprio é cancelado se a preferência mudar.
+
+Biblioteca/estante mantêm cover; Descobrir/Curtidas/galeria mantêm contain. A proteção Safari continua opt-in nas superfícies do avatar próprio; não bloquear zoom global, toque/pinch ou ações de imagens não protegidas. O avatar dentro da superfície ampliada é decorativo: o host já possui o rótulo, evitando anúncio duplicado. Reordenação identifica a capa pelo ID da primeira foto, sem key por URL/timestamp.
+
 A direção “biblioteca social de bolso” usa papel quente como fundo, capas em destaque, magenta para ações e violeta para conexão. O selo verde de ISBN verificado é a assinatura funcional da experiência.
 
 ## Tokens

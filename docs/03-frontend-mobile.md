@@ -1,5 +1,13 @@
 # 3. Frontend mobile e PWA
 
+## Continuidade de imagens — plano011
+
+`features/media` separa identidade de conteúdo, URI assinada e estado de exibição. As views passam `MediaBinding` (viewer/epoch/getter vivo/preferência de movimento) aos componentes; sujeitos são identificados por ID, nunca por nome. Foto de livro usa bookId+BookImage.id; avatar usa subjectId+avatarVersion. Sem identidade confiável, a URI completa é o fallback conservador.
+
+`RemoteMediaImage` tem adapters nativo (`expo-image`57.0.5, política memory explícita) e Web (nó Image próprio preparado por decode/load, sem fetch/blob/canvas). URLs renovadas não remontam nem substituem uma imagem pronta; novos IDs/versões/sessões limpam o frame anterior. Retry explícito conserva o frame até sucesso e não repete fade se já houver pixels. URLs sabidamente vencidas não iniciam uma carga fria.
+
+Descobrir antecipa só capa/avatar dos próximos2 livros:4 recursos,2 preparações simultâneas,24 metadados. Foco/background/scope/validade são verificados; cancelamento é lógico quando a plataforma não oferece abort. Login novo limpa o QueryClient e os metadados do scope anterior, sem mudar renovação comum. Não usar keys por URI/dataUpdatedAt, timers por imagem ou cache privado persistente. O loader gerencia seu cache de memória; não há promessa de teto de RAM, reuso entre assinaturas, login offline ou apagamento seguro do cache HTTP do SO/browser.
+
 Telas ficam em `app/src/pages/<Nome>/index.tsx` com `styles.ts`; componentes reutilizáveis seguem a mesma dupla. Parâmetros de navegação vivem em `src/types/navigation.ts`.
 
 ## Sessão
