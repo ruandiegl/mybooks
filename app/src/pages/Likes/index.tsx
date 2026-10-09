@@ -120,6 +120,7 @@ export function Likes({ navigation }: Props) {
       }),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['likes'] });
+      void queryClient.invalidateQueries({ queryKey: ['books', 'discover'] });
       queryClient.invalidateQueries({ queryKey: ['matches'] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       if (data.match) {

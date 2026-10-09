@@ -18,11 +18,13 @@ import { useAvatarRefresh } from '../features/avatar/useAvatarRefresh';
 import type { AvatarDescriptor, ChangePasswordInput, User } from '../types/api';
 import { accessSessionId, type SessionActor } from '../features/auth/sessionActor';
 
+export type SessionScope = { userId: string | undefined; epoch: number };
 type SessionContextValue = {
   isLoaded: boolean;
   isSignedIn: boolean;
   user: User | null;
   getToken: () => Promise<string | null>;
+  getSessionScope: () => SessionScope;
   establishSession: (response: SessionResponse) => Promise<void>;
   refreshSession: () => Promise<boolean>;
   refreshUser: () => Promise<User | null>;
@@ -47,6 +49,7 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
   const [user, setUser] = useState<User | null>(null);
   const userRef = useRef(user); userRef.current = user;
   const epoch = useRef(0);
+  const scopeActive = useRef(true);
   const [isLoaded, setIsLoaded] = useState(false);
   const [sessionNotice, setSessionNotice] = useState<string>();
   const terminal = useRef<{ epoch: number; operation: string; promise: Promise<void> } | null>(null);
@@ -102,6 +105,7 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
   }, [clearSession, replaceSession]);
 
   const getToken = useCallback(async () => sessionTransport.getToken(sessionRef.current), []);
+  const getSessionScope = useCallback(() => ({ userId: scopeActive.current ? userRef.current?.id : undefined, epoch: epoch.current }), []);
 
   const refreshUser = useCallback(async () => {
     if (!sessionRef.current) return null;
@@ -195,6 +199,7 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
   useEffect(() => {
     let active = true;
     const ticket = epoch.current;
+    scopeActive.current = true;
 
     const hydrate = async () => {
       try {
@@ -228,7 +233,7 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
     };
 
     void hydrate();
-    return () => { active = false; };
+    return () => { active = false; scopeActive.current = false; };
   }, [clearSession, refreshSession, replaceSession]);
 
   const value = useMemo<SessionContextValue>(() => ({
@@ -236,6 +241,7 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
     isSignedIn: Boolean(session && user),
     user,
     getToken,
+    getSessionScope,
     establishSession,
     refreshSession,
     refreshUser,
@@ -243,7 +249,7 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
     updateAvatar,
     captureActor, isActorCurrent, updateUser,
     signOut, signOutAll, changePassword, sessionNotice, endRevokedSession
-  }), [establishSession, getToken, isLoaded, refreshSession, refreshUser, refreshAvatar, updateAvatar, captureActor, isActorCurrent, updateUser, session, signOut, signOutAll, changePassword, sessionNotice, endRevokedSession, user]);
+  }), [establishSession, getToken, getSessionScope, isLoaded, refreshSession, refreshUser, refreshAvatar, updateAvatar, captureActor, isActorCurrent, updateUser, session, signOut, signOutAll, changePassword, sessionNotice, endRevokedSession, user]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

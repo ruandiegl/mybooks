@@ -2,6 +2,25 @@
 
 Os resultados abaixo pertencem às execuções e branches indicadas em cada registro; não comprovam testes, deploy ou aceite da integração em curso.
 
+## 09/10/2026 — Animação de curtir/dispensar em Descobrir (local)
+
+- Desenho aprovado em chat; implementação em `codex/discover-card-motion`, a partir de `db7a326`, num checkout isolado já existente. Menu de perfil e alterações locais do usuário preservados. Main, push, Railway, API, banco e R2 não modificados nesta tarefa.
+- Botão ou swipe: PASS para esquerda e LIKE para direita em240ms, X/coração branco com fade e opacidade máxima0.46, deslocamento48px; próximo card entra por fade160ms. Sem dependências novas; paleta, tipografia e safe areas mantidas. Preferência desconhecida/Reduzir movimento não desloca.
+- Mutex síncrono, ID/conta/geração capturados, snapshot durante request/refetch e fallbacks temporizados evitam duplicação, card errado e dependência exclusiva do animation-end. API lenta mostra aviso apenas depois da saída; erro restaura o mesmo item ainda presente. Cancelamento em blur, largura/altura, preferência, conta e unmount.
+- Revisão independente: nenhum Critical; dois Important reproduzidos e corrigidos (invalidações de confirmação após unmount na mesma sessão; refetch falho substituindo snapshot). Minor de resize somente de altura também reproduzido/corrigido. Teste com SessionProvider real confirma que getter estável acompanha conta e geração, inclusive logout; escopo não é enviado como autorização.
+- Validação repetida na árvore final:48 arquivos/246 testes, TypeScript, buildWeb/PWA smoke e exportsHermes iOS/Android aprovados. Ensaios Edge com conta/capas fictícias apenas em loopback cobriram botões, swipe de toque nas duas direções,375×812/812×375, redução de movimento e textoCSS36px, sem overflow horizontal/erros de página. O primeiro ensaio de swipe não atingiu o limiar por timestamps simulados; corrigido o driver de teste, sem alterar threshold ou CSS do app. Instrumentação temporária removida.
+- Limites julgados: menu e depsbaseline excluídos por escopo; regra backend de reciclagem/quota preservada sem nova API; suítes/builds conferidos pelo implementador, não repetidos pelo reviewer; driver nativo, VoiceOver/TalkBack, Dynamic Type, Safari/PWA e safe areas físicos requerem aparelho. Não afirmar publicação ou operação R2 por este preview. Exports são bundlesHermes, não APK/IPA nem atualizaçãoEAS.
+
+## 09/10/2026 — Retorno de livros após remover curtidas
+
+- Correção isolada a partir de `0c93552` na branch `codex/discover-unlike-pwa`, sem incluir o menu de perfil, conforme escolha explícita do usuário. Os arquivos locais e a branch de configurações foram preservados.
+- A API reapresenta `PASS` quando os inéditos acabam também em produção. Livros com `LIKE` ativo, próprios ou indisponíveis continuam excluídos. Remover curtida mantém o upsert existente e não devolve cota diária. Sem novo schema, migração, variável ou alteração R2.
+- Curtidas invalida Descobrir após confirmação da API; Descobrir invalida Curtidas após interação. Falhas de remoção preservam a lista anterior. Testes cobrem a fila montada e o retorno à aba com cache vazio.
+- Regressões observadas em RED e corrigidas em GREEN. Revisão independente encontrou corrida entre refetch e curtida pendente: reproduzida removendo o card errado; agora a mutação captura ação/ID e filtra o ID enviado, não o card atual. A regressão com respostas adiadas passou. O mock também valida endpoint/alvo/ação. Suítes completas repetidas na árvore final: app47 arquivos/226 testes; API43 arquivos/267 testes, com12 testes condicionais pulados. TypeScript, lint API, Prisma validate com URL sintética, export Web, smoke PWA e ensaio Edge repetidos/aprovados. Docker desligado: as integrações PostgreSQL condicionais não foram executadas nesta entrega.
+- Edge headless375×812 com o bundle exportado, sessão e livros fictícios somente em loopback: remover → Descobrir → curtir → Curtidas, sem reload e com zero erros de página. Não foram modificadas contas/curtidas reais nem objetos R2. Safari/PWA instalado e aparelho físico dependem de aceite do usuário. As vulnerabilidades preexistentes dos lockfiles não foram atualizadas fora deste escopo.
+- Publicação da correção na API/PWA autorizada neste chat; confirmar o SHA e os deploys Railway antes de declarar a versão pública atualizada.
+- Limites da revisão mantidos: paginação PostgreSQL real sem aceite nesta rodada; unlike em reservados/trocados e encerramento de matches/conversas permanecem nas regras anteriores; Safari/aparelho físico requer teste do usuário. Menu e atualizações de dependências excluídos por escopo. A verificação pública de deploy/cache é responsabilidade desta entrega após o push, não da revisão somente leitura.
+
 ## 08/10/2026 — Publicação da animação da foto na main/PWA
 
 - Após autorização explícita, push da main confirmou `417d363` em origin/main, incluindo `ebb5172` (animação/feedback háptico/layout adaptativo). Seed SQL e rascunho local do plano008 permaneceram fora do envio.
