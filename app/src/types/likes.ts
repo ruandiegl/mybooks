@@ -13,12 +13,14 @@ export type ReceivedLike = {
     title: string;
     coverUrl?: string | null;
     coverUrlExpiresAt?: string | null;
+    coverImageId?: string | null;
   };
   actorBook?: {
     id: string;
     title: string;
     coverUrl?: string | null;
     coverUrlExpiresAt?: string | null;
+    coverImageId?: string | null;
   } | null;
   likedAt: string;
 };
@@ -30,6 +32,7 @@ export type SentLike = {
     title: string;
     coverUrl?: string | null;
     coverUrlExpiresAt?: string | null;
+    coverImageId?: string | null;
   };
   owner: {
     id: string;

@@ -15,12 +15,12 @@ function compareImages(a, b) {
 
 async function getCoverDescriptor(images) {
   const image = [...(images ?? [])].sort(compareImages)[0];
-  if (!image) return { coverUrl: null, coverUrlExpiresAt: null };
+  if (!image) return { coverUrl: null, coverUrlExpiresAt: null, coverImageId: null };
   if (image.storageKey) {
     const signed = await storageService.getPresignedGetUrl(image.storageKey);
-    return { coverUrl: signed?.url ?? null, coverUrlExpiresAt: signed?.expiresAt ?? null };
+    return { coverUrl: signed?.url ?? null, coverUrlExpiresAt: signed?.expiresAt ?? null, coverImageId: image.id ?? null };
   }
-  return { coverUrl: image.url ?? null, coverUrlExpiresAt: null };
+  return { coverUrl: image.url ?? null, coverUrlExpiresAt: null, coverImageId: image.id ?? null };
 }
 
 export const likesService = {

@@ -1,5 +1,9 @@
 # 5. Contrato HTTP
 
+### Continuidade de mídia — plano011
+
+Os resumos `book` e `actorBook` de Curtidas incluem `coverImageId: string | null`, além de `coverUrl` e `coverUrlExpiresAt`. O ID corresponde à primeira imagem ordenada e permite reconhecer a mesma capa quando sua URL assinada é renovada. Sem imagem/ID legado, o campo é null; clientes aceitam o campo ausente durante rollout. É um campo aditivo, sem migração e sem exposição de storageKey. Não altera ownership, assinatura, gate Premium ou limites.
+
 Base: `/api/v1`. `/health` e as rotas públicas abaixo não exigem bearer. Rotas privadas exigem `Authorization: Bearer <accessToken>`. Os endpoints de sessão web são protegidos por cookie first-party e validação exata de `Origin`; nenhum cliente pode fornecer um cabeçalho de identidade local.
 
 ## Autenticação

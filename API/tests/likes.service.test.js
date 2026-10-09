@@ -65,6 +65,8 @@ describe('likesService', () => {
       expect(result.items[0].book.coverUrl).toBe('https://signed.example/books/target/cover.jpg');
       expect(result.items[0].book.coverUrlExpiresAt).toBe('2026-09-30T12:05:00.000Z');
       expect(result.items[0].actorBook.coverUrlExpiresAt).toBe('2026-09-30T12:05:00.000Z');
+      expect(result.items[0].book.coverImageId).toBe('a-cover');
+      expect(result.items[0].actorBook.coverImageId).toBe('a-cover');
       expect(mocks.storageService.getPresignedGetUrl).toHaveBeenCalledWith('books/actor/cover.jpg');
       expect(mocks.storageService.getPresignedGetUrl).toHaveBeenCalledWith('books/target/cover.jpg');
       expect(mocks.storageService.getPresignedGetUrl).toHaveBeenCalledTimes(2);
@@ -108,9 +110,9 @@ describe('likesService', () => {
         actorBook: {
           id: '50000000-0000-4000-8000-000000000005',
           title: 'A Hora da Estrela',
-          coverUrl: 'https://example.com/actor-book.jpg', coverUrlExpiresAt: null
+          coverUrl: 'https://example.com/actor-book.jpg', coverUrlExpiresAt: null, coverImageId: null
         },
-        book: { id: bookId, title: 'Dom Casmurro', coverUrl: 'https://example.com/cover.jpg', coverUrlExpiresAt: null },
+        book: { id: bookId, title: 'Dom Casmurro', coverUrl: 'https://example.com/cover.jpg', coverUrlExpiresAt: null, coverImageId: null },
         likedAt: createdAt
       });
       expect(result.hasMore).toBe(false);
@@ -138,6 +140,7 @@ describe('likesService', () => {
 
       expect(result.items).toHaveLength(1);
       expect(result.items[0].actorBook).toBeNull();
+      expect(result.items[0].book.coverImageId).toBeNull();
       expect(result.hasMore).toBe(true);
       expect(result.nextCursor).toBe('10000000-0000-4000-8000-000000000011');
     });
@@ -177,6 +180,19 @@ describe('likesService', () => {
   });
 
   describe('getSentLikes', () => {
+    it('exposes ordered image identity without leaking its storage key', async () => {
+      mocks.storageService.getPresignedGetUrl.mockResolvedValue({ url: 'https://signed.example/cover', expiresAt: '2026-10-09T18:00:00Z' });
+      mocks.likesRepository.findSentLikes.mockResolvedValue([{
+        id: interactionId, createdAt: new Date('2026-10-09T12:00:00Z'),
+        targetBook: { id: bookId, title: 'Livro', owner: { id: otherUserId, name: 'Bia' }, images: [
+          { id: 'photo2', sortOrder: 1, storageKey: 'private/second' },
+          { id: 'image-first', sortOrder: 0, storageKey: 'private/first' }
+        ] }
+      }]);
+      const result = await likesService.getSentLikes(userId, {});
+      expect(result.items[0].book.coverImageId).toBe('image-first');
+      expect(result.items[0].book).not.toHaveProperty('storageKey');
+    });
     it('retorna lista formatada de curtidas enviadas', async () => {
       const createdAt = new Date('2026-09-24T12:00:00Z');
       mocks.likesRepository.findSentLikes.mockResolvedValue([
@@ -197,7 +213,7 @@ describe('likesService', () => {
       expect(result.items).toHaveLength(1);
       expect(result.items[0]).toEqual({
         id: interactionId,
-        book: { id: bookId, title: '1984', coverUrl: 'https://example.com/1984.jpg', coverUrlExpiresAt: null },
+        book: { id: bookId, title: '1984', coverUrl: 'https://example.com/1984.jpg', coverUrlExpiresAt: null, coverImageId: null },
         owner: { id: otherUserId, name: 'Carlos', avatarUrl: null, avatarUrlExpiresAt: null, avatarVersion: 0, city: 'Curitiba' },
         likedAt: createdAt
       });
