@@ -15,7 +15,7 @@ vi.mock('expo-crypto', () => ({ randomUUID: () => '40000000-0000-4000-8000-00000
 vi.mock('@react-navigation/native', () => ({ useIsFocused: () => true, useNavigation: () => ({ navigate: vi.fn() }) }));
 vi.mock('../../../services/api', () => ({ api: { get: boundary.get, post: boundary.post }, apiErrorMessage: () => 'Falha de conexão' }));
 vi.mock('../../../services/notice', () => ({ Alert: { alert: boundary.alert } }));
-vi.mock('../../../providers/SessionProvider', () => ({ useSession: () => ({ user: { id: 'reader', emailVerifiedAt: '2026-10-09' }, isSignedIn: true }) }));
+vi.mock('../../../providers/SessionProvider', () => ({ useSession: () => ({ user: { id: 'reader', emailVerifiedAt: '2026-10-09' }, isSignedIn: true, getSessionScope: () => ({ userId: 'reader', epoch: 0 }) }) }));
 vi.mock('../../premium/usePremiumStatus', () => ({ usePremiumStatus: () => ({ data: { serverNow: '2026-10-09T12:00:00Z', eligible: false, trialState: 'EXPIRED', trialStartedAt: '2026-09-01T12:00:00Z', trialEndsAt: '2026-10-01T12:00:00Z', promptMode: null, benefits: { seeReceivedLikes: false, unlimitedLikes: false, dailyLikeLimit: 15 } }, isLoading: false, isError: false, isTrialLocallyExpired: false, refetch: vi.fn() }) }));
 vi.mock('../../premium/PremiumOfferProvider', () => ({ usePremiumOffer: () => ({ openOffer: vi.fn() }) }));
 
@@ -90,7 +90,11 @@ describe('remoção de curtida e fila Descobrir', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Remover curtida enviada para Ana' }));
     const buttons = boundary.alert.mock.calls.at(-1)?.[2];
     await act(async () => buttons.find((button: { text: string }) => button.text === 'Remover').onPress());
-    await screen.findByRole('button', { name: 'Ver Livro que deve voltar, de Autora. Livro de Ana' });
+    await waitFor(() => {
+      const cached = client.getQueryData<{ pages: { items: { id: string }[] }[] }>(['books', 'discover']);
+      expect(cached?.pages.flatMap(page => page.items.map(item => item.id))).toEqual([book.id, second.id, third.id]);
+    });
+    expect(screen.getByRole('button', { name: 'Ver Livro B em análise, de Autora. Livro de Ana' })).toBeTruthy();
 
     await act(async () => finishLike());
     await waitFor(() => {

@@ -2,6 +2,15 @@
 
 Os resultados abaixo pertencem às execuções e branches indicadas em cada registro; não comprovam testes, deploy ou aceite da integração em curso.
 
+## 09/10/2026 — Animação de curtir/dispensar em Descobrir (local)
+
+- Desenho aprovado em chat; implementação em `codex/discover-card-motion`, a partir de `db7a326`, num checkout isolado já existente. Menu de perfil e alterações locais do usuário preservados. Main, push, Railway, API, banco e R2 não modificados nesta tarefa.
+- Botão ou swipe: PASS para esquerda e LIKE para direita em240ms, X/coração branco com fade e opacidade máxima0.46, deslocamento48px; próximo card entra por fade160ms. Sem dependências novas; paleta, tipografia e safe areas mantidas. Preferência desconhecida/Reduzir movimento não desloca.
+- Mutex síncrono, ID/conta/geração capturados, snapshot durante request/refetch e fallbacks temporizados evitam duplicação, card errado e dependência exclusiva do animation-end. API lenta mostra aviso apenas depois da saída; erro restaura o mesmo item ainda presente. Cancelamento em blur, largura/altura, preferência, conta e unmount.
+- Revisão independente: nenhum Critical; dois Important reproduzidos e corrigidos (invalidações de confirmação após unmount na mesma sessão; refetch falho substituindo snapshot). Minor de resize somente de altura também reproduzido/corrigido. Teste com SessionProvider real confirma que getter estável acompanha conta e geração, inclusive logout; escopo não é enviado como autorização.
+- Validação repetida na árvore final:48 arquivos/246 testes, TypeScript, buildWeb/PWA smoke e exportsHermes iOS/Android aprovados. Ensaios Edge com conta/capas fictícias apenas em loopback cobriram botões, swipe de toque nas duas direções,375×812/812×375, redução de movimento e textoCSS36px, sem overflow horizontal/erros de página. O primeiro ensaio de swipe não atingiu o limiar por timestamps simulados; corrigido o driver de teste, sem alterar threshold ou CSS do app. Instrumentação temporária removida.
+- Limites julgados: menu e depsbaseline excluídos por escopo; regra backend de reciclagem/quota preservada sem nova API; suítes/builds conferidos pelo implementador, não repetidos pelo reviewer; driver nativo, VoiceOver/TalkBack, Dynamic Type, Safari/PWA e safe areas físicos requerem aparelho. Não afirmar publicação ou operação R2 por este preview. Exports são bundlesHermes, não APK/IPA nem atualizaçãoEAS.
+
 ## 09/10/2026 — Retorno de livros após remover curtidas
 
 - Correção isolada a partir de `0c93552` na branch `codex/discover-unlike-pwa`, sem incluir o menu de perfil, conforme escolha explícita do usuário. Os arquivos locais e a branch de configurações foram preservados.

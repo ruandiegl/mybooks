@@ -11,6 +11,20 @@ import { SessionProvider,useSession } from '../../../providers/SessionProvider';
 afterEach(()=>cleanup());
 const response=(id:string)=>({accessToken:id,expiresAt:'2026-10-06T18:00:00Z',user:{id,name:id,interests:[],isActive:true,avatarUrl:null,avatarVersion:0}});
 describe('avatar receipt belongs to the current snapshot, not an older React render',()=>{
+ it('reads the current account and login generation through a stable session scope getter',async()=>{
+  const client=new QueryClient();
+  const wrapper=({children}:React.PropsWithChildren)=><QueryClientProvider client={client}><SessionProvider>{children}</SessionProvider></QueryClientProvider>;
+  const hook=renderHook(()=>useSession(),{wrapper});
+  await act(async()=>{await hook.result.current.establishSession(response('first'));});
+  const scope=hook.result.current.getSessionScope;
+  expect(scope).toBeTypeOf('function');
+  const first=scope();
+  await act(async()=>{await hook.result.current.establishSession(response('second'));});
+  expect(scope().userId).toBe('second'); expect(scope().epoch).toBeGreaterThan(first.epoch);
+  const second=scope(); await act(async()=>{await hook.result.current.signOut();});
+  expect(scope().userId).toBeUndefined(); expect(scope().epoch).toBeGreaterThan(second.epoch);
+  client.clear();
+ });
  it('preserves a newer session photo even when the own-profile cache is older',async()=>{
   const client=new QueryClient({defaultOptions:{queries:{gcTime:Infinity}}});
   const wrapper=({children}:React.PropsWithChildren)=><QueryClientProvider client={client}><SessionProvider>{children}</SessionProvider></QueryClientProvider>;

@@ -3,7 +3,11 @@ import { theme } from '../../styles/theme';
 export const styles = StyleSheet.create({
   body: { flex: 1 },
   bodyContent: { flexGrow: 1, paddingTop: theme.spacing.xxs, paddingBottom: theme.spacing.sm },
-  deck: { flex: 1, alignItems: 'center' },
+  deck: { flex: 1, alignItems: 'center', overflow: 'hidden' },
+  feedback: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' },
+  feedbackIcon: { textShadowColor: theme.colors.black, textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 12 },
+  saving: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, alignItems: 'center', justifyContent: 'center', gap: theme.spacing.sm, pointerEvents: 'none' },
+  savingText: { fontFamily: theme.typography.regular, color: theme.colors.mutedForeground, fontSize: 14 },
   gesture: { width: '100%', maxWidth: 560, flex: 1, minHeight: 440 },
   gestureLandscape: { maxWidth: 860, minHeight: 280 },
   cardPressable: { flex: 1 },
