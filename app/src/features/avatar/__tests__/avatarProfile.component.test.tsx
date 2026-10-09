@@ -24,10 +24,10 @@ vi.mock('../../premium/usePremiumStatus',()=>({usePremiumStatus:()=>({data:null}
 import { Profile } from '../../../pages/profile';
 import { OnboardingProfile } from '../../../pages/OnboardingProfile';
 import { useAvatarRefresh } from '../useAvatarRefresh';
-const person={id:'one',name:'Ana Silva',firstName:'Ana',lastName:'Silva',interests:[],isActive:true,city:'SP',avatarUrl:'https://signed.test/old',avatarUrlExpiresAt:'2026-10-05T18:00:00Z',avatarVersion:1};
+const person={id:'one',name:'Ana Silva',firstName:'Ana',lastName:'Silva',interests:[],isActive:true,city:'SP',avatarUrl:'https://signed.test/old',avatarUrlExpiresAt:null,avatarVersion:1};
 const clients:QueryClient[]=[];
 function host(node:React.ReactNode){const client=new QueryClient({defaultOptions:{queries:{retry:false,gcTime:Infinity}}});clients.push(client);return <QueryClientProvider client={client}>{node}</QueryClientProvider>;}
-beforeEach(()=>{vi.clearAllMocks();boundary.os='web';boundary.reduced=true;boundary.cancels=0;boundary.haptics=[];boundary.hapticFails=false;boundary.selections=0;boundary.captures=0;boundary.removals=0;boundary.longPress=undefined;boundary.editorSource=undefined;boundary.editorError=undefined;boundary.session={user:{...person},isSignedIn:true,refreshUser:async()=>person,refreshAvatar:()=>{},updateAvatar:()=>{},signOut:async()=>{}};boundary.get.mockImplementation(async(url:string)=>({data:{data:url.endsWith('/me')?person:{items:[],pageInfo:{hasNextPage:false}}}}));});
+beforeEach(()=>{vi.stubGlobal('Image', function () { const image = document.createElement('img'); image.decode = async () => { await Promise.resolve(); if (boundary.failImage) { image.dispatchEvent(new Event('error')); throw new Error('offline'); } }; return image; });vi.clearAllMocks();boundary.os='web';boundary.reduced=true;boundary.cancels=0;boundary.haptics=[];boundary.hapticFails=false;boundary.selections=0;boundary.captures=0;boundary.removals=0;boundary.longPress=undefined;boundary.editorSource=undefined;boundary.editorError=undefined;boundary.session={getSessionScope:()=>({userId:boundary.session?.user?.id,epoch:1}),user:{...person},isSignedIn:true,refreshUser:async()=>person,refreshAvatar:()=>{},updateAvatar:()=>{},signOut:async()=>{}};boundary.get.mockImplementation(async(url:string)=>({data:{data:url.endsWith('/me')?person:{items:[],pageInfo:{hasNextPage:false}}}}));});
 afterEach(()=>{cleanup();clients.forEach(c=>c.clear());clients.length=0;boundary.failImage=false;vi.useRealTimers();vi.unstubAllGlobals();delete (navigator as {vibrate?:Navigator['vibrate']}).vibrate;});
 describe('profile and onboarding mounted avatar coordination',()=>{
  it('does not deliver an old animated close after the signed-in account changes',async()=>{
@@ -167,9 +167,17 @@ describe('profile and onboarding mounted avatar coordination',()=>{
  });
  it('uses renewed session photo without resetting unsaved onboarding text',async()=>{
   const tree=host(<OnboardingProfile/>),mounted=render(tree);
+  await act(async()=>{});
+  const firstFrame=document.querySelector('img');
   fireEvent.change(screen.getByRole('textbox',{name:'Nome'}),{target:{value:'Nome ainda não salvo'}});
   boundary.session={...boundary.session,user:{...person,avatarUrl:'https://signed.test/renewed'}};
   mounted.rerender(React.cloneElement(tree as React.ReactElement,{},<OnboardingProfile/>));
+  await act(async()=>{});
+  expect(document.querySelector('img')).toBe(firstFrame);
+  expect(document.querySelector('img')?.getAttribute('src')).toBe('https://signed.test/old');
+  boundary.session={...boundary.session,user:{...person,avatarVersion:2,avatarUrl:'https://signed.test/renewed'}};
+  mounted.rerender(React.cloneElement(tree as React.ReactElement,{},<OnboardingProfile/>));
+  await act(async()=>{});
   expect(document.querySelector('img')?.getAttribute('src')).toBe('https://signed.test/renewed');
   expect((screen.getByRole('textbox',{name:'Nome'}) as HTMLInputElement).value).toBe('Nome ainda não salvo');
  });

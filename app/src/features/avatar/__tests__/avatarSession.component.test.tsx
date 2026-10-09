@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { act,cleanup,renderHook } from '@testing-library/react';
+import { act,cleanup,render,renderHook } from '@testing-library/react';
 import { QueryClient,QueryClientProvider } from '@tanstack/react-query';
 import { afterEach,describe,expect,it,vi } from 'vitest';
 vi.mock('react-native',async()=>await import('react-native-web'));
@@ -8,9 +8,26 @@ vi.mock('../../auth/authApi',()=>({authApi:{me:async()=>null}}));
 vi.mock('../../auth/authTransport',()=>({sessionTransport:{restore:async()=>null,accept:async(response:any)=>({accessToken:response.accessToken,expiresAt:Date.parse(response.expiresAt),user:response.user}),clear:async()=>{},getToken:async()=>null,signOut:async()=>{}}}));
 vi.mock('../../../services/api',()=>({configureApiSession:()=>{}}));
 import { SessionProvider,useSession } from '../../../providers/SessionProvider';
-afterEach(()=>cleanup());
+import { RemoteMediaImage } from '../../../components/RemoteMediaImage/index.web';
+import { toMediaScope } from '../../media/mediaIdentity';
+afterEach(()=>{cleanup();vi.unstubAllGlobals();});
 const response=(id:string)=>({accessToken:id,expiresAt:'2026-10-06T18:00:00Z',user:{id,name:id,interests:[],isActive:true,avatarUrl:null,avatarVersion:0}});
 describe('avatar receipt belongs to the current snapshot, not an older React render',()=>{
+ it('rejects a late decoded photo using the real SessionProvider epoch getter',async()=>{
+  const client=new QueryClient();
+  const wrapper=({children}:React.PropsWithChildren)=><QueryClientProvider client={client}><SessionProvider>{children}</SessionProvider></QueryClientProvider>;
+  const hook=renderHook(()=>useSession(),{wrapper});
+  await act(async()=>{await hook.result.current.establishSession(response('first'));});
+  const getter=hook.result.current.getSessionScope;
+  const scope=toMediaScope(getter())!;
+  let finish!:()=>void;
+  vi.stubGlobal('Image',function(){const image=document.createElement('img');image.decode=()=>new Promise<void>(resolve=>{finish=resolve;});return image;});
+  const mounted=render(<RemoteMediaImage media={{identity:'owned-by-first',url:'https://fixture.invalid/avatar',expiresAt:null}} scope={scope} getScope={()=>toMediaScope(getter())} pixelBucket={256} fit="cover" transitionMs={0}/>);
+  await act(async()=>{await hook.result.current.establishSession(response('second'));finish();});
+  expect(mounted.container.querySelector('img')).toBeNull();
+  expect(getter().userId).toBe('second');
+  client.clear();
+ });
  it('reads the current account and login generation through a stable session scope getter',async()=>{
   const client=new QueryClient();
   const wrapper=({children}:React.PropsWithChildren)=><QueryClientProvider client={client}><SessionProvider>{children}</SessionProvider></QueryClientProvider>;

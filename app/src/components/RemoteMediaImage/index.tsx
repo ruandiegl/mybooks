@@ -5,7 +5,7 @@ import { useMediaDisplay } from '../../features/media/useMediaDisplay';
 import type { RemoteMediaImageProps } from './RemoteMediaImage.types';
 
 export function RemoteMediaImage(props: RemoteMediaImageProps) {
-  const { display, dispatch, accepts } = useMediaDisplay(props.media, props.scope, props.getScope, props.retryToken);
+  const { display, dispatch, accepts } = useMediaDisplay(props.media, props.scope, props.getScope, props.retryToken, props.onError);
   const activeAttempt = useRef<number | null>(null);
   const settled = useRef<string | null>(null);
   const callbacks = useRef(props); callbacks.current = props;

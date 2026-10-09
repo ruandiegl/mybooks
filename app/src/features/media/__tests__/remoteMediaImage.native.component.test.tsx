@@ -4,7 +4,7 @@ import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('react-native', async () => await import('react-native-web'));
 vi.mock('expo-image', () => ({ Image: ({ source, cachePolicy, onDisplay, onError, style }: any) => <img src={source.uri} data-cache={cachePolicy} onLoad={onDisplay} onError={onError} style={{ opacity: Array.isArray(style) ? style.at(-1)?.opacity : 1 }} /> }));
-import { RemoteMediaImage } from '../../../components/RemoteMediaImage';
+import { RemoteMediaImage } from '../../../components/RemoteMediaImage/index';
 const scope = { userId: 'a', epoch: 1 };
 const props = { media: { identity: 'one', url: 'https://fixture.invalid/one', expiresAt: null }, scope, getScope: () => scope, pixelBucket: 256, fit: 'contain' as const, transitionMs: 0 as const };
 afterEach(cleanup);

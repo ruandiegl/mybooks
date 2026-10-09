@@ -8,6 +8,7 @@ vi.mock('react-native',async()=>await import('react-native-web'));
 vi.mock('@expo/vector-icons/MaterialIcons',()=>({default:()=>null}));
 vi.mock('@react-navigation/native',async()=>{const React=await import('react');return {useIsFocused:()=>React.useState(true)[0]};});
 vi.mock('../../../services/api',()=>({api:{get:boundary.get}}));
+vi.mock('../../../providers/SessionProvider', () => ({ useSession: () => ({ getSessionScope: () => ({ userId: 'viewer', epoch: 1 }) }) }));
 import { Matches } from '../../../pages/Matches';
 afterEach(()=>cleanup());
 describe('matches mounted query transitions',()=>{

@@ -1,3 +1,4 @@
+import { useMediaBinding } from '../../features/media/useMediaBinding';
 import { useIsFocused } from '@react-navigation/native';
 import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -20,6 +21,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'BookDetails'>;
 const availabilityLabels = { AVAILABLE: 'Disponível para troca', RESERVED: 'Reservado', EXCHANGED: 'Já trocado' };
 
 export function BookDetails({ route, navigation }: Props) {
+  const mediaBinding = useMediaBinding();
   const insets = useSafeAreaInsets();
   const query = useQuery({
     queryKey: ['book', route.params.bookId],
@@ -29,7 +31,7 @@ export function BookDetails({ route, navigation }: Props) {
   const refreshAvatar = useAvatarRefresh(query.data, query.refetch, useIsFocused());
 
   if (query.isLoading) return <View style={styles.page}><StateView loading title="Abrindo o livro" /></View>;
-  if (query.isError) return <View style={styles.page}><StateView title="Não foi possível abrir o livro" description="Confira sua conexão e tente novamente." icon="cloud-off" actionLabel="Tentar novamente" onAction={() => query.refetch()} /></View>;
+  if (query.isError && !query.data) return <View style={styles.page}><StateView title="Não foi possível abrir o livro" description="Confira sua conexão e tente novamente." icon="cloud-off" actionLabel="Tentar novamente" onAction={() => query.refetch()} /></View>;
   if (!query.data) return <View style={styles.page}><StateView title="Livro não encontrado" icon="menu-book" actionLabel="Tentar novamente" onAction={() => query.refetch()} /></View>;
 
   const book = query.data;
@@ -39,11 +41,11 @@ export function BookDetails({ route, navigation }: Props) {
     <ScrollView style={styles.page} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
       {book.owner ? (
         <View style={styles.owner}>
-          <Avatar name={book.owner.name} url={book.owner.avatarUrl} version={book.owner.avatarVersion} onImageError={refreshAvatar} />
+          <Avatar subjectId={book.owner.id} binding={mediaBinding} name={book.owner.name} url={book.owner.avatarUrl} version={book.owner.avatarVersion} onImageError={refreshAvatar} />
           <View style={styles.ownerInfo}><Text style={styles.ownerCaption}>Na estante de</Text><Text style={styles.ownerName}>{book.owner.name}</Text><Text style={styles.ownerCity}>{book.owner.city || 'Localização não informada'}</Text></View>
         </View>
       ) : null}
-      <BookGallery key={book.id} title={book.title} photos={photos} refreshing={query.isFetching} refreshVersion={query.dataUpdatedAt} onRefresh={() => { void query.refetch(); }} />
+      <BookGallery key={book.id} bookId={book.id} binding={mediaBinding} onImageError={refreshAvatar} title={book.title} photos={photos} refreshing={query.isFetching} onRefresh={() => { void query.refetch(); }} />
       <View style={styles.heading}>
         <View style={styles.meta}><Badge label={availabilityLabels[book.availability]} variant={book.availability === 'AVAILABLE' ? 'success' : 'default'} />{book.hasIsbnBadge ? <IsbnBadge /> : null}</View>
         <Text style={styles.title} accessibilityRole="header">{book.title}</Text>

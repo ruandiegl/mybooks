@@ -6,9 +6,13 @@ import { theme } from '../../styles/theme';
 import { BookPhoto } from '../BookPhoto';
 import { styles } from './styles';
 
-type Props = { title: string; photos: BookImage[]; onRefresh: () => void; refreshing: boolean; refreshVersion: number };
+import { createBookMedia } from '../../features/media/mediaIdentity';
+import type { MediaBinding } from '../../features/media/mediaTypes';
 
-export function BookGallery({ title, photos, onRefresh, refreshing, refreshVersion }: Props) {
+type Props = { bookId: string; binding?: MediaBinding; title: string; photos: BookImage[]; onRefresh: () => void; refreshing: boolean; onImageError?: () => void; retryToken?: number };
+
+export function BookGallery({ bookId, binding, title, photos, onRefresh, onImageError, refreshing, retryToken = 0 }: Props) {
+  const [manualRetry, setManualRetry] = useState(0);
   const { width, height } = useWindowDimensions();
   const pager = useRef<ScrollView>(null);
   const [pageWidth, setPageWidth] = useState(0);
@@ -28,7 +32,7 @@ export function BookGallery({ title, photos, onRefresh, refreshing, refreshVersi
           <ScrollView ref={pager} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={(event) => setActiveIndex(Math.round(event.nativeEvent.contentOffset.x / pageWidth))}>
             {photos.map((photo, index) => (
               <View key={photo.id} style={{ width: pageWidth, height: photoHeight }}>
-                <BookPhoto key={(photo.url ?? photo.id) + refreshVersion} url={photo.url} hasPhoto title={title} label={`Foto ${index + 1} de ${photos.length}: ${title}${index === 0 ? ', capa' : ''}`} />
+                <BookPhoto media={binding?.scope ? createBookMedia(binding.scope, bookId, photo) : null} binding={binding} retryToken={retryToken + manualRetry} onImageError={onImageError} hasPhoto title={title} label={`Foto ${index + 1} de ${photos.length}: ${title}${index === 0 ? ', capa' : ''}`} />
               </View>
             ))}
           </ScrollView>
@@ -45,13 +49,13 @@ export function BookGallery({ title, photos, onRefresh, refreshing, refreshVersi
         <View style={styles.thumbnails}>
           {photos.map((photo, index) => (
             <Pressable key={photo.id} accessibilityRole="button" accessibilityLabel={index === 0 ? 'Mostrar capa' : `Mostrar foto ${index + 1}`} accessibilityState={{ selected: selectedIndex === index }} onPress={() => setActiveIndex(index)} style={({ pressed }) => [styles.thumbnail, selectedIndex === index && styles.selectedThumbnail, pressed && styles.pressed]}>
-              <View style={styles.thumbnailImage}><BookPhoto key={(photo.url ?? photo.id) + refreshVersion} url={photo.url} hasPhoto title={title} label={`Miniatura ${index + 1}`} compact /></View>
+              <View style={styles.thumbnailImage}><BookPhoto media={binding?.scope ? createBookMedia(binding.scope, bookId, photo) : null} binding={binding} retryToken={retryToken + manualRetry} onImageError={onImageError} hasPhoto title={title} label={`Miniatura ${index + 1}`} compact /></View>
               <Text style={[styles.thumbnailLabel, selectedIndex === index && styles.selectedLabel]}>{index === 0 ? 'Capa' : `Foto ${index + 1}`}</Text>
             </Pressable>
           ))}
         </View>
       ) : null}
-      {photos.length > 0 ? <Pressable accessibilityRole="button" disabled={refreshing} accessibilityState={{ disabled: refreshing, busy: refreshing }} onPress={onRefresh} style={({ pressed }) => [styles.refresh, pressed && styles.pressed]}><Text style={styles.refreshLabel}>{refreshing ? 'Atualizando fotos…' : 'Recarregar fotos'}</Text></Pressable> : null}
+      {photos.length > 0 ? <Pressable accessibilityRole="button" disabled={refreshing} accessibilityState={{ disabled: refreshing, busy: refreshing }} onPress={() => { setManualRetry(value => value + 1); onRefresh(); }} style={({ pressed }) => [styles.refresh, pressed && styles.pressed]}><Text style={styles.refreshLabel}>{refreshing ? 'Atualizando fotos…' : 'Recarregar fotos'}</Text></Pressable> : null}
     </View>
   );
 }

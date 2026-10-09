@@ -1,3 +1,4 @@
+import { useMediaBinding } from '../../features/media/useMediaBinding';
 import { useIsFocused } from '@react-navigation/native';
 import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -34,6 +35,7 @@ type TabType = 'received' | 'sent';
 type SortType = 'desc' | 'asc';
 
 export function Likes({ navigation }: Props) {
+  const mediaBinding = useMediaBinding();
   const queryClient = useQueryClient();
   const session = useSession();
   const premiumStatusQuery = usePremiumStatus(session.user?.id, session.isSignedIn);
@@ -198,6 +200,7 @@ export function Likes({ navigation }: Props) {
     return (
       <LikeCard
         variant="received"
+        binding={mediaBinding} userId={item.actor.id} bookId={item.book.id} coverImageId={item.book.coverImageId} bookCoverUrlExpiresAt={item.book.coverUrlExpiresAt}
         userName={item.actor.name}
         userAvatar={item.actor.avatarUrl} avatarVersion={item.actor.avatarVersion} onAvatarError={refreshReceivedAvatars}
         userCity={item.actor.city}
@@ -221,6 +224,7 @@ export function Likes({ navigation }: Props) {
   const renderSentItem = ({ item }: { item: SentLike }) => (
     <LikeCard
       variant="sent"
+      binding={mediaBinding} userId={item.owner.id} bookId={item.book.id} coverImageId={item.book.coverImageId} bookCoverUrlExpiresAt={item.book.coverUrlExpiresAt}
       userName={item.owner.name}
       userAvatar={item.owner.avatarUrl} avatarVersion={item.owner.avatarVersion} onAvatarError={refreshSentAvatars}
       userCity={item.owner.city}

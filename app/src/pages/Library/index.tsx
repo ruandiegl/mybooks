@@ -1,3 +1,4 @@
+import { useMediaBinding } from '../../features/media/useMediaBinding';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -18,6 +19,7 @@ import type { RootStackParamList } from '../../types/navigation';
 import { styles } from './styles';
 
 export function Library() {
+  const mediaBinding = useMediaBinding();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<'recent' | 'title'>('recent');
@@ -44,7 +46,7 @@ export function Library() {
         refreshControl={<RefreshControl refreshing={query.isRefetching && !query.isFetchingNextPage} onRefresh={query.refetch} tintColor={theme.colors.primary} />}
         onEndReached={() => { if (query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage(); }}
         onEndReachedThreshold={0.4}
-        renderItem={({ item }) => <BookCard book={item} style={styles.item} onPress={() => navigation.navigate('BookDetails', { bookId: item.id })} />}
+        renderItem={({ item }) => <BookCard binding={mediaBinding} book={item} style={styles.item} onPress={() => navigation.navigate('BookDetails', { bookId: item.id })} />}
         ListFooterComponent={query.isFetchingNextPage ? <View style={styles.footer}><ActivityIndicator color={theme.colors.primary} /></View> : null}
         ListEmptyComponent={<StateView title={search ? 'Nenhum livro encontrado' : 'Sua estante está vazia'} description={search ? 'Tente outro título, autor ou ISBN.' : 'Cadastre o primeiro livro e coloque uma nova história em circulação.'} actionLabel={search ? 'Limpar busca' : 'Cadastrar livro'} onAction={() => search ? setSearch('') : navigation.navigate('BookCreate')} />}
       />}

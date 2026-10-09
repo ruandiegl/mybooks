@@ -4,7 +4,7 @@ import { useMediaDisplay } from '../../features/media/useMediaDisplay';
 import type { RemoteMediaImageProps } from './RemoteMediaImage.types';
 
 export function RemoteMediaImage(props: RemoteMediaImageProps) {
-  const { display, dispatch, accepts } = useMediaDisplay(props.media, props.scope, props.getScope, props.retryToken);
+  const { display, dispatch, accepts } = useMediaDisplay(props.media, props.scope, props.getScope, props.retryToken, props.onError);
   const host = useRef<HTMLDivElement>(null);
   const callbacks = useRef(props); callbacks.current = props;
   const identity = props.media?.identity ?? null;
@@ -13,7 +13,7 @@ export function RemoteMediaImage(props: RemoteMediaImageProps) {
     if (!display.pendingUrl || !display.identity) return;
     const image = new Image();
     const attempt = display.attempt, identity = display.identity;
-    let cancelled = false, settled = false;
+    let cancelled = false, settled = false, loaded = false, decodeRejected = false;
     const finish = () => {
       if (cancelled || settled || !accepts(identity, attempt) || !host.current) return;
       settled = true;
@@ -26,7 +26,7 @@ export function RemoteMediaImage(props: RemoteMediaImageProps) {
       dispatch({ type: 'loaded', identity, attempt });
       callbacks.current.onReady?.();
     };
-    image.onload = finish;
+    image.onload = () => { loaded = true; if (!image.decode || decodeRejected) finish(); };
     image.onerror = () => {
       if (cancelled || settled || !accepts(identity, attempt)) return;
       settled = true;
@@ -34,11 +34,11 @@ export function RemoteMediaImage(props: RemoteMediaImageProps) {
       callbacks.current.onError?.();
     };
     image.src = display.pendingUrl;
-    if (image.decode) void image.decode().then(finish).catch(() => { if (image.complete && image.naturalWidth > 0) finish(); });
+    if (image.decode) void image.decode().then(finish).catch(() => { decodeRejected = true; if (loaded || (image.complete && image.naturalWidth > 0)) finish(); });
     else if (image.complete && image.naturalWidth > 0) finish();
     return () => { cancelled = true; image.onload = null; image.onerror = null; };
   }, [display.pendingUrl, display.identity, display.attempt]);
   const visible = display.activeUrl || display.pendingUrl;
   // Clear a prior actor synchronously in render, before layout effects run.
-  return <View style={[props.style, { overflow: 'hidden' }]} pointerEvents="none"><div key={identity + ':' + props.scope.epoch} ref={host} style={{ width: '100%', height: '100%', borderRadius: 'inherit', display: visible ? 'block' : 'none' }} /></View>;
+  return <View style={[props.style, { overflow: 'hidden' }]}><div key={identity + ':' + props.scope.epoch} ref={host} style={{ width: '100%', height: '100%', borderRadius: 'inherit', display: visible ? 'block' : 'none' }} /></View>;
 }

@@ -30,7 +30,7 @@ import { AvatarPhotoModal } from '../../../components/AvatarPhotoModal';
 import type { AvatarPhotoModalProps } from '../../../components/AvatarPhotoModal/AvatarPhotoModal.types';
 
 function props(overrides: Partial<AvatarPhotoModalProps> = {}): AvatarPhotoModalProps {
-  return { visible: true, name: 'Leitora', avatar: { avatarUrl: 'https://signed.test/photo.jpg', avatarVersion: 1, avatarUrlExpiresAt: null }, busy: false, onClose: () => {}, onEdit: () => {}, onTakePhoto: () => {}, onRemove: () => {}, onCancelCrop: () => {}, onSave: () => {}, ...overrides };
+  return { subjectId: 'reader', visible: true, name: 'Leitora', avatar: { avatarUrl: 'https://signed.test/photo.jpg', avatarVersion: 1, avatarUrlExpiresAt: null }, busy: false, onClose: () => {}, onEdit: () => {}, onTakePhoto: () => {}, onRemove: () => {}, onCancelCrop: () => {}, onSave: () => {}, ...overrides };
 }
 async function show(value = props()) {
   const mounted = render(<AvatarPhotoModal {...value} visible={false} />);

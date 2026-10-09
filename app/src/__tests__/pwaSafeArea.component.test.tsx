@@ -45,7 +45,7 @@ vi.mock('../pages/Chat', () => ({ Chat: () => null }));
 vi.mock('../pages/Matches', () => ({ Matches: () => null }));
 vi.mock('../pages/OnboardingProfile', () => ({ OnboardingProfile: () => null }));
 vi.mock('../pages/OnboardingBooks', () => ({ OnboardingBooks: () => null }));
-vi.mock('../providers/SessionProvider', () => ({ useSession: () => ({ user: undefined }) }));
+vi.mock('../providers/SessionProvider', () => ({ useSession: () => ({ user: undefined, getSessionScope: () => ({ userId: undefined, epoch: 0 }) }) }));
 
 import { MainTabs } from '../routes/main-tabs.custom';
 import { AppRoutes } from '../routes/app.routes';

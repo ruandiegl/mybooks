@@ -24,6 +24,23 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe('Web media frame continuity', () => {
+  it('does not replace a ready frame on load while decode is still pending', async () => {
+    const mounted = render(<RemoteMediaImage {...props} />);
+    await act(async () => requests[0].resolve());
+    const first = mounted.container.querySelector('img');
+    mounted.rerender(<RemoteMediaImage {...props} retryToken={1} media={{ ...media, url: 'https://fixture.invalid/new' }} />);
+    act(() => fireEvent.load(requests[1].image));
+    expect(mounted.container.querySelector('img')).toBe(first);
+    await act(async () => requests[1].resolve());
+    expect(mounted.container.querySelector('img')?.getAttribute('src')).toBe('https://fixture.invalid/new');
+  });
+  it('does not start a cold download using a known expired grant', async () => {
+    let refresh = 0;
+    render(<RemoteMediaImage {...props} media={{ ...media, expiresAt: '2000-01-01T00:00:00Z' }} onError={() => refresh++} />);
+    await act(async () => {});
+    expect(requests).toHaveLength(0);
+    expect(refresh).toBe(1);
+  });
   it('keeps the decoded DOM frame through twenty refetches and missing signatures', async () => {
     const mounted = render(<RemoteMediaImage {...props} />);
     await act(async () => requests[0].resolve());

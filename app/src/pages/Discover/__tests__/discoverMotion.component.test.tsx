@@ -22,8 +22,9 @@ vi.mock('../../../providers/SessionProvider', () => ({ useSession: () => ({ user
 vi.mock('../../../services/api', () => ({ api: { get: network.get, post: network.post }, apiErrorMessage: () => 'Falha de conexão' }));
 vi.mock('../../../services/notice', () => ({ Alert: { alert: network.alert } }));
 import { Discover } from '../index';
+import type { BookImage } from '../../../types/api';
 
-const first = { id: 'first', title: 'Primeiro livro', authors: ['Autora'], subjects: [], availability: 'AVAILABLE', owner: { id: 'owner', name: 'Ana' }, images: [] };
+const first = { id: 'first', title: 'Primeiro livro', authors: ['Autora'], subjects: [], availability: 'AVAILABLE', owner: { id: 'owner', name: 'Ana' }, images: [] as BookImage[] };
 const second = { ...first, id: 'second', title: 'Segundo livro' };
 const third = { ...first, id: 'third', title: 'Terceiro livro' };
 const pageInfo = { hasNextPage: false, nextCursor: null };
@@ -58,6 +59,20 @@ beforeEach(() => {
 afterEach(() => { cleanup(); clients.splice(0).forEach(client => client.clear()); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe('animação dos cards Descobrir', () => {
+  it('keeps the same decoded cover through twenty refetches without interfering with the card', async () => {
+    vi.stubGlobal('Image', function () { const image = document.createElement('img'); image.decode = async () => {}; return image; });
+    const photo = { id: 'photo1', sortOrder: 0, isCover: true, url: 'https://fixture.invalid/cover?sig=1', expiresAt: null };
+    const { client, mounted } = await host([{ ...first, images: [photo] }]);
+    await act(async () => {});
+    const original = mounted.container.querySelector('img');
+    expect(original).not.toBeNull();
+    for (let index = 2; index < 22; index++) {
+      await act(async () => { client.setQueryData(['books', 'discover'], { pages: [{ items: [{ ...first, images: [{ ...photo, url: 'https://fixture.invalid/cover?sig=' + index }] }], pageInfo }], pageParams: [''] }); await vi.advanceTimersByTimeAsync(1); });
+    }
+    expect(mounted.container.querySelector('img')).toBe(original);
+    expect(original?.getAttribute('src')).toBe('https://fixture.invalid/cover?sig=1');
+    expect(x()).toBe(0);
+  });
   it.each([['Passar livro', 'PASS', -1, 'discover-pass-feedback'], ['Gostei do livro', 'LIKE', 1, 'discover-like-feedback']] as const)('desliza %s na direção correta com feedback breve', async (label, action, direction, feedbackId) => {
     await host();
     fireEvent.click(screen.getByRole('button', { name: label }));

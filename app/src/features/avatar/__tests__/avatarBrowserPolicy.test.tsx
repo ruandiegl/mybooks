@@ -7,8 +7,8 @@ const { renderToStaticMarkup } = await vi.importActual<{ renderToStaticMarkup: (
 
 describe('exported Safari avatar policy', () => {
   it('emits callout suppression only on opted-in avatar classes', () => {
-    const markup = renderToStaticMarkup(<Avatar name="Ana" suppressBrowserActions />);
-    const ordinaryMarkup = renderToStaticMarkup(<Avatar name="Ana" />);
+    const markup = renderToStaticMarkup(<Avatar subjectId="reader" name="Ana" suppressBrowserActions />);
+    const ordinaryMarkup = renderToStaticMarkup(<Avatar subjectId="reader" name="Ana" />);
     // jsdom drops unknown WebKit declarations; inspect the real export boundary.
     const css = (StyleSheet as unknown as { getSheet: () => { textContent: string } }).getSheet().textContent;
     const rules = Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g));

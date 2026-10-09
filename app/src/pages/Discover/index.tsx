@@ -1,3 +1,4 @@
+import { useMediaBinding } from '../../features/media/useMediaBinding';
 import { useIsFocused } from '@react-navigation/native';
 import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -14,6 +15,7 @@ import { Card } from '../../components/Card';
 import { IsbnBadge } from '../../components/IsbnBadge';
 import { StateView } from '../../components/StateView';
 import { TopBar } from '../../components/TopBar';
+import { createBookMedia } from '../../features/media/mediaIdentity';
 import { getBookGalleryPhotos } from '../../features/books/bookPresentation';
 import { api, apiErrorMessage } from '../../services/api';
 import { Alert } from '../../services/notice';
@@ -29,6 +31,7 @@ type InteractionInput = { targetBookId: string; action: DiscoverAction; runId: n
 type InteractionRun = { id: number; ownerId: string | undefined; book: Book; exit: Promise<void> };
 
 export function Discover() {
+  const mediaBinding = useMediaBinding();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const queryClient = useQueryClient();
   const { width, height } = useWindowDimensions();
@@ -145,7 +148,7 @@ export function Discover() {
               >
                 <Card style={styles.card}>
                   <View style={styles.ownerRow}>
-                    <Avatar name={book.owner?.name || 'Leitor TrocaLivros'} url={book.owner?.avatarUrl} version={book.owner?.avatarVersion} onImageError={refreshAvatar} size={44} />
+                    <Avatar subjectId={book.owner?.id ?? null} binding={mediaBinding} name={book.owner?.name || 'Leitor TrocaLivros'} url={book.owner?.avatarUrl} version={book.owner?.avatarVersion} onImageError={refreshAvatar} size={44} />
                     <View style={styles.ownerInfo}>
                       <Text style={styles.ownerName} numberOfLines={1}>{book.owner?.name || 'Leitor TrocaLivros'}</Text>
                       <Text style={styles.ownerCity} numberOfLines={1}>{book.owner?.city || 'Livro em circulação'}</Text>
@@ -154,7 +157,7 @@ export function Discover() {
                   </View>
                   <View style={[styles.cardContent, landscape && styles.cardLandscape]}>
                     <View style={[styles.cover, landscape && styles.coverLandscape]}>
-                      <BookPhoto key={book.id + (photos[0]?.url ?? '') + query.dataUpdatedAt} url={photos[0]?.url} hasPhoto={Boolean(photos[0])} title={book.title} label={`Capa de ${book.title}`} />
+                      <BookPhoto media={mediaBinding.scope && photos[0] ? createBookMedia(mediaBinding.scope, book.id, photos[0]) : null} binding={mediaBinding} onImageError={refreshAvatar} hasPhoto={Boolean(photos[0])} title={book.title} label={`Capa de ${book.title}`} />
                       {book.hasIsbnBadge ? <View style={styles.badge}><IsbnBadge /></View> : null}
                       {photos.length > 1 ? <View style={styles.photoCount}><MaterialIcons name="photo-library" size={16} color={theme.colors.foreground} accessible={false} /><Text style={styles.photoCountText}>{photos.length} fotos</Text></View> : null}
                     </View>
