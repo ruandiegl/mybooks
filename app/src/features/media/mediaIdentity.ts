@@ -17,3 +17,11 @@ export function getMediaPixelBucket(size: number, pixelRatio: number): number {
   return [128, 256, 512, 1024, 1536].find((bucket) => bucket >= pixels) ?? 1536;
 }
 
+export function toMediaScope(scope: { userId: string | undefined; epoch: number }): MediaScope | null {
+  return scope.userId ? { userId: scope.userId, epoch: scope.epoch } : null;
+}
+
+export function isMediaScopeCurrent(scope: MediaScope, current: MediaScope | null): boolean {
+  return scope.userId === current?.userId && scope.epoch === current?.epoch;
+}
+

@@ -5,12 +5,14 @@ Data: 09/10/2026. Branch: `codex/media-image-continuity`, base `bbca847`. Worktr
 ## Progresso
 
 - Tarefa1: concluída — identidade por foto/versão/sujeito/epoch, DTO coverImageId compatível.
-- Tarefa2: pendente — apresentação contínua.
+- Tarefa2: concluída — reducer e adapters Web/nativo; cache memory e retry com retenção do frame.
 - Tarefa3: pendente — consumidores.
 - Tarefa4: pendente — antecipação.
 - Tarefa5: pendente — regressões/revisão/evidências.
 
 ## Decisões de execução
+
+- Ruling: usar hook interno useMediaDisplay nos dois adapters — coordenação de actor/identidade/retry única; custo: um arquivo adicional. Expo CLI instalou57.0.5 mas não escreveu config dinâmica; plugin registrado em app.json após check RED, confirmado GREEN. Sem upgrade geral;30 alertas npm preexistentes mantidos.
 
 - Ruling: executar sobre a main limpa na worktree existente, não sobre o WIP do menu — evita publicar alterações alheias; custo: testar integração com menu separadamente depois. ProfileEditForm só será adaptado se existir nesta base; AvatarPicker e onboarding existentes serão cobertos.
 - Pre-flight1→2→3: MediaDescriptor/MediaScope e identidade lógica são compartilhados; adaptar SessionScope com userId indefinido para null, sem modificar seu contrato.
@@ -21,3 +23,5 @@ Data: 09/10/2026. Branch: `codex/media-image-continuity`, base `bbca847`. Worktr
 ## Validação
 
 Baseline: app48/246 aprovados; API43/267 aprovados,4 suites/12 condicionais pulados. Tarefa1 RED observado (módulo de identidade ausente e cinco falhas no DTO); GREEN focado5/5 identidade e10/10 likes. Suítes finais da etapa: app49/251 e API43/268 aprovados,12 condicionais pulados; tipos e lint aprovados. Hardware/Safari/PWA instalada são aceites separados.
+
+Tarefa2: RED de módulos ausentes; adicional RED real de callback da ponte duplicado (2 em vez de1), corrigido com settle por tentativa. Renderer Web real usa nós HTML decodificados, preparações adiadas e actor trocado; teste nativo simula somente a ponte externa. Tipos e21 testes focados do módulo aprovados; exportsWeb/iOS concluídos. Sem execução física nem resultado de rede R2 real.
