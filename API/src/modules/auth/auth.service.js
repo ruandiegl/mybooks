@@ -3,7 +3,9 @@ import { AppError } from '../../shared/errors/AppError.js';
 import { emailService as applicationEmailService } from '../email/email.service.js';
 import { authRepository as applicationRepository } from './auth.repository.js';
 import { hashOpaqueToken, hashPassword, needsPasswordRehash, validateCpf, verifyPassword } from './auth.crypto.js';
-import { loginSchema, registerSchema, resetPasswordSchema, verifyEmailSchema } from './auth.schemas.js';
+import { changePasswordSchema, loginSchema, registerSchema, resetPasswordSchema, verifyEmailSchema } from './auth.schemas.js';
+import { publishSessionRevocation } from './auth.revocation.js';
+import { settingsSessionChanged } from './auth.actor.js';
 import { PENDING_REGISTRATION_TTL_MS } from './auth.constants.js';
 import { normalizeEmail } from './validators.js';
 import {
@@ -46,8 +48,13 @@ export const createAuthService = ({
   repository = applicationRepository,
   emailService = applicationEmailService,
   clock = systemClock,
-  logger = console
+  logger = console,
+  revocationPublisher = publishSessionRevocation
 } = {}) => {
+  const notifyRevoked = (event) => {
+    try { revocationPublisher(event); }
+    catch { logger.warn(JSON.stringify({ level: 'warn', code: 'REVOCATION_NOTIFICATION_FAILED' })); }
+  };
   const sendMailSafely = async (code, userId, operation) => {
     try {
       await operation();
@@ -184,25 +191,28 @@ export const createAuthService = ({
         throw new AppError('Conta inativa.', { statusCode: 403, code: 'ACCOUNT_INACTIVE' });
       }
 
-      if (needsPasswordRehash(user.passwordHash)) {
-        user.passwordHash = await hashPassword(payload.password);
-        await repository.updatePasswordHash(user.id, user.passwordHash);
-      }
+      const expectedPasswordHash = user.passwordHash;
+      const rehashedPasswordHash = needsPasswordRehash(user.passwordHash) ? await hashPassword(payload.password) : undefined;
 
       const now = clock.now();
       const material = createSessionMaterial({ now, meta });
-      const session = await repository.createSession({ userId: user.id, session: material.stored });
+      const session = await repository.createSession({ userId: user.id, session: material.stored, expectedPasswordHash, rehashedPasswordHash });
+      if (!session) throw invalidCredentials();
       return issueSession(user, session, material.refreshToken, now);
     },
 
-    async refresh(refreshToken, meta) {
+    async refresh(refreshToken, meta, correlation) {
       const now = clock.now();
       const material = createSessionMaterial({ now, meta });
       const result = await repository.rotateSession({
         refreshTokenHash: hashOpaqueToken(refreshToken),
         now,
-        replacement: material.stored
+        replacement: material.stored,
+        correlation
       });
+
+      if (result.sessionIds?.length) notifyRevoked({ userId: result.userId, sessionIds: result.sessionIds });
+      if (result.retiredSessionIds?.length) notifyRevoked({ userId: result.user.id, sessionIds: result.retiredSessionIds, reason: 'rotated' });
 
       if (result.status === 'REPLAYED') {
         throw new AppError('Reutilização de sessão detectada.', { statusCode: 401, code: 'SESSION_REPLAYED' });
@@ -211,13 +221,28 @@ export const createAuthService = ({
       return issueSession(result.user, result.session, material.refreshToken, now);
     },
 
-    async logout({ refreshToken }) {
-      await repository.revokeSession(hashOpaqueToken(refreshToken), clock.now());
+    async logout({ refreshToken }, correlation) {
+      const result = await repository.revokeSession(hashOpaqueToken(refreshToken), clock.now(), correlation);
+      if (result?.sessionIds?.length) notifyRevoked(result);
       return { ok: true };
     },
 
-    async logoutAll(userId) {
-      await repository.revokeAllSessions(userId, clock.now());
+    async logoutAll(userId, options) {
+      const result = await repository.revokeAllSessions(userId, clock.now(), options);
+      if (result?.sessionIds?.length) notifyRevoked(result);
+      return { ok: true };
+    },
+
+    async changePassword(userId, sessionId, input, correlation) {
+      const payload = changePasswordSchema.parse(input);
+      const user = await repository.findUserByIdForAuth(userId);
+      if (!user?.passwordHash || !await verifyPassword(payload.currentPassword, user.passwordHash)) {
+        throw new AppError('A senha atual está incorreta.', { statusCode: 403, code: 'CURRENT_PASSWORD_INVALID', fields: { currentPassword: 'Confira sua senha atual.' } });
+      }
+      const newPasswordHash = await hashPassword(payload.newPassword);
+      const result = await repository.changePasswordAndRevokeSessions({ userId, sessionId, expectedPasswordHash: user.passwordHash, newPasswordHash, now: clock.now(), correlation });
+      if (result.status !== 'CHANGED') throw settingsSessionChanged();
+      notifyRevoked({ userId, sessionIds: result.sessionIds });
       return { ok: true };
     },
 
@@ -257,6 +282,7 @@ export const createAuthService = ({
       });
 
       if (result.status !== 'RESET') throw invalidCode();
+      if (result.sessionIds?.length) notifyRevoked({ userId: result.userId, sessionIds: result.sessionIds });
       return { ok: true };
     }
   };

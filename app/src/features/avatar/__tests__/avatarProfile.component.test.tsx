@@ -7,7 +7,7 @@ const boundary=vi.hoisted(()=>({get:vi.fn(),patch:vi.fn(),session:undefined as a
 vi.mock('react-native',async()=>{
  const native=await vi.importActual<typeof import('react-native')>('react-native-web'),React=await import('react');
  const implementation=await vi.importActual<{default:typeof native.Animated}>('react-native-web/dist/cjs/vendor/react-native/Animated/AnimatedImplementation');
- return {...native,Animated:{...native.Animated,...implementation.default},AccessibilityInfo:{isReduceMotionEnabled:async()=>boundary.reduced,addEventListener:()=>({remove:()=>{}})},Platform:{...native.Platform,get OS(){return boundary.os;}},Modal:(props:any)=>{if(props.animationType==='slide')boundary.textModalVisible=Boolean(props.visible);return React.createElement(native.Modal,props);},Pressable:(props:any)=>{if(props.accessibilityLabel==='Ver foto de perfil')boundary.longPress=props.onLongPress;return React.createElement(native.Pressable,props);},Image:(props:any)=>{React.useEffect(()=>{if(!boundary.failImage)return;let alive=true;queueMicrotask(()=>{if(alive)props.onError?.();});return()=>{alive=false;};},[props.source.uri]);return React.createElement('img',{src:props.source.uri,alt:'avatar'});}};
+ return {...native,Animated:{...native.Animated,...implementation.default},AccessibilityInfo:{isReduceMotionEnabled:async()=>boundary.reduced,addEventListener:()=>({remove:()=>{}})},Platform:{...native.Platform,get OS(){return boundary.os;}},Modal:(props:any)=>{if(props.accessibilityLabel!=='Foto de perfil')boundary.textModalVisible=Boolean(props.visible);return React.createElement(native.Modal,props);},Pressable:(props:any)=>{if(props.accessibilityLabel==='Ver foto de perfil')boundary.longPress=props.onLongPress;return React.createElement(native.Pressable,props);},Image:(props:any)=>{React.useEffect(()=>{if(!boundary.failImage)return;let alive=true;queueMicrotask(()=>{if(alive)props.onError?.();});return()=>{alive=false;};},[props.source.uri]);return React.createElement('img',{src:props.source.uri,alt:'avatar'});}};
 });
 vi.mock('expo-haptics',()=>({ImpactFeedbackStyle:{Light:'light'},AndroidHaptics:{Long_Press:'long-press'},impactAsync:async(style:string)=>{boundary.haptics.push('ios:'+style);if(boundary.hapticFails)throw Error('unavailable');},performAndroidHapticsAsync:async(type:string)=>{boundary.haptics.push('android:'+type);if(boundary.hapticFails)throw Error('unavailable');}}));
 vi.mock('@expo/vector-icons/MaterialIcons',()=>({default:()=>null}));
@@ -17,19 +17,51 @@ vi.mock('react-native-safe-area-context',async()=>({SafeAreaView:(await import('
 vi.mock('../../../services/api',()=>({api:{get:boundary.get,patch:boundary.patch},apiErrorMessage:()=> 'offline'}));
 vi.mock('../../../services/notice',()=>({Alert:{alert:()=>{}}}));
 vi.mock('../../../providers/SessionProvider',()=>({useSession:()=>boundary.session}));
+vi.mock('../../preferences/themeStorage',()=>({loadThemePreference:async()=>({preference:'light'}),saveThemePreference:async()=>{}}));
 vi.mock('../useAvatarEditor',()=>({useAvatarEditor:()=>({busy:false,source:boundary.editorSource,error:boundary.editorError,choose:()=>{boundary.selections++;},takePhoto:()=>{boundary.captures++;},remove:()=>{boundary.removals++;},cancel:()=>{boundary.cancels++;boundary.editorSource=undefined;boundary.editorError=undefined;}})}));
 vi.mock('../../../components/AvatarEditor',()=>({AvatarEditor:()=>null}));
-vi.mock('../../premium/PremiumOfferProvider',()=>({usePremiumOffer:()=>({open:()=>{}}),PremiumStatusCard:()=>null}));
+vi.mock('../../premium/PremiumOfferProvider',()=>({usePremiumOffer:()=>({openOffer:()=>{},setPresentationBlocked:()=>{}}),PremiumStatusCard:()=>null}));
 vi.mock('../../premium/usePremiumStatus',()=>({usePremiumStatus:()=>({data:null})}));
 import { Profile } from '../../../pages/profile';
 import { OnboardingProfile } from '../../../pages/OnboardingProfile';
 import { useAvatarRefresh } from '../useAvatarRefresh';
+import { ThemeProvider, useAppTheme } from '../../../providers/ThemeProvider';
 const person={id:'one',name:'Ana Silva',firstName:'Ana',lastName:'Silva',interests:[],isActive:true,city:'SP',avatarUrl:'https://signed.test/old',avatarUrlExpiresAt:null,avatarVersion:1};
 const clients:QueryClient[]=[];
 function host(node:React.ReactNode){const client=new QueryClient({defaultOptions:{queries:{retry:false,gcTime:Infinity}}});clients.push(client);return <QueryClientProvider client={client}>{node}</QueryClientProvider>;}
-beforeEach(()=>{vi.stubGlobal('Image', function () { const image = document.createElement('img'); image.decode = async () => { await Promise.resolve(); if (boundary.failImage) { image.dispatchEvent(new Event('error')); throw new Error('offline'); } }; return image; });vi.clearAllMocks();boundary.os='web';boundary.reduced=true;boundary.cancels=0;boundary.haptics=[];boundary.hapticFails=false;boundary.selections=0;boundary.captures=0;boundary.removals=0;boundary.longPress=undefined;boundary.editorSource=undefined;boundary.editorError=undefined;boundary.session={getSessionScope:()=>({userId:boundary.session?.user?.id,epoch:1}),user:{...person},isSignedIn:true,refreshUser:async()=>person,refreshAvatar:()=>{},updateAvatar:()=>{},signOut:async()=>{}};boundary.get.mockImplementation(async(url:string)=>({data:{data:url.endsWith('/me')?person:{items:[],pageInfo:{hasNextPage:false}}}}));});
+beforeEach(()=>{vi.stubGlobal('Image', function () { const image = document.createElement('img'); image.decode = async () => { await Promise.resolve(); if (boundary.failImage) { image.dispatchEvent(new Event('error')); throw new Error('offline'); } }; return image; });vi.clearAllMocks();boundary.os='web';boundary.reduced=true;boundary.cancels=0;boundary.haptics=[];boundary.hapticFails=false;boundary.selections=0;boundary.captures=0;boundary.removals=0;boundary.longPress=undefined;boundary.editorSource=undefined;boundary.editorError=undefined;boundary.session={getSessionScope:()=>({userId:boundary.session?.user?.id,epoch:1}),user:{...person},isSignedIn:true,refreshUser:async()=>person,refreshAvatar:()=>{},updateAvatar:()=>{},signOut:async()=>{},captureActor:()=>({userId:boundary.session.user.id,epoch:1,sessionId:'10000000-0000-4000-8000-000000000001'}),isActorCurrent:(actor:any)=>actor.userId===boundary.session.user.id,updateUser:()=>{}};boundary.get.mockImplementation(async(url:string)=>({data:{data:url.endsWith('/me')?person:{items:[],pageInfo:{hasNextPage:false}}}}));});
 afterEach(()=>{cleanup();clients.forEach(c=>c.clear());clients.length=0;boundary.failImage=false;vi.useRealTimers();vi.unstubAllGlobals();delete (navigator as {vibrate?:Navigator['vibrate']}).vibrate;});
 describe('profile and onboarding mounted avatar coordination',()=>{
+ it('keeps the editing avatar decoded across twenty renewals and a theme change without resetting text',async()=>{
+  let changeTheme!:()=>Promise<void>;
+  function ThemedProfile(){const {setPreference}=useAppTheme();changeTheme=()=>setPreference('dark');return <Profile navigation={{navigate:()=>{}} as any}/>;}
+  render(host(<ThemeProvider><ThemedProfile/></ThemeProvider>));
+  fireEvent.click(await screen.findByRole('button',{name:'Abrir configurações'}));
+  fireEvent.click(await screen.findByRole('button',{name:'Editar perfil'}));
+  const dialog=screen.getByRole('dialog',{name:'Editar perfil'});
+  await waitFor(()=>expect(dialog.querySelector('img')).not.toBeNull());
+  const frame=dialog.querySelector('img')!;
+  expect(frame.getAttribute('src')).toBe('https://signed.test/old');
+  fireEvent.change(screen.getByRole('textbox',{name:'Nome'}),{target:{value:'Nome não salvo'}});
+  for(let signature=2;signature<=21;signature++)await act(async()=>{clients[0].setQueryData(['me'],{...person,avatarUrl:'https://signed.test/renewed?signature='+signature});});
+  await act(async()=>{await changeTheme();});
+  expect(dialog.querySelector('img')).toBe(frame);
+  expect(frame.getAttribute('src')).toBe('https://signed.test/old');
+  expect((screen.getByRole('textbox',{name:'Nome'}) as HTMLInputElement).value).toBe('Nome não salvo');
+  expect(getComputedStyle(screen.getByRole('button',{name:'Salvar alterações'})).backgroundColor).toBe('rgb(255, 143, 181)');
+ });
+ it('requests owner renewal when the avatar inside the profile editor fails',async()=>{
+  boundary.failImage=true;
+  let renewals=0;boundary.session.refreshAvatar=()=>{renewals++;};
+  render(host(<Profile navigation={{navigate:()=>{}} as any}/>));
+  await screen.findByRole('button',{name:'Abrir configurações'});
+  await act(async()=>{});
+  const previous=renewals;
+  fireEvent.click(screen.getByRole('button',{name:'Abrir configurações'}));
+  fireEvent.click(await screen.findByRole('button',{name:'Editar perfil'}));
+  await act(async()=>{});
+  expect(renewals).toBe(previous+1);
+ });
  it('does not deliver an old animated close after the signed-in account changes',async()=>{
   boundary.reduced=false;
   vi.stubGlobal('requestAnimationFrame',(callback:FrameRequestCallback)=>setTimeout(()=>callback(performance.now()),16));
@@ -98,15 +130,15 @@ describe('profile and onboarding mounted avatar coordination',()=>{
  });
  it('does not reopen the text editor after closing a photo error',async()=>{
   const tree=host(<Profile navigation={{navigate:()=>{}} as any}/>),mounted=render(tree);
+  fireEvent.click(await screen.findByRole('button',{name:'Abrir configurações'}));
   fireEvent.click(await screen.findByRole('button',{name:'Editar perfil'}));
   boundary.editorError='Erro na foto';
   mounted.rerender(React.cloneElement(tree as React.ReactElement,{},<Profile navigation={{navigate:()=>{}} as any}/>));
   await screen.findByText('Erro na foto');
   vi.useFakeTimers();
-  fireEvent.click(screen.getByRole('button',{name:'Fechar edição de perfil'}));
+  fireEvent.click(screen.getByRole('button',{name:'Fechar configurações'}));
   await act(async()=>{await vi.advanceTimersByTimeAsync(400);});
-  // jsdom does not emit CSS animationend: inspect the actual visibility prop.
-  expect(boundary.textModalVisible).toBe(false);
+  expect(screen.queryByRole('dialog')).toBeNull();
  });
  it('opens the enlarged photo with a long press without starting the gallery',async()=>{
   render(host(<Profile navigation={{navigate:()=>{}} as any}/>));
@@ -157,13 +189,17 @@ describe('profile and onboarding mounted avatar coordination',()=>{
   let resolve!:(value:unknown)=>void;
   boundary.patch.mockReturnValue(new Promise(r=>{resolve=r;}));
   render(host(<Profile navigation={{navigate:()=>{}} as any}/>));
+  fireEvent.click(await screen.findByRole('button',{name:'Abrir configurações'}));
   fireEvent.click(await screen.findByRole('button',{name:'Editar perfil'}));
   fireEvent.click(screen.getByRole('button',{name:'Salvar alterações'}));
   const choose=screen.getByRole('button',{name:'Escolher ou alterar foto de perfil'});
   await waitFor(()=>expect(choose.getAttribute('aria-disabled')).toBe('true'));
+  fireEvent.click(screen.getByRole('button',{name:'Fechar configurações'}));
+  expect(screen.getByRole('dialog',{name:'Editar perfil'})).toBeTruthy();
   fireEvent.click(choose);
   expect(boundary.selections).toBe(0);
   await act(async()=>resolve({data:{data:person}}));
+  expect(await screen.findByRole('dialog',{name:'Configurações'})).toBeTruthy();
  });
  it('uses renewed session photo without resetting unsaved onboarding text',async()=>{
   const tree=host(<OnboardingProfile/>),mounted=render(tree);

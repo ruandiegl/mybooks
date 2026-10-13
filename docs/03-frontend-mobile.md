@@ -8,6 +8,12 @@
 
 Descobrir antecipa só capa/avatar dos próximos2 livros:4 recursos,2 preparações simultâneas,24 metadados. Foco/background/scope/validade são verificados; cancelamento é lógico quando a plataforma não oferece abort. Login novo limpa o QueryClient e os metadados do scope anterior, sem mudar renovação comum. Não usar keys por URI/dataUpdatedAt, timers por imagem ou cache privado persistente. O loader gerencia seu cache de memória; não há promessa de teto de RAM, reuso entre assinaturas, login offline ou apagamento seguro do cache HTTP do SO/browser.
 
+## Menu do perfil — plano010 (local)
+
+Hambúrguer substitui Editar; ProfileSettingsModal compõe editor, conta, aparência, senha, notificações, ajuda, Sobre e confirmações. Dirty/crop/busy são coordenados sem outro dialog; foco volta ao acionador no Web e fonte grande pode rolar. ThemeProvider/useAppTheme/useThemedStyles tornam cores reativas, sem key de remontagem. Preferência pública sobrevive ao logout.
+
+Ações terminais usam actor/epoch e confirmação remota (HTTP ou revogação de socket), preservam sessão em erro transitório e não limpam um novo login. SecureStore serializa operações; Web Locks `trocalivros.auth.refresh.v1` cobre cookies, inclusive login/verify. Requests termináveis usam adapter público sem refresh recursivo;401 pode renovar fora do lock uma vez. Preferências usam query `['account-preferences',userId]`;404 mantém legado e impede controles novos sem contrato.
+
 Telas ficam em `app/src/pages/<Nome>/index.tsx` com `styles.ts`; componentes reutilizáveis seguem a mesma dupla. Parâmetros de navegação vivem em `src/types/navigation.ts`.
 
 ## Sessão

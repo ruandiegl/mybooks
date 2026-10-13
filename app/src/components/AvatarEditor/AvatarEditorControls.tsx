@@ -1,9 +1,12 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import { useState, type PropsWithChildren } from 'react';
 import { ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { AppButton } from '../AppButton';
-import { editorStyles as styles } from './editorStyles.shared';
+import { createEditorStyles } from './editorStyles.shared';
 type Props=PropsWithChildren<{busy:boolean;ready:boolean;error?:string;statusLabel?:string;lowResolution:boolean;onSave:()=>void;onCancel:()=>void}>;
 export function AvatarEditorControls({children,busy,ready,error,statusLabel,lowResolution,onSave,onCancel}:Props) {
+  const styles = useThemedStyles(createEditorStyles);
+
  const [focused,setFocused]=useState<'cancel'|'save'|null>(null);
  const [wrappedTitle,setWrappedTitle]=useState(false);
  const {width,fontScale}=useWindowDimensions(),stackedHeader=width<360||fontScale>=1.5||wrappedTitle;

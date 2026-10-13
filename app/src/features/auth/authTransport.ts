@@ -1,6 +1,7 @@
 import { authApi } from './authApi';
 import { clearTokens, loadTokens, saveTokens } from './authStorage';
-import type { AuthSessionResponse, AuthTokens, BrowserAuthSessionResponse, User } from '../../types/api';
+import type { AuthSessionResponse, BrowserAuthSessionResponse, ChangePasswordInput, User } from '../../types/api';
+import type { SessionActor } from './sessionActor';
 
 export type SessionResponse = AuthSessionResponse | BrowserAuthSessionResponse;
 
@@ -17,7 +18,9 @@ export type SessionTransport = {
   getToken: (current: SessionSnapshot | null) => Promise<string | null>;
   refresh: (current: SessionSnapshot | null) => Promise<SessionSnapshot | null>;
   clear: () => Promise<void>;
-  signOut: (current: SessionSnapshot | null) => Promise<void>;
+  signOut: (current: SessionSnapshot | null, actor?: SessionActor, isCurrent?: () => boolean) => Promise<void>;
+  signOutAll: (current: SessionSnapshot, actor: SessionActor, isCurrent: () => boolean) => Promise<void>;
+  changePassword: (current: SessionSnapshot, input: ChangePasswordInput, actor: SessionActor, isCurrent: () => boolean) => Promise<void>;
 };
 
 function snapshot(response: AuthSessionResponse): SessionSnapshot {
@@ -67,8 +70,10 @@ export const sessionTransport: SessionTransport = {
         const next = snapshot(response);
         const saved = await storeCurrent(ticket, async () => { await saveTokens({ accessToken: next.accessToken, refreshToken: next.refreshToken!, expiresAt: next.expiresAt }); return true; });
         return saved ? next : null;
-      } catch {
-        return null;
+      } catch (error) {
+        if (ticket !== generation) return null;
+        if ((error as { response?: { status?: number } })?.response?.status === 401) return null;
+        throw error;
       }
     })();
     const run = { generation: ticket, token, promise }; refreshRun = run;
@@ -79,8 +84,17 @@ export const sessionTransport: SessionTransport = {
     }
   },
   async clear() { const ticket = ++generation; await storeCurrent(ticket, async () => { await clearTokens(); return true; }); },
-  async signOut(current) {
+  async signOut(current, actor, isCurrent) {
+    if (isCurrent && !isCurrent()) throw Error('A sessão mudou.');
     if (!current?.refreshToken) return;
-    await authApi.logout(current.refreshToken);
+    await authApi.logout(current.refreshToken, actor);
+  },
+  async signOutAll(current, actor, isCurrent) {
+    if (!isCurrent()) throw Error('A sessão mudou.');
+    await authApi.logoutAll(current.accessToken, actor);
+  },
+  async changePassword(current, input, actor, isCurrent) {
+    if (!isCurrent()) throw Error('A sessão mudou.');
+    await authApi.changePassword(current.accessToken, input, actor);
   }
 };

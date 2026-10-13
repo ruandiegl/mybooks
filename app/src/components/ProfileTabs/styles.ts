@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
-import { theme } from '../../styles/theme';
+import type { AppTheme } from '../../styles/theme';
 
-export const styles = StyleSheet.create({
+export const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: theme.colors.outline },
   tab: { flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', paddingHorizontal: theme.spacing.xs, position: 'relative' },
   tabPressed: { opacity: 0.72 },

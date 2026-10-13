@@ -48,5 +48,5 @@ export async function withCookieRefreshLock<T>(
     : (navigator as Navigator & { locks?: BrowserLockManager }).locks) : lockManager;
   if (!cookieSession) return operation();
   if (!availableLocks) throw new Error('Atualize o navegador para sincronizar a renovação segura da sessão.');
-  return availableLocks.request('trocalivros-auth-refresh', { mode: 'exclusive' }, operation);
+  return availableLocks.request('trocalivros.auth.refresh.v1', { mode: 'exclusive' }, operation);
 }

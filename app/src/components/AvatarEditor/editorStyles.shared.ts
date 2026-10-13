@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
-import { theme } from '../../styles/theme';
-export const editorStyles = StyleSheet.create({
+import type { AppTheme } from '../../styles/theme';
+export const createEditorStyles = (theme: AppTheme) => StyleSheet.create({
   root:{flex:1,backgroundColor:theme.colors.background},
   header:{paddingHorizontal:theme.spacing.md,paddingVertical:theme.spacing.xs,gap:theme.spacing.xs},
   headerRow:{flexDirection:'row',alignItems:'center',gap:theme.spacing.xs},

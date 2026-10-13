@@ -2,6 +2,7 @@ import { AppError } from '../../shared/errors/AppError.js';
 import { authService } from './auth.service.js';
 import {
   forgotPasswordSchema,
+  changePasswordSchema,
   loginSchema,
   refreshSchema,
   registerSchema,
@@ -15,6 +16,8 @@ import {
   readRefreshCookie,
   webCookieSessionResponse
 } from './auth.web-session.js';
+import { hashOpaqueToken } from './auth.crypto.js';
+import { settingsCorrelation, settingsSessionChanged } from './auth.actor.js';
 
 export const BROWSER_REFRESH_COOKIE = '__Host-trocalivros_refresh';
 const BROWSER_REFRESH_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
@@ -60,6 +63,14 @@ function clearBrowserRefreshCookie(res) {
 
 function preventBrowserSessionCaching(res) {
   res.set('Cache-Control', 'no-store');
+}
+
+function terminalCorrelation(req, browser = false) {
+  const cookieTransport = browser || isCookieSessionRequest(req);
+  const refreshToken = cookieTransport ? (browser ? readCookie(req, BROWSER_REFRESH_COOKIE).value : readRefreshCookie(req)) : null;
+  if (cookieTransport && !refreshToken) throw settingsSessionChanged();
+  const supplied = settingsCorrelation(req, refreshToken ? hashOpaqueToken(refreshToken) : undefined);
+  return supplied ?? (cookieTransport ? { ownerId: req.currentUser.id, anchorSessionId: req.identity.sessionId, cookieHash: hashOpaqueToken(refreshToken) } : undefined);
 }
 
 const missingBrowserSession = () => new AppError('Sessão inválida ou expirada.', {
@@ -114,7 +125,7 @@ export function createAuthController({ service = authService, getMe = usersServi
         throw missingBrowserSession();
       }
       try {
-        const session = await service.refresh(parsedRefresh.data.refreshToken, metadata(req));
+        const session = await service.refresh(parsedRefresh.data.refreshToken, metadata(req), settingsCorrelation(req));
         setBrowserRefreshCookie(res, session.refreshToken);
         return res.status(200).json({ data: browserSessionPayload(session) });
       } catch (error) {
@@ -127,7 +138,9 @@ export function createAuthController({ service = authService, getMe = usersServi
     browserLogout: async (req, res) => {
       preventBrowserSessionCaching(res);
       const { value: refreshToken } = readCookie(req, BROWSER_REFRESH_COOKIE);
-      if (refreshToken) await service.logout(refreshSchema.parse({ refreshToken }));
+      const correlation = settingsCorrelation(req);
+      if (!refreshToken && correlation) throw settingsSessionChanged();
+      if (refreshToken) await service.logout(refreshSchema.parse({ refreshToken }), correlation);
       clearBrowserRefreshCookie(res);
       return res.status(200).json({ data: { ok: true } });
     },
@@ -147,7 +160,7 @@ export function createAuthController({ service = authService, getMe = usersServi
           req,
           res,
           200,
-          await service.refresh(refreshToken, metadata(req))
+          await service.refresh(refreshToken, metadata(req), settingsCorrelation(req))
         );
       } catch (error) {
         if (cookieTransport && error?.statusCode === 401) clearRefreshCookie(res);
@@ -156,17 +169,40 @@ export function createAuthController({ service = authService, getMe = usersServi
     },
     logout: async (req, res) => {
       if (!isCookieSessionRequest(req)) {
-        return res.status(200).json({ data: await service.logout(refreshSchema.parse(req.body)) });
+        return res.status(200).json({ data: await service.logout(refreshSchema.parse(req.body), settingsCorrelation(req)) });
       }
 
       const refreshToken = readRefreshCookie(req);
-      if (refreshToken) await service.logout({ refreshToken });
+      const correlation = settingsCorrelation(req);
+      if (!refreshToken && correlation) throw settingsSessionChanged();
+      if (refreshToken) await service.logout({ refreshToken }, correlation);
       clearRefreshCookie(res);
       return res.status(200).json({ data: { ok: true } });
     },
-    logoutAll: async (req, res) => res.status(200).json({
-      data: await service.logoutAll(req.currentUser.id)
-    }),
+    logoutAll: async (req, res) => {
+      preventBrowserSessionCaching(res);
+      const data = await service.logoutAll(req.currentUser.id, { sessionId: req.identity?.sessionId, correlation: terminalCorrelation(req) });
+      if (isCookieSessionRequest(req)) clearRefreshCookie(res);
+      return res.status(200).json({ data });
+    },
+    browserLogoutAll: async (req, res) => {
+      preventBrowserSessionCaching(res);
+      const data = await service.logoutAll(req.currentUser.id, { sessionId: req.identity.sessionId, correlation: terminalCorrelation(req, true) });
+      clearBrowserRefreshCookie(res);
+      return res.status(200).json({ data });
+    },
+    changePassword: async (req, res) => {
+      preventBrowserSessionCaching(res);
+      const data = await service.changePassword(req.currentUser.id, req.identity.sessionId, changePasswordSchema.parse(req.body), terminalCorrelation(req));
+      if (isCookieSessionRequest(req)) clearRefreshCookie(res);
+      return res.status(200).json({ data });
+    },
+    browserChangePassword: async (req, res) => {
+      preventBrowserSessionCaching(res);
+      const data = await service.changePassword(req.currentUser.id, req.identity.sessionId, changePasswordSchema.parse(req.body), terminalCorrelation(req, true));
+      clearBrowserRefreshCookie(res);
+      return res.status(200).json({ data });
+    },
     forgotPassword: async (req, res) => res.status(200).json({
       data: await service.requestPasswordReset(forgotPasswordSchema.parse(req.body))
     }),

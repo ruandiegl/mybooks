@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
-import { theme } from '../../../styles/theme';
+import type { AppTheme } from '../../../styles/theme';
 
-export const styles = StyleSheet.create({
+export const createStyles = (theme: AppTheme) => StyleSheet.create({
   banner: { minHeight: 36, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: theme.spacing.xs, paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.xs },
   connecting: { backgroundColor: theme.colors.secondarySoft },
   offline: { backgroundColor: theme.colors.surfaceStrong },

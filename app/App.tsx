@@ -13,7 +13,7 @@ import { ActivityIndicator, AppState, Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SessionProvider } from './src/providers/SessionProvider';
 import { Routes } from './src/routes';
-import { theme } from './src/styles/theme';
+import { ThemeProvider, useAppTheme } from './src/providers/ThemeProvider';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,6 +25,11 @@ const queryClient = new QueryClient({
 });
 
 export default function App() {
+  return <ThemeProvider><AppContent /></ThemeProvider>;
+}
+
+function AppContent() {
+  const { theme, mode, hydrated } = useAppTheme();
   const [fontsLoaded] = useFonts({
     BeVietnamPro_400Regular,
     BeVietnamPro_500Medium,
@@ -42,6 +47,7 @@ export default function App() {
     return () => subscription.remove();
   }, []);
 
+  if (!hydrated) return null;
   if (!fontsLoaded) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.background }}>
@@ -54,7 +60,7 @@ export default function App() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <SessionProvider>
-          <StatusBar style="dark" />
+          <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
           <Routes />
         </SessionProvider>
       </QueryClientProvider>

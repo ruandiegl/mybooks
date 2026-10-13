@@ -1,16 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../authApi', () => ({
-  authApi: {
-    refresh: vi.fn(),
-    logout: vi.fn()
-  }
-}));
+const requests = vi.hoisted(() => ({ refresh: vi.fn(), logout: vi.fn() }));
+vi.mock('../authApi', () => ({ authApi: requests }));
+vi.mock('../authApi.web', () => ({ authApi: requests }));
 
-const { authApi } = await import('../authApi');
+const { authApi } = await import('../authApi.web');
 
 const session = {
-  accessToken: 'short-lived-access-token',
+  accessToken: `e30.${btoa(JSON.stringify({ sub: 'user-1', sid: '10000000-0000-4000-8000-000000000001' }))}.test`,
   expiresAt: '2026-10-01T12:00:00.000Z',
   user: { id: 'user-1', name: 'Leitora', interests: [], isActive: true }
 };
@@ -58,6 +55,7 @@ describe('browser session transport', () => {
   });
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(authApi.refresh).mockReset(); vi.mocked(authApi.logout).mockReset();
     vi.stubGlobal('window', { sessionStorage: makeSessionStorage(), localStorage: makeSessionStorage() });
     vi.stubGlobal('navigator', { locks: makeLockManager() });
   });
@@ -178,6 +176,43 @@ describe('browser session transport', () => {
 
     await expect(transport.accept(session)).resolves.toMatchObject({ accessToken: session.accessToken });
     expect(window.sessionStorage.values.size).toBe(0);
+  });
+
+  it('does not revoke after the captured actor changes while waiting for the cookie lock', async () => {
+    vi.mocked(authApi.logout).mockReset();
+    let release!: () => void, current = true;
+    const locks = makeLockManager();
+    const gate = locks.request('trocalivros.auth.refresh.v1', () => new Promise<void>(r => { release = r; }));
+    await Promise.resolve(); await Promise.resolve();
+    const module = await loadFreshTransport();
+    const transport = module.createWebSessionTransport({ auth: authApi, locks });
+    const snapshot = await transport.accept(session);
+    const actor = { userId: 'user-1', epoch: 1, sessionId: '10000000-0000-4000-8000-000000000001' };
+    const result = expect(transport.signOut(snapshot, actor, () => current)).rejects.toThrow(/sessão mudou/i);
+    current = false; release(); await gate; await result;
+    expect(authApi.logout).not.toHaveBeenCalled();
+    expect(await transport.getToken(null)).toBe(session.accessToken);
+  });
+  it('never mutates a cookie without Web Locks', async () => {
+    vi.mocked(authApi.logout).mockReset();
+    const module = await loadFreshTransport();
+    const transport = module.createWebSessionTransport({ auth: authApi, locks: null });
+    await expect(transport.signOut(null)).rejects.toThrow(/navegador/i);
+    expect(authApi.logout).not.toHaveBeenCalled();
+  });
+  it('does not let the next login join a refresh started for the previous login', async () => {
+    let finish!: (value: any) => void, started!: () => void;
+    const pending = new Promise(resolve => { finish = resolve; }), sent = new Promise<void>(resolve => { started = resolve; });
+    vi.mocked(authApi.refresh).mockReset().mockImplementationOnce(async () => { started(); return await pending as any; });
+    const module = await loadFreshTransport(), transport = module.createWebSessionTransport({ auth: authApi, locks: makeLockManager() });
+    const first = await transport.accept(session), oldRefresh = transport.refresh(first); await sent;
+    const next = { ...session, accessToken: `e30.${btoa(JSON.stringify({ sub: 'user-2', sid: '10000000-0000-4000-8000-000000000002' }))}.test`, user: { ...session.user, id: 'user-2' } };
+    const current = await transport.accept(next);
+    vi.mocked(authApi.refresh).mockResolvedValueOnce(next);
+    const newRefresh = transport.refresh(current); finish(session);
+    await expect(oldRefresh).resolves.toBeNull();
+    await expect(newRefresh).resolves.toMatchObject({ user: { id: 'user-2' } });
+    expect(await transport.getToken(null)).toBe(next.accessToken);
   });
 
   it('keeps the in-memory session when refresh fails temporarily', async () => {

@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
-import { theme } from '../../styles/theme';
-export const styles = StyleSheet.create({
+import type { AppTheme } from '../../styles/theme';
+export const createStyles = (theme: AppTheme) => StyleSheet.create({
   list: { paddingBottom: theme.spacing.xxl },
   item: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, paddingVertical: theme.spacing.md, borderBottomWidth: 1, borderBottomColor: theme.colors.outline },
   itemPressed: { opacity: 0.72 },

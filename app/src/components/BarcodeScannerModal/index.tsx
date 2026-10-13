@@ -1,3 +1,4 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import {
   CameraView,
@@ -23,9 +24,9 @@ import {
   shouldRefreshCameraPermission,
   shouldRequestCameraPermission
 } from '../../features/books/scannerFlow';
-import { theme } from '../../styles/theme';
+import { useAppTheme } from '../../providers/ThemeProvider';
 import { AppButton } from '../AppButton';
-import { styles } from './styles';
+import { createStyles } from './styles';
 
 export type BarcodeScannerModalProps = {
   visible: boolean;
@@ -34,6 +35,9 @@ export type BarcodeScannerModalProps = {
 };
 
 export function BarcodeScannerModal({ visible, onClose, onIsbnScanned }: BarcodeScannerModalProps) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   const [permission, requestPermission, getPermission] = useCameraPermissions();
   const [requestingPermission, setRequestingPermission] = useState(false);
   const [scannerError, setScannerError] = useState<string | null>(null);

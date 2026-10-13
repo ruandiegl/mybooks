@@ -19,7 +19,7 @@ export const usersService = {
       });
     }
     const firstName = data.firstName ?? user.firstName;
-    const lastName = data.lastName ?? user.lastName;
+    const lastName = data.lastName !== undefined ? data.lastName : user.lastName;
     const displayName = [firstName, lastName].filter(Boolean).join(' ');
     await usersRepository.update(userId, {
       ...data,

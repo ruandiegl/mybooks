@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
-import { theme } from '../../styles/theme';
+import type { AppTheme } from '../../styles/theme';
 
-export const styles = StyleSheet.create({
+export const createStyles = (theme: AppTheme) => StyleSheet.create({
   list: { gap: theme.spacing.xxs },
   item: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs },
   label: { color: theme.colors.mutedForeground, fontFamily: theme.typography.regular, fontSize: 11, flex: 1 },

@@ -46,6 +46,8 @@ export function createAuthRouter({ service, authenticateMiddleware = authenticat
   const router = Router();
   const controller = createAuthController({ service, getMe });
   const config = Object.fromEntries(Object.entries(defaults).map(([name, value]) => [name, { ...value, ...limits[name] }]));
+  const accountPasswordLimit = rateLimit({ windowMs: 60_000, limit: 5, standardHeaders: 'draft-8', legacyHeaders: false, keyGenerator: req => req.currentUser.id, handler: limitedResponse });
+  const ipPasswordLimit = rateLimit({ windowMs: 60_000, limit: 20, standardHeaders: 'draft-8', legacyHeaders: false, keyGenerator: req => ipKeyGenerator(req.ip || '0.0.0.0'), handler: limitedResponse });
   const requireSameOriginBrowserRequest = (req, _res, next) => {
     const origin = req.get('origin');
     const fetchSite = req.get('sec-fetch-site');
@@ -72,7 +74,10 @@ export function createAuthRouter({ service, authenticateMiddleware = authenticat
   router.post('/browser/logout', requireSameOriginBrowserRequest, limiter('logout', config.logout), asyncHandler(controller.browserLogout));
   router.post('/forgot-password', limiter('forgot', config.forgot), asyncHandler(controller.forgotPassword));
   router.post('/reset-password', limiter('reset', config.reset), asyncHandler(controller.resetPassword));
-  router.post('/logout-all', authenticateMiddleware, asyncHandler(controller.logoutAll));
+  router.post('/logout-all', cookieSessionGuard, authenticateMiddleware, asyncHandler(controller.logoutAll));
+  router.post('/browser/logout-all', requireSameOriginBrowserRequest, authenticateMiddleware, asyncHandler(controller.browserLogoutAll));
+  router.post('/change-password', cookieSessionGuard, authenticateMiddleware, accountPasswordLimit, ipPasswordLimit, asyncHandler(controller.changePassword));
+  router.post('/browser/change-password', requireSameOriginBrowserRequest, authenticateMiddleware, accountPasswordLimit, ipPasswordLimit, asyncHandler(controller.browserChangePassword));
   router.get('/me', authenticateMiddleware, asyncHandler(controller.me));
 
   return router;

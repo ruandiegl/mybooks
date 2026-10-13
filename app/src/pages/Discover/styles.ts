@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
-import { theme } from '../../styles/theme';
-export const styles = StyleSheet.create({
+import type { AppTheme } from '../../styles/theme';
+export const createStyles = (theme: AppTheme) => StyleSheet.create({
   body: { flex: 1 },
   bodyContent: { flexGrow: 1, paddingTop: theme.spacing.xxs, paddingBottom: theme.spacing.sm },
   deck: { flex: 1, alignItems: 'center', overflow: 'hidden' },

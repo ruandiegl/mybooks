@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
-import { theme } from '../../styles/theme';
+import type { AppTheme } from '../../styles/theme';
 
-export const styles = StyleSheet.create({
+export const createStyles = (theme: AppTheme) => StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'stretch' },
   metric: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: theme.spacing.xxs, paddingVertical: theme.spacing.xs },
   value: { color: theme.colors.foreground, fontFamily: theme.typography.bold, fontSize: 22, lineHeight: 27 },

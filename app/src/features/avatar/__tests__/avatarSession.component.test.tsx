@@ -13,7 +13,7 @@ import { RemoteMediaImage } from '../../../components/RemoteMediaImage/index.web
 import { toMediaScope } from '../../media/mediaIdentity';
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
 beforeEach(()=>{boundary.refresh.mockReset();boundary.me.mockReset();boundary.me.mockResolvedValue(null);});
-const response=(id:string)=>({accessToken:id,expiresAt:'2026-10-06T18:00:00Z',user:{id,name:id,interests:[],isActive:true,avatarUrl:null,avatarVersion:0}});
+const response=(id:string)=>({accessToken:`e30.${btoa(JSON.stringify({sub:id,sid:'10000000-0000-4000-8000-000000000001'})).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_')}.test-signature`,expiresAt:'2026-10-06T18:00:00Z',user:{id,name:id,interests:[],isActive:true,avatarUrl:null,avatarVersion:0}});
 describe('avatar receipt belongs to the current snapshot, not an older React render',()=>{
  it.each([['second',false],['first',false],['second',true]] as const)('rejects old refresh after login %s (null=%s)',async(nextUser,missing)=>{
   const client=new QueryClient();
@@ -28,7 +28,7 @@ describe('avatar receipt belongs to the current snapshot, not an older React ren
   client.setQueryData(['books'],{owner:nextUser});
   await act(async()=>{finish(missing?null:{accessToken:'old-refresh',expiresAt:Date.now()+60000,user:response('first').user});await pending;});
   expect(hook.result.current.user?.id).toBe(nextUser);
-  expect(await hook.result.current.getToken()).toBe(nextUser);
+  expect(await hook.result.current.getToken()).toBe(response(nextUser).accessToken);
   expect(hook.result.current.getSessionScope().epoch).toBe(epoch);
   expect(client.getQueryData(['books'])).toEqual({owner:nextUser});
   client.clear();

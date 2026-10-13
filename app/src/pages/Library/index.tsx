@@ -1,5 +1,6 @@
 import { useMediaBinding } from '../../features/media/useMediaBinding';
 import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,14 +15,17 @@ import { ToggleGroup } from '../../components/ToggleGroup';
 import { TopBar } from '../../components/TopBar';
 import { getSignedBookImageRefreshDelay } from '../../features/books/bookPhotos';
 import { api } from '../../services/api';
-import { theme } from '../../styles/theme';
+import { useAppTheme } from '../../providers/ThemeProvider';
 import type { ApiEnvelope, Book, Paginated } from '../../types/api';
 import type { RootStackParamList } from '../../types/navigation';
-import { styles } from './styles';
+import { createStyles } from './styles';
 
 export function Library() {
   const mediaBinding = useMediaBinding();
   const [imageRetryToken, setImageRetryToken] = useState(0);
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<'recent' | 'title'>('recent');
@@ -39,7 +43,7 @@ export function Library() {
 
   return (
     <AppScreen>
-      <TopBar eyebrow="Meu espaço" title="Biblioteca" action={<Pressable accessibilityRole="button" accessibilityLabel="Cadastrar livro" style={({ pressed }) => [styles.add, pressed && styles.addPressed]} onPress={() => navigation.navigate('BookCreate')}><MaterialIcons name="add" size={26} color={theme.colors.white} /></Pressable>} />
+      <TopBar eyebrow="Meu espaço" title="Biblioteca" action={<Pressable accessibilityRole="button" accessibilityLabel="Cadastrar livro" style={({ pressed }) => [styles.add, pressed && styles.addPressed]} onPress={() => navigation.navigate('BookCreate')}><MaterialIcons name="add" size={26} color={theme.colors.onPrimary} /></Pressable>} />
       {query.isLoading ? <StateView loading title="Organizando sua estante" /> : query.isError ? <StateView title="Não foi possível abrir sua estante" description="Confira a conexão e tente novamente." icon="cloud-off" actionLabel="Tentar novamente" onAction={retryImages} /> : <FlatList
         data={books}
         numColumns={2}

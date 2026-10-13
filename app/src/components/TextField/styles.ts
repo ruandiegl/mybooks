@@ -1,7 +1,7 @@
 import { Platform, StyleSheet } from 'react-native';
-import { theme } from '../../styles/theme';
+import type { AppTheme } from '../../styles/theme';
 
-export const styles = StyleSheet.create({
+export const createStyles = (theme: AppTheme) => StyleSheet.create({
   group: { gap: theme.spacing.xs },
   label: { color: theme.colors.foreground, fontFamily: theme.typography.semibold, fontSize: 13 },
   input: {

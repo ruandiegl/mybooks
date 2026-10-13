@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMediaBinding } from '../../features/media/useMediaBinding';
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import { useIsFocused } from '@react-navigation/native';
 import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -16,7 +17,7 @@ import { getBookGalleryPhotos } from '../../features/books/bookPresentation';
 import { api } from '../../services/api';
 import type { ApiEnvelope, Book, User } from '../../types/api';
 import type { RootStackParamList } from '../../types/navigation';
-import { styles } from './styles';
+import { createStyles } from './styles';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BookDetails'>;
 const availabilityLabels = { AVAILABLE: 'Disponível para troca', RESERVED: 'Reservado', EXCHANGED: 'Já trocado' };
@@ -24,6 +25,8 @@ const availabilityLabels = { AVAILABLE: 'Disponível para troca', RESERVED: 'Res
 export function BookDetails({ route, navigation }: Props) {
   const mediaBinding = useMediaBinding();
   const [imageRetryToken, setImageRetryToken] = useState(0);
+  const styles = useThemedStyles(createStyles);
+
   const insets = useSafeAreaInsets();
   const query = useQuery({
     queryKey: ['book', route.params.bookId],

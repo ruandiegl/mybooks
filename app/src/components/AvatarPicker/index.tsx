@@ -1,17 +1,20 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Pressable,Text,View } from 'react-native';
 import { Avatar } from '../Avatar';
 import { AppButton } from '../AppButton';
 import type { AvatarDescriptor } from '../../types/api';
-import { theme } from '../../styles/theme';
-import { styles } from './styles';
+import { useAppTheme } from '../../providers/ThemeProvider';
+import { createStyles } from './styles';
 import type { MediaBinding } from '../../features/media/mediaTypes';
-type Props={subjectId:string|null;retryToken?:number;binding?:MediaBinding;avatar?:AvatarDescriptor;name:string;busy:boolean;error?:string;onChoose:()=>void;onTakePhoto?:()=>void;onRemove:()=>void;onOpenSettings?:()=>void};
-export function AvatarPicker({subjectId,binding,retryToken,avatar,name,busy,error,onChoose,onTakePhoto,onRemove,onOpenSettings}:Props){
+type Props={subjectId:string|null;retryToken?:number;binding?:MediaBinding;onImageError?:()=>void;avatar?:AvatarDescriptor;name:string;busy:boolean;error?:string;onChoose:()=>void;onTakePhoto?:()=>void;onRemove:()=>void;onOpenSettings?:()=>void};
+export function AvatarPicker({subjectId,binding,retryToken,onImageError,avatar,name,busy,error,onChoose,onTakePhoto,onRemove,onOpenSettings}:Props){
+ const styles = useThemedStyles(createStyles);
+ const { theme } = useAppTheme();
  return <View style={styles.wrapper}>
   <Pressable accessibilityRole="button" accessibilityLabel="Escolher ou alterar foto de perfil" accessibilityState={{disabled:busy,busy}} disabled={busy} onPress={onChoose} style={({pressed})=>[styles.avatar,pressed&&styles.pressed]}>
-   <Avatar retryToken={retryToken} subjectId={subjectId} binding={binding} name={name} url={avatar?.avatarUrl} version={avatar?.avatarVersion} size={104} suppressBrowserActions/>
-   <View style={styles.edit}><MaterialIcons name="photo-camera" size={16} color={theme.colors.white} accessible={false}/></View>
+   <Avatar retryToken={retryToken} subjectId={subjectId} binding={binding} onImageError={onImageError} name={name} url={avatar?.avatarUrl} version={avatar?.avatarVersion} size={104} suppressBrowserActions/>
+   <View style={styles.edit}><MaterialIcons name="photo-camera" size={16} color={theme.colors.onPrimary} accessible={false}/></View>
   </Pressable>
   <Text style={styles.help}>{busy?'Aguarde a foto terminar de salvar…':'Toque para escolher uma foto e ajustar o círculo.'}</Text>
   {error?<Text style={styles.error} accessibilityLiveRegion="polite">{error}</Text>:null}

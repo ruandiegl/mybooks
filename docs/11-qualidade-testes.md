@@ -6,6 +6,10 @@ Executar `app: npm test`, `npm run typecheck`, `npm run build:web`, `npm run tes
 
 Exigir20 renovações sem remontagem/retorno ao fallback, capa correta após reorder, remoção/version++, retry da mesmaURI, decode/load separados, URL vencida, erro sem corpo legível, actor/epoch novo, foco/background, motion e orçamento da fila. O smoke PWA executa o worker gerado com requests sintéticas: API/R2 bypass, ativos públicos preservados e ausência de escrita privada. Fixtures/URLs/contas sintéticas não aprovam acesso R2, login real, uso offline, sensores ou Safari físico. Evidências atuais e aceites pendentes: [execução011](../plans/plan-011-carregamento-imagens-sem-piscadas-execucao.md).
 
+## Plano010
+
+Cobrir providers/componentes reais, I/O simulado somente nas fronteiras; ownership/epoch, hydrate/write atrasados, cookie Web Lock não recursivo e pendências do modal. `SETTINGS_TEST_DATABASE_URL` exige loopback/banco `plan010_test`; integrações verificam concorrência, rollback, família, FK e HTTP/cookies. Sockets usam cliente real. Export/browsertests não são aceite físico; [execução](../plans/plan-010-menu-perfil-configuracoes-execucao.md) separa evidências e limitações.
+
 Antes de uma entrega, executar os checks abaixo na versão integrada e registrar os resultados. Esta conciliação documental não executou esses comandos:
 
 ```bash

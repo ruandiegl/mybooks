@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
-import { theme } from '../../styles/theme';
+import type { AppTheme } from '../../styles/theme';
 
-export const styles = StyleSheet.create({
+export const createStyles = (theme: AppTheme) => StyleSheet.create({
   gallery: { gap: theme.spacing.xs },
   stage: { borderRadius: theme.radius.lg, backgroundColor: theme.colors.surfaceMuted, overflow: 'hidden' },
   controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

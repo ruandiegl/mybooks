@@ -6,6 +6,10 @@ Branch `codex/media-image-continuity`, base bbca847; sem publicação/merge ou a
 
 Rodada final após revisão: app58 arquivos/303 testes e types; exportsWeb/worker/smoke/Hermes iOS/Android repetidos/aprovados. Edge loopback com duas imagens sintéticas e20 renovações por latência50/250/1000ms: controle por keyURI fez40 downloads adicionais; continuidade fez0, manteve os nós e0 amostras DOM vazias. Zero pageerrors, landscape sem overflow, actor B sem imagens de A. Não equivale a medições R2/fotos reais, RAM/p50/p95 ou aceite físico; parecer e limites no registro011.
 
+## Plano010 — validação em andamento (08/10/2026)
+
+[Registro de execução](../plans/plan-010-menu-perfil-configuracoes-execucao.md): banco descartável/HTTP/sockets reais, suites/types e builds. Browser usa fixtures sintéticas; não equivale a conta de produção. Resultados finais/revisão serão registrados após execução. Dispositivos/Safari/PWA instalada, deploy/API alvo e migração Railway não foram realizados nesta tarefa.
+
 Revisão documental: 05/10/2026. Integração em curso na branch `codex/main-pwa-integration`, entre main `249751e8d135a1380e7cd4fc4891dcfc1abaa975` e PWA `89733efb662985a73c492efe85afb7cab4a7df30`.
 
 A conciliação documental inicial não executou testes. A validação local posterior da integração está registrada abaixo; os registros históricos seguintes não se somam. Migração no banco alvo, alteração de deploy e aceite físico não foram executados nesta integração.

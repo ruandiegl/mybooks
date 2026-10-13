@@ -1,8 +1,9 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { ComponentProps } from 'react';
 import { ActivityIndicator, Pressable, Text, type PressableProps, type StyleProp, type TextStyle } from 'react-native';
-import { theme } from '../../styles/theme';
-import { styles } from './styles';
+import { useAppTheme } from '../../providers/ThemeProvider';
+import { createStyles } from './styles';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost';
 type IconName = ComponentProps<typeof MaterialIcons>['name'];
@@ -14,13 +15,16 @@ type Props = PressableProps & {
   labelStyle?: StyleProp<TextStyle>;
 };
 
-export function AppButton({ label, variant = 'primary', icon, loading, disabled, style, labelStyle, ...props }: Props) {
-  const light = variant === 'primary' || variant === 'secondary';
-  const color = light ? theme.colors.white : theme.colors.foreground;
+export function AppButton({ label, variant = 'primary', icon, loading, disabled, style, labelStyle, accessibilityLabel, ...props }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
+  const color = variant === 'primary' ? theme.colors.onPrimary : variant === 'secondary' ? theme.colors.onSecondary : theme.colors.foreground;
 
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
       disabled={disabled || loading}
       style={({ pressed }) => [
         styles.base,
@@ -31,8 +35,8 @@ export function AppButton({ label, variant = 'primary', icon, loading, disabled,
       ]}
       {...props}
     >
-      {loading ? <ActivityIndicator color={color} /> : icon ? <MaterialIcons name={icon} size={20} color={color} /> : null}
-      <Text style={[styles.label, light ? styles.lightLabel : styles.darkLabel, labelStyle]}>{label}</Text>
+      {loading ? <ActivityIndicator accessible={false} color={color} /> : icon ? <MaterialIcons accessible={false} aria-hidden importantForAccessibility="no-hide-descendants" name={icon} size={20} color={color} /> : null}
+      <Text style={[styles.label, { color }, labelStyle]}>{label}</Text>
     </Pressable>
   );
 }

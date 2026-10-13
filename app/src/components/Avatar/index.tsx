@@ -3,11 +3,13 @@ import { PixelRatio, Platform, StyleSheet, Text, View } from 'react-native';
 import { createAvatarMedia, getMediaPixelBucket } from '../../features/media/mediaIdentity';
 import type { MediaBinding } from '../../features/media/mediaTypes';
 import { RemoteMediaImage } from '../RemoteMediaImage';
-import { styles } from './styles';
+import { useThemedStyles } from '../../styles/useThemedStyles';
+import { createStyles } from './styles';
 
 type Props = { subjectId: string | null; binding?: MediaBinding; retryToken?: number; decorative?: boolean; name: string; url?: string | null; size?: number; version?: number; onImageError?: () => void; suppressBrowserActions?: boolean };
 function preventBrowserAction(event: { preventDefault(): void }) { event.preventDefault(); }
 export function Avatar({ subjectId, binding, retryToken, decorative = false, name, url, size = 44, version, onImageError, suppressBrowserActions = false }: Props) {
+  const styles = useThemedStyles(createStyles);
   const [ready, setReady] = useState<string | null>(null);
   const media = binding?.scope && subjectId ? createAvatarMedia(binding.scope, subjectId, { avatarUrl: url, avatarVersion: version }) : null;
   useLayoutEffect(() => { setReady(null); }, [media?.identity]);

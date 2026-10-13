@@ -4,6 +4,12 @@ import type { AuthTokens } from '../../types/api';
 
 const SESSION_KEY = 'trocalivros.auth.session.v1';
 let webTokens: AuthTokens | null = null;
+let storageWrites: Promise<unknown> = Promise.resolve();
+function serializeWrite<T>(operation: () => Promise<T>): Promise<T> {
+  const next = storageWrites.catch(() => {}).then(operation);
+  storageWrites = next;
+  return next;
+}
 
 function isAuthTokens(value: unknown): value is AuthTokens {
   if (!value || typeof value !== 'object') return false;
@@ -18,6 +24,7 @@ function isAuthTokens(value: unknown): value is AuthTokens {
 
 export async function loadTokens(): Promise<AuthTokens | null> {
   if (Platform.OS === 'web') return webTokens;
+  return serializeWrite(async () => {
 
   const stored = await SecureStore.getItemAsync(SESSION_KEY);
   if (!stored) return null;
@@ -31,6 +38,7 @@ export async function loadTokens(): Promise<AuthTokens | null> {
 
   await SecureStore.deleteItemAsync(SESSION_KEY);
   return null;
+  });
 }
 
 export function saveTokens(tokens: AuthTokens) {
@@ -39,7 +47,7 @@ export function saveTokens(tokens: AuthTokens) {
     return Promise.resolve();
   }
 
-  return SecureStore.setItemAsync(SESSION_KEY, JSON.stringify(tokens));
+  return serializeWrite(() => SecureStore.setItemAsync(SESSION_KEY, JSON.stringify(tokens)));
 }
 
 export function clearTokens() {
@@ -48,5 +56,5 @@ export function clearTokens() {
     return Promise.resolve();
   }
 
-  return SecureStore.deleteItemAsync(SESSION_KEY);
+  return serializeWrite(() => SecureStore.deleteItemAsync(SESSION_KEY));
 }

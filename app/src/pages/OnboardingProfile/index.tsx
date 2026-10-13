@@ -1,4 +1,5 @@
 import { useMediaBinding } from '../../features/media/useMediaBinding';
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, ScrollView, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,10 +15,12 @@ import { useSession } from '../../providers/SessionProvider';
 import { api, apiErrorMessage } from '../../services/api';
 import { Alert } from '../../services/notice';
 import type { ApiEnvelope, User } from '../../types/api';
-import { styles } from './styles';
+import { createStyles } from './styles';
 
 export function OnboardingProfile() {
   const mediaBinding = useMediaBinding();
+  const styles = useThemedStyles(createStyles);
+
   const { user, refreshUser, updateAvatar } = useSession();
   const [firstName, setFirstName] = useState(user?.firstName || '');
   const [lastName, setLastName] = useState(user?.lastName || '');

@@ -1,5 +1,9 @@
 # 6. Banco de dados
 
+## Preferências (plano010, migração ainda não publicada)
+
+`UserPreferences` usa `userId` como PK/FK com cascade, `showLikesBadge` boolean defaulttrue e `updatedAt`. Migração aditiva `20261008140000_user_preferences`, sem regravar contas existentes. GET sem linha retorna default; PATCH faz upsert. Preferência pública de tema fica por dispositivo, fora do PostgreSQL e das chaves de autenticação.
+
 `API/prisma/schema.prisma` é a fonte de verdade; PostgreSQL 16 e Prisma 6 são o caminho de acesso.
 
 ## Identidade

@@ -57,6 +57,12 @@ describe('native profile onboarding', () => {
     });
   });
 
+  it.each(['', '   ', null])('clears optional surname without leaving it in the display name: %s', async (lastName) => {
+    mocks.repository.findById.mockResolvedValue({ ...baseUser, firstName: 'Ana', lastName: 'Silva' });
+    await usersService.updateMe(baseUser.id, { lastName });
+    expect(mocks.repository.update).toHaveBeenCalledWith(baseUser.id, expect.objectContaining({ lastName: null, name: 'Ana' }));
+  });
+
   it('rejects arbitrary avatar URLs in the profile payload', async () => {
     await expect(usersService.updateMe(baseUser.id, { avatarUrl: 'https://attacker.example/avatar.jpg' }))
       .rejects.toMatchObject({ name: 'ZodError' });

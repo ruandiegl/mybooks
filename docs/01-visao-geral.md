@@ -1,5 +1,9 @@
 # 1. Visão geral
 
+## Configurações de conta (plano010)
+
+O perfil reúne edição, dados da conta, aparência, senha, indicador de Curtidas, ajuda e saída em um menu. Push, exclusão de conta, troca de e-mail/CPF e cobrança não são oferecidos nesta entrega. A implementação ainda é local; consulte [evidências e liberação](../plans/plan-010-menu-perfil-configuracoes-execucao.md).
+
 O TrocaLivros conecta leitores interessados em colocar livros em circulação. Cada pessoa cria uma conta própria, confirma o e-mail, pode completar o perfil e cadastrar livros, descobre obras de outras pessoas, recebe match por interesse mútuo e combina a troca por chat.
 
 ## Escopo do MVP

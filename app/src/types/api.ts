@@ -153,3 +153,10 @@ export type IsbnLookup = {
 export type ApiEnvelope<T> = {
   data: T;
 };
+export type AccountPreferencesDTO = {
+  schemaVersion: 1;
+  userId: string;
+  notifications: { showLikesBadge: boolean };
+  capabilities: { changePassword: boolean; logoutAll: boolean; push: false };
+};
+export type ChangePasswordInput = { currentPassword: string; newPassword: string };

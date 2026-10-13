@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
-import { theme } from '../../styles/theme';
+import type { AppTheme } from '../../styles/theme';
 
-export const styles = StyleSheet.create({
+export const createStyles = (theme: AppTheme) => StyleSheet.create({
   screen: { width: '100%', maxWidth: 672, alignSelf: 'center' },
   scroll: { paddingBottom: theme.spacing.xl, gap: theme.spacing.lg },
   bookList: { paddingBottom: theme.spacing.xl, gap: theme.spacing.md },

@@ -1,6 +1,9 @@
 import axios, { AxiosError } from 'axios';
 import { appEnv } from '../../config/env';
 import { api } from '../../services/api';
+import { withBrowserSessionLock } from './browserSessionLock.web';
+import { settingsActorHeaders, type SessionActor } from './sessionActor';
+import type { ChangePasswordInput } from '../../types/api';
 import type {
   ApiEnvelope,
   BrowserAuthSessionResponse,
@@ -26,19 +29,25 @@ export const authApi = {
     return data<RegistrationResult>(await publicApi.post('/api/v1/auth/register', input));
   },
   async verifyEmail(input: VerifyEmailInput) {
-    return data<BrowserAuthSessionResponse>(await publicApi.post('/api/v1/auth/browser/verify-email', input));
+    return withBrowserSessionLock(async () => data<BrowserAuthSessionResponse>(await publicApi.post('/api/v1/auth/browser/verify-email', input)));
   },
   async resendVerification(email: string) {
     return data<{ accepted: true }>(await publicApi.post('/api/v1/auth/resend-verification', { email }));
   },
   async login(input: LoginInput) {
-    return data<BrowserAuthSessionResponse>(await publicApi.post('/api/v1/auth/browser/login', input));
+    return withBrowserSessionLock(async () => data<BrowserAuthSessionResponse>(await publicApi.post('/api/v1/auth/browser/login', input)));
   },
-  async refresh() {
-    return data<BrowserAuthSessionResponse>(await publicApi.post('/api/v1/auth/browser/refresh'));
+  async refresh(actor?: SessionActor) {
+    return data<BrowserAuthSessionResponse>(await publicApi.post('/api/v1/auth/browser/refresh', {}, { headers: actor ? settingsActorHeaders(actor) : {} }));
   },
-  async logout() {
-    return data<{ ok: true }>(await publicApi.post('/api/v1/auth/browser/logout'));
+  async logout(actor?: SessionActor) {
+    return data<{ ok: true }>(await publicApi.post('/api/v1/auth/browser/logout', {}, { headers: actor ? settingsActorHeaders(actor) : {} }));
+  },
+  async logoutAll(accessToken: string, actor: SessionActor) {
+    return data<{ ok: true }>(await publicApi.post('/api/v1/auth/browser/logout-all', {}, { headers: { ...settingsActorHeaders(actor), Authorization: 'Bearer ' + accessToken } }));
+  },
+  async changePassword(accessToken: string, input: ChangePasswordInput, actor: SessionActor) {
+    return data<{ ok: true }>(await publicApi.post('/api/v1/auth/browser/change-password', input, { headers: { ...settingsActorHeaders(actor), Authorization: 'Bearer ' + accessToken } }));
   },
   async forgotPassword(email: string) {
     return data<{ accepted: true }>(await publicApi.post('/api/v1/auth/forgot-password', { email }));

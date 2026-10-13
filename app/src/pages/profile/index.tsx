@@ -1,38 +1,46 @@
 import { useMediaBinding } from '../../features/media/useMediaBinding';
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import { useIsFocused } from '@react-navigation/native';
 import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, Text, View, useWindowDimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { FlatList, Platform, Pressable, RefreshControl, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { AppButton } from '../../components/AppButton';
 import { AppScreen } from '../../components/AppScreen';
 import { Avatar } from '../../components/Avatar';
-import { AvatarPicker } from '../../components/AvatarPicker';
 import { AvatarEditor } from '../../components/AvatarEditor';
 import { AvatarPhotoModal } from '../../components/AvatarPhotoModal';
 import { useAvatarEditor } from '../../features/avatar/useAvatarEditor';
 import { avatarDescriptorOf } from '../../features/avatar/avatarTypes';
 import { avatarLongPressFeedback } from '../../features/avatar/avatarLongPressFeedback';
-import { Badge } from '../../components/Badge';
 import { BookCard } from '../../components/BookCard';
 import { ProfileMetricRow, type ProfileMetric } from '../../components/ProfileMetricRow';
 import { ProfileTabs, type ProfileTabKey } from '../../components/ProfileTabs';
 import { StateView } from '../../components/StateView';
-import { TextField } from '../../components/TextField';
 import { TopBar } from '../../components/TopBar';
-import { maskBrazilianPhone } from '../../features/auth/inputMasks';
+import { ProfileSettingsModal } from '../../components/ProfileSettingsModal';
+import { ProfileEditForm } from '../../components/ProfileEditForm';
+import { AppearanceSettingsPanel } from '../../components/AppearanceSettingsPanel';
+import { NotificationSettingsPanel } from '../../components/NotificationSettingsPanel';
+import { AccountSettingsPanel } from '../../components/AccountSettingsPanel';
+import { PasswordChangeForm } from '../../components/PasswordChangeForm';
+import { ProfileHelpPanel } from '../../components/ProfileHelpPanel';
+import { AboutAppPanel } from '../../components/AboutAppPanel';
+import { useAccountSecurity } from '../../features/auth/useAccountSecurity';
+import { useAccountPreferences } from '../../features/settings/useAccountPreferences';
+import { useProfileSettings } from '../../features/settings/useProfileSettings';
+import { useProfileEditor } from '../../features/profile/useProfileEditor';
+import type { SettingsRoute } from '../../features/settings/settingsTypes';
 import { PremiumStatusCard, usePremiumOffer } from '../../features/premium/PremiumOfferProvider';
 import { usePremiumStatus } from '../../features/premium/usePremiumStatus';
 import { useSession } from '../../providers/SessionProvider';
-import { api, apiErrorMessage } from '../../services/api';
-import { Alert } from '../../services/notice';
-import { theme } from '../../styles/theme';
+import { api } from '../../services/api';
+import { useAppTheme } from '../../providers/ThemeProvider';
 import type { ApiEnvelope, Book, Paginated, User } from '../../types/api';
 import type { RootStackParamList } from '../../types/navigation';
-import { styles } from './styles';
+import { createStyles } from './styles';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 type Props = { navigation: Navigation };
@@ -40,25 +48,21 @@ type Props = { navigation: Navigation };
 export function Profile({ navigation }: Props) {
   const mediaBinding = useMediaBinding();
   const [imageRetryToken, setImageRetryToken] = useState(0);
+  const styles = useThemedStyles(createStyles);
+  const { theme, preference } = useAppTheme();
+
   const session = useSession();
   const premiumOffer = usePremiumOffer();
   const premiumQuery = usePremiumStatus(session.user?.id, session.isSignedIn);
-  const insets = useSafeAreaInsets();
   const { width, fontScale } = useWindowDimensions();
   const stackedIdentity = width < 360 || fontScale > 1.3;
   const bookWidth = (Math.min(width, 672) - theme.spacing.md * 3) / 2;
-  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<ProfileTabKey>('shelf');
-  const [editing, setEditing] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState(false);
   const photoOpened = useRef(false);
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [city, setCity] = useState('');
-  const [bio, setBio] = useState('');
-  const [phone, setPhone] = useState('');
-  const [interests, setInterests] = useState('');
-  const [nameError, setNameError] = useState<string | undefined>();
+  const menuButton = useRef<View>(null);
+  const [menuFocused, setMenuFocused] = useState(false);
+  const settingsOwner = useRef<ReturnType<typeof session.captureActor>>(null);
 
   const profileQuery = useQuery({
     queryKey: ['me'],
@@ -68,6 +72,37 @@ export function Profile({ navigation }: Props) {
     if (session.user) session.updateAvatar(avatar, session.user.id);
     setViewingPhoto(false);
   });
+  const completedEdit = useRef<ReturnType<typeof session.captureActor>>(null);
+  const editor = useProfileEditor(profileQuery.data, () => { completedEdit.current = session.captureActor(); });
+  const actor = session.captureActor();
+  const accountPreferences = useAccountPreferences();
+  const security = useAccountSecurity();
+  const busy = avatarEditor.busy || editor.pending || security.busy || accountPreferences.saving;
+  const settings = useProfileSettings({ actor, isBusy: busy,
+    hasUnsavedChanges: editor.dirty || security.dirty,
+    isDirtyForRoute: route => route === 'editProfile' ? editor.dirty : (route === 'password' || route === 'confirmSignOutAll') && security.dirty,
+    cropActive: Boolean(avatarEditor.source), onCancelCrop: avatarEditor.cancel,
+    onDiscard: () => { editor.reset(); security.reset(); } });
+  const wasSettingsOpen = useRef(false);
+  useEffect(() => {
+    if (busy || !completedEdit.current) return;
+    const owner = completedEdit.current; completedEdit.current = null;
+    if (session.isActorCurrent(owner) && settings.visible) settings.openMenu();
+  }, [busy, settings.visible, actor?.userId, actor?.epoch]);
+  useEffect(() => {
+    if (settings.visible && !wasSettingsOpen.current) settingsOwner.current = actor;
+    if (!settings.visible && wasSettingsOpen.current) {
+      security.reset(); editor.reset(); avatarEditor.cancel();
+      if (Platform.OS === 'web' && settingsOwner.current && session.isActorCurrent(settingsOwner.current)) menuButton.current?.focus();
+      settingsOwner.current = null;
+    }
+    wasSettingsOpen.current = settings.visible;
+    if (settings.visible && !['password', 'confirmSignOutAll', 'confirmDiscard'].includes(settings.route)) security.reset();
+  }, [settings.visible, settings.route]);
+  useLayoutEffect(() => {
+    premiumOffer.setPresentationBlocked('profile-overlay', settings.visible || viewingPhoto);
+    return () => premiumOffer.setPresentationBlocked('profile-overlay', false);
+  }, [premiumOffer.setPresentationBlocked, settings.visible, viewingPhoto]);
   const booksQuery = useInfiniteQuery({
     queryKey: ['books', 'mine', 'profile'],
     initialPageParam: '',
@@ -78,39 +113,12 @@ export function Profile({ navigation }: Props) {
   const refreshBookImages = useAvatarRefresh(booksQuery.data, () => booksQuery.refetch({ cancelRefetch: false }), useIsFocused());
 
   useEffect(() => {
-    if (!profileQuery.data || editing) return;
-    setFirstName(profileQuery.data.firstName || '');
-    setLastName(profileQuery.data.lastName || '');
-    setCity(profileQuery.data.city || '');
-    setBio(profileQuery.data.bio || '');
-    setPhone(maskBrazilianPhone(profileQuery.data.phone || ''));
-    setInterests(profileQuery.data.interests.join(', '));
-  }, [profileQuery.data, editing]);
-
-  useEffect(() => {
-    if ((avatarEditor.source || avatarEditor.error) && !editing && !viewingPhoto) openEditor();
+    if ((avatarEditor.source || avatarEditor.error) && !settings.visible && !viewingPhoto) openEditor();
     // Only a new source/error opens an editor; closing a modal must not reopen it.
   }, [avatarEditor.source, avatarEditor.error]);
 
-  useEffect(() => { photoOpened.current = false; setViewingPhoto(false); }, [session.user?.id]);
+  useEffect(() => { photoOpened.current = false; setViewingPhoto(false); }, [actor?.userId, actor?.epoch]);
   useEffect(() => { photoOpened.current = viewingPhoto; }, [viewingPhoto]);
-
-  const saveMutation = useMutation({
-    mutationFn: async () => (await api.patch<ApiEnvelope<User>>('/api/v1/me', {
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      city: city.trim() || null,
-      bio: bio.trim() || null,
-      phone: phone.trim() || null,
-      interests: interests.split(',').map((item) => item.trim()).filter(Boolean)
-    })).data.data,
-    onSuccess: (user) => {
-      queryClient.setQueryData(['me'], user);
-      setEditing(false);
-      Alert.alert('Perfil atualizado', 'Suas informações foram salvas.');
-    },
-    onError: (error) => Alert.alert('Não foi possível salvar', apiErrorMessage(error))
-  });
 
   const books = booksQuery.data?.pages.flatMap((page) => page.items) || [];
   const profile = profileQuery.data;
@@ -122,57 +130,26 @@ export function Profile({ navigation }: Props) {
   ] : [];
 
   function openPhoto(longPress = false) {
-    if (avatarEditor.busy || saveMutation.isPending || editing || photoOpened.current) return;
+    if (avatarEditor.busy || editor.pending || settings.visible || photoOpened.current) return;
     photoOpened.current = true;
     if (longPress) void avatarLongPressFeedback();
     setViewingPhoto(true);
   }
 
   function closePhoto() {
-    if (avatarEditor.busy || saveMutation.isPending) return;
+    if (avatarEditor.busy || editor.pending) return;
     avatarEditor.cancel();
     setViewingPhoto(false);
   }
 
   function openEditor() {
-    setFirstName(profile?.firstName || '');
-    setLastName(profile?.lastName || '');
-    setCity(profile?.city || '');
-    setBio(profile?.bio || '');
-    setPhone(maskBrazilianPhone(profile?.phone || ''));
-    setInterests(profile?.interests.join(', ') || '');
-    setNameError(undefined);
-    setEditing(true);
+    if (viewingPhoto || editor.pending) return;
+    if (!settings.visible) settings.openMenu();
+    editor.reset(); settings.openRoute('editProfile');
   }
-
-  function hasChanges() {
-    return Boolean(profile && (
-      firstName !== (profile.firstName || '')
-      || lastName !== (profile.lastName || '')
-      || city !== (profile.city || '')
-      || bio !== (profile.bio || '')
-      || phone !== maskBrazilianPhone(profile.phone || '')
-      || interests !== profile.interests.join(', ')
-    ));
-  }
-
-  function closeEditor() {
-    if (avatarEditor.busy) return;
-    if (avatarEditor.source) return avatarEditor.cancel();
-    if (!hasChanges()) return setEditing(false);
-    Alert.alert('Descartar alterações?', 'As informações editadas ainda não foram salvas.', [
-      { text: 'Continuar editando', style: 'cancel' },
-      { text: 'Descartar', style: 'destructive', onPress: () => setEditing(false) }
-    ]);
-  }
-
-  function saveProfile() {
-    if (!firstName.trim()) {
-      setNameError('Digite seu nome.');
-      return;
-    }
-    setNameError(undefined);
-    saveMutation.mutate();
+  function openRoute(route: SettingsRoute) {
+    if (route === 'editProfile') { openEditor(); return; }
+    settings.openRoute(route);
   }
 
   function refreshAll() {
@@ -183,11 +160,11 @@ export function Profile({ navigation }: Props) {
   const profileIntro = (
     <View style={styles.introStack}>
       <TopBar title="Meu perfil" action={
-        <AppButton label="Editar" accessibilityLabel="Editar perfil" variant="outline" icon="edit" style={styles.editButton} onPress={openEditor} />
+        <Pressable ref={menuButton} accessibilityRole="button" accessibilityLabel="Abrir configurações" accessibilityState={{ expanded: settings.visible }} onFocus={() => setMenuFocused(true)} onBlur={() => setMenuFocused(false)} style={({ pressed }) => [styles.modalClose, { borderWidth: 2, borderColor: menuFocused ? theme.colors.primary : 'transparent' }, pressed && styles.modalPressed]} onPress={() => { if (!viewingPhoto) settings.openMenu(); }}><MaterialIcons accessible={false} name="menu" size={26} color={theme.colors.foreground} /></Pressable>
       } />
       <View style={styles.identity}>
         <View style={[styles.identityRow, stackedIdentity && styles.identityStacked]}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Ver foto de perfil" accessibilityHint="Toque ou mantenha pressionado para ampliar a foto e abrir as opções." disabled={avatarEditor.busy || saveMutation.isPending} onPress={() => openPhoto()} onLongPress={() => openPhoto(true)} delayLongPress={500}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Ver foto de perfil" accessibilityHint="Toque ou mantenha pressionado para ampliar a foto e abrir as opções." disabled={avatarEditor.busy || editor.pending} onPress={() => openPhoto()} onLongPress={() => openPhoto(true)} delayLongPress={500}>
             <Avatar retryToken={imageRetryToken} subjectId={profile?.id ?? null} binding={mediaBinding} name={profile?.name || 'Leitor TrocaLivros'} url={profile?.avatarUrl} version={profile?.avatarVersion} onImageError={session.refreshAvatar} size={72} suppressBrowserActions />
           </Pressable>
           <View style={[styles.identityCopy, stackedIdentity && styles.identityCopyStacked]}>
@@ -272,40 +249,20 @@ export function Profile({ navigation }: Props) {
           <View style={styles.aboutRow}><MaterialIcons name="phone" size={20} color={theme.colors.secondary} /><View style={styles.aboutCopy}><Text style={styles.aboutLabel}>Telefone</Text><Text style={styles.aboutValue}>{profile.phone || 'Ainda não informado'}</Text></View></View>
           <View style={styles.aboutRow}><MaterialIcons name="menu-book" size={20} color={theme.colors.secondary} /><View style={styles.aboutCopy}><Text style={styles.aboutLabel}>Bio</Text><Text style={styles.aboutValue}>{profile.bio || 'Você ainda não escreveu uma bio.'}</Text></View></View>
         </View>
-        <View style={styles.accountSection}>
-          <Text accessibilityRole="header" style={styles.sectionTitle}>Conta</Text>
-          <Badge label="Conta protegida" variant="violet" />
-          <AppButton label="Sair da conta" variant="ghost" icon="logout" style={styles.signOut} onPress={() => {
-            void session.signOut().catch((error) => {
-              Alert.alert('Não foi possível sair', apiErrorMessage(error, 'Não foi possível revogar a sessão. Confira a conexão e tente novamente.'));
-            });
-          }} />
-        </View>
       </ScrollView>}
-      <Modal visible={editing} animationType="slide" onRequestClose={closeEditor}>
-        <View style={[styles.modalSafe, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-          {avatarEditor.source ? <AvatarEditor key={avatarEditor.source.uri} source={avatarEditor.source} busy={avatarEditor.busy} error={avatarEditor.error} statusLabel={avatarEditor.statusLabel} previewUri={avatarEditor.previewUri} onSave={avatarEditor.save} onCancel={avatarEditor.cancel} onChooseAnother={avatarEditor.choose} /> : <>
-          <KeyboardAvoidingView style={styles.modalKeyboard} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <View style={styles.modalHeader}>
-              <Pressable accessibilityRole="button" accessibilityLabel="Fechar edição de perfil" style={({ pressed }) => [styles.modalClose, pressed && styles.modalPressed]} onPress={closeEditor}><MaterialIcons name="close" size={24} color={theme.colors.foreground} /></Pressable>
-              <Text style={styles.modalTitle}>Editar perfil</Text>
-              <View style={styles.modalHeaderSpacer} />
-            </View>
-            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.modalScroll}>
-              <View style={styles.editorIdentity}><AvatarPicker retryToken={imageRetryToken} subjectId={profile.id} binding={mediaBinding} name={[firstName, lastName].filter(Boolean).join(' ')} avatar={avatarDescriptorOf(profile)} busy={avatarEditor.busy || saveMutation.isPending} error={avatarEditor.error} onChoose={avatarEditor.choose} onTakePhoto={avatarEditor.takePhoto} onRemove={avatarEditor.remove} onOpenSettings={avatarEditor.permissionBlocked ? avatarEditor.openSettings : undefined} /></View>
-              <TextField label="Nome" value={firstName} maxLength={50} onChangeText={(value) => { setFirstName(value); if (nameError) setNameError(undefined); }} error={nameError} autoCapitalize="words" />
-              <TextField label="Sobrenome" value={lastName} maxLength={80} onChangeText={setLastName} autoCapitalize="words" />
-              <TextField label="Cidade" value={city} maxLength={100} onChangeText={setCity} placeholder="Ex.: São Paulo" />
-              <TextField label="Telefone" value={phone} onChangeText={(value) => setPhone(maskBrazilianPhone(value))} keyboardType="phone-pad" textContentType="telephoneNumber" placeholder="(11) 91234-5678" maxLength={15} />
-              <TextField label="Bio" value={bio} onChangeText={setBio} maxLength={280} multiline placeholder="Conte um pouco sobre seus gostos literários" help={`${bio.length}/280 caracteres`} />
-              <TextField label="Interesses" value={interests} onChangeText={setInterests} placeholder="Fantasia, clássicos, romance" help="Separe por vírgulas." />
-              <AppButton label="Salvar alterações" icon="check" loading={saveMutation.isPending} disabled={avatarEditor.busy} onPress={saveProfile} />
-            </ScrollView>
-          </KeyboardAvoidingView>
-          </>}
-        </View>
-      </Modal>
-      <AvatarPhotoModal retryToken={imageRetryToken} subjectId={profile.id} binding={mediaBinding} visible={viewingPhoto} name={profile.name} avatar={avatarDescriptorOf(profile)} source={avatarEditor.source} busy={avatarEditor.busy || saveMutation.isPending} error={avatarEditor.error} previewUri={avatarEditor.previewUri} statusLabel={avatarEditor.statusLabel} onClose={closePhoto} onEdit={avatarEditor.choose} onTakePhoto={avatarEditor.takePhoto} onRemove={avatarEditor.remove} onCancelCrop={avatarEditor.cancel} onSave={avatarEditor.save} onImageError={session.refreshAvatar} onOpenSettings={avatarEditor.permissionBlocked ? avatarEditor.openSettings : undefined} />
+      <ProfileSettingsModal visible={settings.visible} route={settings.route} busy={busy} cropping={Boolean(avatarEditor.source)} onBack={settings.back} onClose={settings.requestClose} onRoute={openRoute} available={['editProfile', 'account', 'appearance', 'notifications', 'help', 'about', 'confirmSignOut', ...(accountPreferences.data?.capabilities.changePassword ? ['password' as const] : [])]} appearanceLabel={preference === 'system' ? 'Dispositivo' : preference === 'dark' ? 'Escuro' : 'Claro'}>
+        {avatarEditor.source ? <AvatarEditor key={avatarEditor.source.uri} source={avatarEditor.source} busy={avatarEditor.busy} error={avatarEditor.error} statusLabel={avatarEditor.statusLabel} previewUri={avatarEditor.previewUri} onSave={avatarEditor.save} onCancel={avatarEditor.cancel} onChooseAnother={avatarEditor.choose} />
+          : settings.route === 'editProfile' ? <ProfileEditForm editor={editor} avatarEditor={avatarEditor} profile={profile} binding={mediaBinding} retryToken={imageRetryToken} onImageError={session.refreshAvatar} />
+          : settings.route === 'appearance' ? <AppearanceSettingsPanel />
+          : settings.route === 'notifications' ? <NotificationSettingsPanel preferences={accountPreferences} />
+          : settings.route === 'account' ? <AccountSettingsPanel />
+          : settings.route === 'help' ? <ProfileHelpPanel />
+          : settings.route === 'about' ? <AboutAppPanel />
+          : settings.route === 'password' ? <PasswordChangeForm security={security} enabled={Boolean(accountPreferences.data?.capabilities.changePassword)} logoutAllEnabled={Boolean(accountPreferences.data?.capabilities.logoutAll)} onSignOutAll={() => settings.openRoute('confirmSignOutAll')} />
+          : settings.route === 'confirmDiscard' ? <View style={styles.aboutSection}><Text style={styles.aboutValue}>As alterações ainda não foram salvas.</Text><AppButton label="Continuar editando" variant="outline" onPress={settings.back} /><AppButton label="Descartar alterações" onPress={settings.confirmDiscard} /></View>
+          : settings.route === 'confirmSignOut' || settings.route === 'confirmSignOutAll' ? <View style={styles.aboutSection}><Text style={styles.aboutValue}>{settings.route === 'confirmSignOutAll' ? 'Todos os dispositivos serão desconectados. Você precisará entrar novamente.' : 'Você precisará entrar novamente para acessar sua conta neste dispositivo.'}</Text>{security.error ? <Text style={{ color: theme.colors.danger }} accessibilityLiveRegion="polite">{security.error}</Text> : null}<AppButton label={settings.route === 'confirmSignOutAll' ? 'Sair de todos os dispositivos' : 'Sair da conta'} loading={security.busy} onPress={() => { void (settings.route === 'confirmSignOutAll' ? security.signOutAll() : security.signOut()); }} /><AppButton label="Cancelar" variant="outline" disabled={security.busy} onPress={settings.back} /></View> : null}
+      </ProfileSettingsModal>
+      <AvatarPhotoModal retryToken={imageRetryToken} subjectId={profile.id} binding={mediaBinding} visible={viewingPhoto} name={profile.name} avatar={avatarDescriptorOf(profile)} source={avatarEditor.source} busy={avatarEditor.busy || editor.pending} error={avatarEditor.error} previewUri={avatarEditor.previewUri} statusLabel={avatarEditor.statusLabel} onClose={closePhoto} onEdit={avatarEditor.choose} onTakePhoto={avatarEditor.takePhoto} onRemove={avatarEditor.remove} onCancelCrop={avatarEditor.cancel} onSave={avatarEditor.save} onImageError={session.refreshAvatar} onOpenSettings={avatarEditor.permissionBlocked ? avatarEditor.openSettings : undefined} />
     </AppScreen>
   );
 }

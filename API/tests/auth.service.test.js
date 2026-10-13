@@ -174,7 +174,10 @@ class FakeAuthRepository {
     return { status: 'VERIFIED', user, session: this.createStoredSession(user.id, session) };
   }
 
-  async createSession({ userId, session }) {
+  async createSession({ userId, session, expectedPasswordHash, rehashedPasswordHash }) {
+    const user = this.users.find(candidate => candidate.id === userId);
+    if (expectedPasswordHash !== undefined && user.passwordHash !== expectedPasswordHash) return null;
+    if (rehashedPasswordHash) user.passwordHash = rehashedPasswordHash;
     return this.createStoredSession(userId, session);
   }
 

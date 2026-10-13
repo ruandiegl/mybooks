@@ -1,12 +1,16 @@
+import { useThemedStyles } from '../../../styles/useThemedStyles';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Pressable, Text, View } from 'react-native';
-import { theme } from '../../../styles/theme';
+import { useAppTheme } from '../../../providers/ThemeProvider';
 import type { Message } from '../../../types/api';
-import { styles } from './styles';
+import { createStyles } from './styles';
 
 type Props = { status: NonNullable<Message['localStatus']>; onRetry?: () => void };
 
 export function DeliveryStatus({ status, onRetry }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   if (status === 'failed' && onRetry) {
     return <Pressable accessibilityRole="button" accessibilityLabel="Tentar enviar mensagem novamente" hitSlop={4} onPress={onRetry} style={({ pressed }) => [styles.retry, pressed && styles.pressed]}><MaterialIcons name="refresh" size={16} color={theme.colors.danger} /><Text style={styles.failed}>Falhou · tentar novamente</Text></Pressable>;
   }

@@ -2,7 +2,7 @@
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#B90041" />
     <title>Sem conexão · TrocaLivros</title>
     <style>
@@ -12,7 +12,22 @@
       h1 { margin: 0 0 12px; color: #b90041; font-size: 1.5rem; }
       p { line-height: 1.55; }
       button { margin-top: 12px; border: 0; border-radius: 999px; padding: 12px 20px; background: #b90041; color: white; font: inherit; font-weight: 600; }
+      :root[data-theme="dark"] { color-scheme: dark; background: #181318; color: #fff8f7; }
+      :root[data-theme="dark"] h1 { color: #ff8fb5; }
+      :root[data-theme="dark"] button { background: #ff8fb5; color: #271719; }
+      body { padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); }
     </style>
+    <script>
+      let preference = 'system';
+      try { const value = JSON.parse(localStorage.getItem('trocalivros.appearance.v1')); if(value?.version === 1 && ['light','dark','system'].includes(value.theme)) preference = value.theme; } catch {}
+      function updateAppearance() {
+        const dark = preference === 'dark' || (preference === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        document.querySelector('meta[name="theme-color"]').content = dark ? '#181318' : '#FFF8F7';
+      }
+      updateAppearance();
+      matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateAppearance);
+    </script>
   </head>
   <body>
     <main>

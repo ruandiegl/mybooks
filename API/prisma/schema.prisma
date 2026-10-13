@@ -44,10 +44,18 @@ model User {
   messages                   Message[]
   authSessions               AuthSession[]
   authCodes                  AuthCode[]
+  preferences                UserPreferences?
   createdAt                  DateTime             @default(now())
   updatedAt                  DateTime             @updatedAt
 
   @@index([pendingRegistrationExpiresAt])
+}
+
+model UserPreferences {
+  userId          String   @id
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  showLikesBadge  Boolean  @default(true)
+  updatedAt       DateTime @updatedAt
 }
 
 model AuthSession {

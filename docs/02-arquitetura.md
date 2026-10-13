@@ -1,5 +1,9 @@
 # 2. Arquitetura
 
+## Preferências e sessão — plano010
+
+ThemeProvider fica acima de SessionProvider e cobre boot/Auth/onboarding. Aparência pública fica no dispositivo; UserPreferences é privada e pertence à conta no PostgreSQL. Configurações usam um host de modal; avatar é exclusivo. Época local protege callbacks/queries; owner/sid só correlacionam, enquanto token/cookie e família são verificados pela API. Revogação local em sockets não constitui adapter distribuído.
+
 ```text
 Expo/React Native
   ├─ CameraView ─► validação EAN-13 local ─► HTTPS + access ─► GET /api/v1/isbn/:isbn

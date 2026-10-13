@@ -6,6 +6,10 @@ Avatar/BookPhoto continuam responsáveis por fallback, paleta, dimensões e aces
 
 Biblioteca/estante mantêm cover; Descobrir/Curtidas/galeria mantêm contain. A proteção Safari continua opt-in nas superfícies do avatar próprio; não bloquear zoom global, toque/pinch ou ações de imagens não protegidas. O avatar dentro da superfície ampliada é decorativo: o host já possui o rótulo, evitando anúncio duplicado. Reordenação identifica a capa pelo ID da primeira foto, sem key por URL/timestamp.
 
+## Configurações e temas — plano010 (local)
+
+Perfil clean mantém uma identidade e usa hambúrguer48; edição/saída migram ao modal de configurações. Lista com divisores, ícones24, labels16 e linhas56; nenhuma nova dupla de cards ou drawer. Novo tema escuro adapta magenta/violeta, usando onPrimary/onSecondary/onDanger/onSuccess em fills claros. Viewer mantém fundo escuro absoluto e fotos não são invertidas. Usar createStyles(AppTheme)/useThemedStyles e useAppTheme, não constantes de cor congeladas. Safe area pertence a um componente por borda; redução de movimento evita slide.
+
 A direção “biblioteca social de bolso” usa papel quente como fundo, capas em destaque, magenta para ações e violeta para conexão. O selo verde de ISBN verificado é a assinatura funcional da experiência.
 
 ## Tokens

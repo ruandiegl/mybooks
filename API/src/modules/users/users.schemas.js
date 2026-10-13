@@ -7,7 +7,7 @@ const phoneSchema = z.string().trim().max(24).superRefine((value, context) => {
 
 export const updateProfileSchema = z.object({
   firstName: z.string().trim().min(1).max(50).optional(),
-  lastName: z.string().trim().min(1).max(80).optional(),
+  lastName: z.string().trim().max(80).nullable().optional().transform((value) => value === '' ? null : value),
   phone: phoneSchema.nullable().optional(),
   bio: z.string().trim().max(280).nullable().optional(),
   city: z.string().trim().max(100).nullable().optional(),

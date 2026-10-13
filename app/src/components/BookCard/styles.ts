@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
-import { theme } from '../../styles/theme';
-export const styles = StyleSheet.create({
+import type { AppTheme } from '../../styles/theme';
+export const createStyles = (theme: AppTheme) => StyleSheet.create({
   card: { flex: 1, gap: theme.spacing.sm },
   cover: { width: '100%', aspectRatio: 0.69, borderRadius: theme.radius.md, overflow: 'hidden', backgroundColor: theme.colors.surfaceStrong },
   image: { width: '100%', height: '100%' },

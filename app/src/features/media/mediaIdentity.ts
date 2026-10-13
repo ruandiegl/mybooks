@@ -24,4 +24,3 @@ export function toMediaScope(scope: { userId: string | undefined; epoch: number 
 export function isMediaScopeCurrent(scope: MediaScope, current: MediaScope | null): boolean {
   return scope.userId === current?.userId && scope.epoch === current?.epoch;
 }
-

@@ -1,13 +1,16 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useLayoutEffect, useState, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { MediaBinding, MediaDescriptor } from '../../features/media/mediaTypes';
-import { theme } from '../../styles/theme';
+import { useAppTheme } from '../../providers/ThemeProvider';
 import { RemoteMediaImage } from '../RemoteMediaImage';
-import { styles } from './styles';
+import { createStyles } from './styles';
 
 type Props = { media?: MediaDescriptor | null; binding?: MediaBinding; title: string; label: string; compact?: boolean; hasPhoto?: boolean; fit?: 'cover' | 'contain'; retryToken?: number; onImageError?: () => void; fallback?: ReactNode };
 export function BookPhoto({ media = null, binding, title, label, compact = false, hasPhoto = false, fit = 'contain', retryToken, onImageError, fallback }: Props) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
   const [ready, setReady] = useState<string | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   useLayoutEffect(() => { setReady(null); setFailed(null); }, [media?.identity]);

@@ -1,10 +1,14 @@
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Text, View } from 'react-native';
 import { passwordIssues, PASSWORD_REQUIREMENTS } from '../../features/auth/passwordRules';
-import { theme } from '../../styles/theme';
-import { styles } from './styles';
+import { useAppTheme } from '../../providers/ThemeProvider';
+import { createStyles } from './styles';
 
 export function PasswordRequirements({ password }: { password: string }) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   const issues = passwordIssues(password);
 
   return (

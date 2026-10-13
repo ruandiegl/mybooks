@@ -1,5 +1,6 @@
 import { useMediaBinding } from '../../features/media/useMediaBinding';
 import { useDiscoverMediaPrefetch } from '../../features/media/useDiscoverMediaPrefetch';
+import { useThemedStyles } from '../../styles/useThemedStyles';
 import { useIsFocused } from '@react-navigation/native';
 import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -20,10 +21,10 @@ import { createBookMedia } from '../../features/media/mediaIdentity';
 import { getBookGalleryPhotos } from '../../features/books/bookPresentation';
 import { api, apiErrorMessage } from '../../services/api';
 import { Alert } from '../../services/notice';
-import { theme } from '../../styles/theme';
+import { useAppTheme } from '../../providers/ThemeProvider';
 import type { ApiEnvelope, Book, Match, Paginated } from '../../types/api';
 import type { RootStackParamList } from '../../types/navigation';
-import { styles } from './styles';
+import { createStyles } from './styles';
 import { useSession, type SessionScope } from '../../providers/SessionProvider';
 import { useDiscoverCardMotion, type DiscoverAction } from './useDiscoverCardMotion';
 
@@ -35,6 +36,9 @@ export function Discover() {
   const mediaBinding = useMediaBinding();
   const [imageRetryToken, setImageRetryToken] = useState(0);
   const retryImages = () => { setImageRetryToken(value => value + 1); void query.refetch(); };
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
+
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const queryClient = useQueryClient();
   const { width, height } = useWindowDimensions();
@@ -179,7 +183,7 @@ export function Discover() {
           </View>
           <View style={styles.actions}>
             <Pressable accessibilityRole="button" accessibilityLabel="Passar livro" accessibilityState={{ disabled: busy }} disabled={busy} style={({ pressed }) => [styles.action, busy && styles.disabled, pressed && !busy && styles.pressed]} onPress={() => interact('PASS')}><MaterialIcons name="close" size={30} color={theme.colors.mutedForeground} /></Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="Gostei do livro" accessibilityState={{ disabled: busy }} disabled={busy} style={({ pressed }) => [styles.action, styles.like, busy && styles.disabled, pressed && !busy && styles.likePressed]} onPress={() => interact('LIKE')}><MaterialIcons name="favorite" size={29} color={theme.colors.white} /></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Gostei do livro" accessibilityState={{ disabled: busy }} disabled={busy} style={({ pressed }) => [styles.action, styles.like, busy && styles.disabled, pressed && !busy && styles.likePressed]} onPress={() => interact('LIKE')}><MaterialIcons name="favorite" size={29} color={theme.colors.onPrimary} /></Pressable>
           </View>
         </>}
       </ScrollView>

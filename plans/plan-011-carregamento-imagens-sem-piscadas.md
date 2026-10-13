@@ -1,8 +1,8 @@
 # Plano 011 — Carregamento de capas e avatares sem piscadas
 
-> **Para execução por agentes:** usar `superpowers:executing-plans` na execução sequencial recomendada, ou `superpowers:subagent-driven-development` se escolhido pelo usuário. Os passos `- [ ]` são trabalho futuro. Ler a especificação e os contratos deste documento antes de implementar.
+> **Para execução por agentes:** usar `superpowers:executing-plans` na execução sequencial recomendada, ou `superpowers:subagent-driven-development` se escolhido pelo usuário. A implementação e as evidências estão no [registro de execução](./plan-011-carregamento-imagens-sem-piscadas-execucao.md); caixas originais abaixo descrevem o roteiro, não substituem o status desse registro.
 
-**Estado:** proposta para revisão; não implementada. **Data:** 09/10/2026.
+**Estado:** implementação local concluída; integração com o menu em validação na branch `codex/media-profile-integration`. Aceite físico e publicação pendentes. **Data:** 09/10/2026; atualizado em 13/10/2026.
 
 **Objetivo:** eliminar os resets visuais evitáveis no carregamento e na renovação de capas e fotos de perfil, em Expo e PWA, mantendo a foto correta, a privacidade e as interações existentes.
 
@@ -249,4 +249,4 @@ Rollback: reverter os commits desta tarefa, preservando o DTO aditivo compatíve
 - Contratos: IDs existentes reutilizados; único campo novo de API é coverImageId; assinaturas de builders, renderer e fila consistentes entre tarefas.
 - Plataforma/cache: não confundir identidade React com cache URI; memória explícita no nativo, DOM apenas Web, sem prometer limpeza de cache HTTP ou abort não suportado.
 - Proporção: corrigir continuidade e antecipação limitada primeiro; sem redesign, migração, thumbnails ou infraestrutura nova.
-- Estado: nenhuma tarefa foi executada nesta fase. Próximo passo é revisar/aprovar este plano e escolher execução sequencial ou por subagentes.
+- Estado original do planejamento: a implementação ainda não havia iniciado em 09/10. Estado atual: tarefas1–4 implementadas, validação automatizada/revisão inicial da tarefa5 realizadas e integração do menu retomada em13/10. Aceites de dispositivos reais e publicação continuam separados; consultar o registro de execução.

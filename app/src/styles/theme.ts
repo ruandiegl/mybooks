@@ -17,6 +17,12 @@ export const theme = {
     dangerSoft: '#FFDAD6',
     success: '#236B4A',
     successSoft: '#D8F3E6',
+    onPrimary: '#FFFFFF',
+    onSecondary: '#FFFFFF',
+    onDanger: '#FFFFFF',
+    onSuccess: '#FFFFFF',
+    viewerBackground: '#271719',
+    viewerForeground: '#FFFFFF',
     profileHeroStart: '#271719',
     profileHeroEnd: '#7145BA',
     profileHeroAccent: '#B90041',
@@ -57,3 +63,26 @@ export const theme = {
     elevation: 4
   }
 } as const;
+
+export type AppTheme = Omit<typeof theme, 'colors' | 'shadow'> & {
+  colors: { [Key in keyof typeof theme.colors]: string };
+  shadow: Omit<typeof theme.shadow, 'color'> & { color: string };
+};
+export const lightTheme: AppTheme = theme;
+export const darkTheme: AppTheme = {
+  ...theme,
+  colors: {
+    ...theme.colors,
+    background: '#181318', surface: '#241B24', surfaceMuted: '#302331', surfaceStrong: '#3B2A3B',
+    foreground: '#FFF8F7', mutedForeground: '#CCBAC4',
+    primary: '#FF8FB5', primaryPressed: '#FFB3CD', primarySoft: '#4B1F33',
+    secondary: '#C6ABFF', secondaryPressed: '#DDCCFF', secondarySoft: '#332746',
+    outline: '#9C8292', danger: '#FFB4AB', dangerSoft: '#4C2020',
+    success: '#8EDCB5', successSoft: '#17372B',
+    profileHeroStart: '#1A121C', profileHeroEnd: '#332244', profileHeroAccent: '#FF8FB5',
+    profileHeroScrim: 'rgba(24,19,24,0.84)', profileHeroPattern: 'rgba(255,248,247,0.08)',
+    profileMetricDivider: '#5D4857', overlay: 'rgba(0,0,0,0.72)',
+    onPrimary: '#271719', onSecondary: '#271719', onDanger: '#271719', onSuccess: '#271719'
+  },
+  shadow: { ...theme.shadow, color: '#000000' }
+};
