@@ -2,7 +2,7 @@
 
 > **Para execução por agentes:** usar `superpowers:executing-plans` na execução sequencial recomendada, ou `superpowers:subagent-driven-development` se escolhido pelo usuário. A implementação e as evidências estão no [registro de execução](./plan-011-carregamento-imagens-sem-piscadas-execucao.md); caixas originais abaixo descrevem o roteiro, não substituem o status desse registro.
 
-**Estado:** implementação local concluída; integração com o menu em validação na branch `codex/media-profile-integration`. Aceite físico e publicação pendentes. **Data:** 09/10/2026; atualizado em 13/10/2026.
+**Estado:** implementação e integração local com o menu concluídas na branch `codex/media-profile-integration`, com revisão e testes automatizados. Aceite físico, entrega ao checkout principal e publicação pendentes. **Data:** 09/10/2026; atualizado em 13/10/2026.
 
 **Objetivo:** eliminar os resets visuais evitáveis no carregamento e na renovação de capas e fotos de perfil, em Expo e PWA, mantendo a foto correta, a privacidade e as interações existentes.
 

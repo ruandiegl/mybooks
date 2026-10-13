@@ -23,7 +23,10 @@ export type SessionTransport = {
   changePassword: (current: SessionSnapshot, input: ChangePasswordInput, actor: SessionActor, isCurrent: () => boolean) => Promise<void>;
 };
 
-function snapshot(response: AuthSessionResponse): SessionSnapshot {
+function snapshot(response: SessionResponse): SessionSnapshot {
+  if (!('refreshToken' in response) || typeof response.refreshToken !== 'string' || !response.refreshToken) {
+    throw new Error('Resposta de sessão nativa inválida.');
+  }
   const expiresAt = Date.parse(response.expiresAt);
   if (!Number.isFinite(expiresAt)) throw new Error('Expiração de sessão inválida.');
   return { accessToken: response.accessToken, refreshToken: response.refreshToken, expiresAt, user: response.user };
@@ -48,9 +51,6 @@ export const sessionTransport: SessionTransport = {
     return tokens ? { ...tokens } : null;
   },
   async accept(response) {
-    if (!('refreshToken' in response) || typeof response.refreshToken !== 'string' || !response.refreshToken) {
-      throw new Error('Resposta de sessão nativa inválida.');
-    }
     const next = snapshot(response);
     const ticket = ++generation;
     await storeCurrent(ticket, async () => { await saveTokens({ accessToken: next.accessToken, refreshToken: next.refreshToken!, expiresAt: next.expiresAt }); return true; });

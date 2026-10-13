@@ -91,8 +91,29 @@ Branch candidata `codex/media-profile-integration`, combinando a entrega011 (`0d
 - Conflitos resolvidos combinando estilos reativos com o renderer estável; menu/tema, atores de sessão e descarte por geração preservados. SecureStore mantém serialização; erros transitórios continuam distintos de401. Documentação dos dois planos preservada.
 - Formulário de edição agora recebe `MediaBinding`, ID do usuário, retry explícito e callback proprietário de renovação via AvatarPicker. Dois testes novos falharam antes da correção (sem imagem e sem renovação no editor), depois passaram com componentes/hooks reais. Vinte assinaturas e mudança de tema mantêm o mesmo nó/URI e o texto não salvo.
 - Validação da candidata: app75 arquivos/349 testes e typecheck aprovados; API47 arquivos/285 testes,6 suites/24 testes condicionais pulados, lint e Prisma generate aprovados. Aumento dos skips decorre das integrações PostgreSQL do menu; nenhum PostgreSQL ou R2 real foi operado nesta continuação. Não confundir skips com aprovação de migração.
-- Export Web/worker e smoke PWA aprovados, incluindo bypass de mídia privada. Exports nativos, ensaio browser e revisão de integração são registrados no fechamento abaixo.
+- Export Web/worker e smoke PWA aprovados, incluindo bypass de mídia privada. Exports nativos, ensaio browser e revisão de integração estão registrados no fechamento abaixo.
 - Ruling: complementar a entrega em branch candidata separada — conserva as branches originais e o WIP; custo: entrega ao checkout Expo/main ainda exige escolha de integração e validação desse WIP.
 - Ruling: o plano original passa a apontar o estado real no registro de execução, sem marcar aceites físicos não realizados — custo: as caixas do roteiro não constituem uma segunda fonte de status.
 
 Pendências externas continuam explícitas: iPhone/Android/Safari/PWA instalada, sensores/assistivas, fotos reais/RAM/p50/p95 e publicação. Integrar o menu na principal também inclui sua migração aditiva de preferências, cuja aplicação no banco alvo exige autorização específica; plano011 sozinho não cria migração.
+
+### Fechamento da integração
+
+Pauli revisou em modo somente leitura o remerge de `3fd98a1`, comparando os pais e o formulário/tema/actor. Nenhum Critical ou Minor novo comprovado; um Important: a renovação nativa construía o snapshot diretamente e perdia a validação de refreshToken do pai do menu. Quatro testes novos reproduziram respostas sem token, null, vazio e número; antes do fix todos falharam. A validação agora é compartilhada por accept/refresh antes de qualquer gravação. GREEN preserva as credenciais existentes e comprova recuperação numa tentativa posterior. Guardas de geração e gravação serializada permanecem. Não se chamou accept em refresh, pois incrementar sua geração ali descartaria operações legítimas.
+
+O revisor também considerou, sem reabrir, o callback de erro ausente no onboarding. Ruling: regraduar como Important para o aceite de todas as superfícies do plano011 — um usuário deve conseguir renovar sua foto ali sem perder o draft; custo: encaminhar um callback adicional, sem novo timer/endpoint. Um teste real do onboarding falhou com zero renovações e passou após encaminhar refreshAvatar via AvatarPicker, preservando o nome não salvo. Esses dois itens foram corrigidos na única rodada de fix da integração, sem nova revisão.
+
+- Resultado final: app75 arquivos/354 testes aprovados; typecheck aprovado. API47 arquivos/285 testes aprovados e6 suites/24 testes condicionais pulados; lint e geração Prisma aprovados. Os skips PostgreSQL permanecem skips.
+- Builds finais Web/worker/smoke e export conjunto Web/Hermes iOS/Android aprovados após os fixes. Um typecheck paralelo ao export falhou porque o export substituiu arquivos dist enquanto eram enumerados; repetição sequencial após os builds passou. Ruling: ordenar essa verificação após exports, sem mascarar a corrida alterando o tsconfig; custo: menos paralelismo nessa etapa.
+- Edge headless375×812/812×375 repetido na candidata:20 renovações em50/250/1000ms, duas imagens sintéticas, zero novos GETs/bytes/amostras DOM vazias e nós preservados; controle negativo40 GETs/12000 bytes em cada latência. Sem pageerrors, overflow horizontal ou imagens de A depois de mudar para B. Isso não é aceite de Safari, hardware, memória ou payload real.
+- A checklist UI/UX orientou a manutenção dos slots, gestos, tokens e estilos reativos existentes; não houve redesign, mudança de paleta ou redução global do zoom. A busca focada confirmou a orientação de reservar o espaço da mídia, sem justificar novas cópias/formatos R2 nesta tarefa.
+
+Limites considerados pelo revisor e decisões do executor:
+
+1. Módulos imutáveis dos pais: não repetir a auditoria integral já realizada; custo: este parecer aprova apenas a junção inspecionada, não cada módulo histórico.
+2. Onboarding sem callback próprio: regraduado e corrigido com RED→GREEN conforme acima; não foi silenciosamente adiado.
+3. Novo login real seguido das20 renovações no formulário: cobertura de conta/epoch e continuidade inspecionada separadamente, sem alegar cenário real composto; custo: incluir a combinação no aceite físico/operacional.
+4. WIP de segurança/realtime principal e fixes futuros: preservados e excluídos da candidata; custo: resolver e verificar a entrega ao checkout sem substituir esse WIP, antes de publicar seu conjunto.
+5. Publicação, migração, DB/R2/Railway, hardware/Safari, RAM/p50/p95/cache do SO: não aprovados por testes locais; custo: autorização de liberação e aceite reais separados. Alertas/minors preexistentes do menu seguem no registro010, não foram tratados como regressões novas da integração.
+
+Não há Minors novos adiados deste parecer. Relatórios anteriores e decisões acima são conservados no Git; apenas helpers/logs da workspace deste plano são descartados no fechamento. A candidata está pronta para escolha de integração, não equivale à main ou à PWA já publicada.

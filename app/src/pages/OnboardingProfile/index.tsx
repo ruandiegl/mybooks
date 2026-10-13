@@ -21,7 +21,7 @@ export function OnboardingProfile() {
   const mediaBinding = useMediaBinding();
   const styles = useThemedStyles(createStyles);
 
-  const { user, refreshUser, updateAvatar } = useSession();
+  const { user, refreshUser, refreshAvatar, updateAvatar } = useSession();
   const [firstName, setFirstName] = useState(user?.firstName || '');
   const [lastName, setLastName] = useState(user?.lastName || '');
   const [bio, setBio] = useState(user?.bio || '');
@@ -64,7 +64,7 @@ export function OnboardingProfile() {
           <Text style={styles.title}>Conte um pouco sobre você</Text>
           <Text style={styles.description}>Essa etapa é opcional. Um perfil completo ajuda outras pessoas a conhecerem seus gostos de leitura.</Text>
           <Card style={styles.card}>
-            <AvatarPicker subjectId={user?.id ?? null} binding={mediaBinding} avatar={avatar} name={[firstName, lastName].filter(Boolean).join(' ')} busy={avatarEditor.busy} error={avatarEditor.error} onChoose={avatarEditor.choose} onTakePhoto={avatarEditor.takePhoto} onRemove={avatarEditor.remove} onOpenSettings={avatarEditor.permissionBlocked ? avatarEditor.openSettings : undefined} />
+            <AvatarPicker subjectId={user?.id ?? null} binding={mediaBinding} onImageError={refreshAvatar} avatar={avatar} name={[firstName, lastName].filter(Boolean).join(' ')} busy={avatarEditor.busy} error={avatarEditor.error} onChoose={avatarEditor.choose} onTakePhoto={avatarEditor.takePhoto} onRemove={avatarEditor.remove} onOpenSettings={avatarEditor.permissionBlocked ? avatarEditor.openSettings : undefined} />
             <TextField label="Nome" value={firstName} onChangeText={setFirstName} autoComplete="name-given" textContentType="givenName" maxLength={50} />
             <TextField label="Sobrenome" value={lastName} onChangeText={setLastName} autoComplete="name-family" textContentType="familyName" maxLength={80} />
             <TextField label="Bio" value={bio} onChangeText={setBio} multiline maxLength={280} help={`${bio.length}/280`} />

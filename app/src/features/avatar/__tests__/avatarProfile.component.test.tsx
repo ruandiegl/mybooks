@@ -62,6 +62,15 @@ describe('profile and onboarding mounted avatar coordination',()=>{
   await act(async()=>{});
   expect(renewals).toBe(previous+1);
  });
+ it('requests owner renewal for a failed onboarding avatar without clearing the name draft',async()=>{
+  boundary.failImage=true;
+  let renewals=0;boundary.session.refreshAvatar=()=>{renewals++;};
+  render(host(<OnboardingProfile/>));
+  fireEvent.change(screen.getByRole('textbox',{name:'Nome'}),{target:{value:'Nome ainda não salvo'}});
+  await act(async()=>{});
+  expect(renewals).toBe(1);
+  expect((screen.getByRole('textbox',{name:'Nome'}) as HTMLInputElement).value).toBe('Nome ainda não salvo');
+ });
  it('does not deliver an old animated close after the signed-in account changes',async()=>{
   boundary.reduced=false;
   vi.stubGlobal('requestAnimationFrame',(callback:FrameRequestCallback)=>setTimeout(()=>callback(performance.now()),16));

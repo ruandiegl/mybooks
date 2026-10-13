@@ -67,6 +67,23 @@ describe('native session transport after the PWA merge', () => {
     expect(await loadTokens()).toEqual(previousTokens);
   });
 
+  it.each([undefined, null, '', 123])('preserves credentials when refresh returns an invalid token (%s) and permits retry', async (refreshToken) => {
+    await saveTokens(previousTokens);
+    const malformed = {
+      accessToken: 'broken-access', expiresAt: '2030-01-01T01:00:00Z', user,
+      ...(refreshToken === undefined ? {} : { refreshToken })
+    } as unknown as AuthSessionResponse;
+    const refresh = vi.spyOn(authApi, 'refresh').mockResolvedValueOnce(malformed);
+
+    await expect(sessionTransport.refresh(previousTokens)).rejects.toThrow('sessão nativa inválida');
+    expect(await loadTokens()).toEqual(previousTokens);
+    expect(await sessionTransport.restore()).toEqual(previousTokens);
+
+    refresh.mockResolvedValueOnce({ accessToken: 'recovered-access', refreshToken: 'recovered-refresh', expiresAt: '2030-01-01T01:00:00Z', user });
+    await expect(sessionTransport.refresh(previousTokens)).resolves.toMatchObject({ accessToken: 'recovered-access', refreshToken: 'recovered-refresh' });
+    expect(await loadTokens()).toMatchObject({ accessToken: 'recovered-access', refreshToken: 'recovered-refresh' });
+  });
+
   it('propagates a failed revocation so the provider cannot clear the native session prematurely', async () => {
     await saveTokens(previousTokens);
     const failure = new Error('revocation unavailable');
