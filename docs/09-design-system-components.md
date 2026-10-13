@@ -28,9 +28,9 @@ O projeto segue princípios de composição, variantes e tokens do shadcn, imple
 
 ## Perfil do leitor
 
-O perfil tem uma única área de identidade em fluxo vertical, sem banner, cartões sobrepostos ou margens negativas. O topo reúne “Meu perfil” e “Editar”; foto e nome aparecem lado a lado, com empilhamento em telas menores que 360 pt ou com fonte ampliada. Cidade e bio são opcionais. A linha de livros, matches e conversas usa apenas estatísticas retornadas pela API, sem um cartão próprio.
+O perfil tem uma única área de identidade em fluxo vertical, sem banner, cartões sobrepostos ou margens negativas. Na branch do plano010, o topo reúne “Meu perfil” e o hambúrguer de configurações; Editar fica no menu. Foto e nome aparecem lado a lado, com empilhamento em telas menores que 360 pt ou com fonte ampliada. Cidade e bio são opcionais. A linha de livros, matches e conversas usa apenas estatísticas retornadas pela API, sem um cartão próprio.
 
-As abas “Minha estante” e “Sobre você” ficam antes do conteúdo. A estante mantém duas colunas de largura igual, inclusive com quantidade ímpar de livros, e uma ação magenta de adicionar. No estado vazio, a ação aparece junto da orientação para cadastrar o primeiro livro. Dados pessoais e saída da conta ficam em “Sobre você”, separados por linhas discretas. O avatar usa iniciais quando a imagem está ausente ou falha.
+As abas “Minha estante” e “Sobre você” ficam antes do conteúdo. A estante mantém duas colunas de largura igual, inclusive com quantidade ímpar de livros, e uma ação magenta de adicionar. No estado vazio, a ação aparece junto da orientação para cadastrar o primeiro livro. Sobre você mantém informações em linhas; configurações de conta e saída ficam no menu do plano010. O avatar usa iniciais quando a imagem está ausente ou falha.
 
 Referências de organização: [perfil do Spotify](https://support.spotify.com/us/article/spotify-profile/) (identidade e coleção) e [perfil do Strava](https://support.strava.com/en-us/articles/15402175-your-strava-profile-page) (resumo de atividade). A composição adapta Avatar, Tabs, Empty e Button do [shadcn/ui](https://ui.shadcn.com/docs/components) aos componentes React Native existentes. Paleta e família Be Vietnam Pro permanecem as oficiais.
 

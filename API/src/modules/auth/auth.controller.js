@@ -144,6 +144,17 @@ export function createAuthController({ service = authService, getMe = usersServi
       clearBrowserRefreshCookie(res);
       return res.status(200).json({ data: { ok: true } });
     },
+    browserRebind: async (req, res) => {
+      preventBrowserSessionCaching(res);
+      const cookie = readCookie(req, BROWSER_REFRESH_COOKIE);
+      if (!cookie.value) throw missingBrowserSession();
+      const correlation = settingsCorrelation(req);
+      if (!correlation) throw settingsSessionChanged();
+      const parsed = refreshSchema.safeParse({ refreshToken: cookie.value });
+      if (!parsed.success) throw missingBrowserSession();
+      const session = await service.rebind(parsed.data.refreshToken, correlation);
+      return res.status(200).json({ data: browserSessionPayload(session) });
+    },
     refresh: async (req, res) => {
       const cookieTransport = isCookieSessionRequest(req);
       const refreshToken = cookieTransport

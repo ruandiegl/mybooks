@@ -2,6 +2,8 @@
 
 ## Configurações de conta (plano010, branch de implementação)
 
+`POST /auth/browser/rebind`: cookie vivo + Origin/HTTPS e headers owner/sid obrigatórios; retorna sessão browser com access token do sid vigente da mesma família. Não rotaciona, não envia refresh nem Set-Cookie, não amplia TTL. Outra família409 preserva cookie; cookie revogado401. Usado para recuperar sockets de abas compartilhadas sem ciclo de rotação.
+
 Novos `POST /auth/change-password` e `/auth/browser/change-password`: body estrito `{currentPassword,newPassword}`;200 `{data:{ok:true}}`,403 `CURRENT_PASSWORD_INVALID`,422 validação,429 limite. Sucesso exige novo login. `POST /auth/browser/logout-all` completa o contrato web; `/auth/logout-all` mantém compatibilidade/cookie transport. `X-Settings-Session` ancora a família com X-Settings-Owner; outro login/cookie, mesmo da mesma conta,409 sem Set-Cookie/efeitos. Rotação legítima da família é aceita. Limpeza dos dois cookies preserva nomes/paths próprios e ocorre após commit confirmado.
 
 `GET /me/preferences` e `PATCH /me/preferences` são autenticados, privados e `no-store`. PATCH aceita somente `{showLikesBadge:boolean}`; ownership vem da sessão. O DTO contém `schemaVersion:1`, `userId`, `notifications.showLikesBadge` e `capabilities` (senha/logout global conforme rotas instaladas; push:false). Ausência de linha usa true sem criar registro. `X-Settings-Owner` é correlação, não autorização; divergência retorna409 `SETTINGS_SESSION_CHANGED`. API antiga404 mantém o badge legado e não oferece um switch falsamente funcional. Sobrenome opcional em PATCH/me aceita null/vazio para limpeza; máximo80, nome obrigatório1–50 quando enviado.

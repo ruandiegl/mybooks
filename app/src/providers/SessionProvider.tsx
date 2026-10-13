@@ -10,7 +10,7 @@ import React, {
   useState
 } from 'react';
 import { authApi } from '../features/auth/authApi';
-import { sessionTransport, type SessionResponse, type SessionSnapshot } from '../features/auth/authTransport';
+import { sessionTransport, type SessionResponse, type SessionSnapshot, type SocketRecoveryReason } from '../features/auth/authTransport';
 import { configureApiSession } from '../services/api';
 import { mergeAvatarVersion } from '../features/avatar/avatarRefresh';
 import { avatarDescriptorOf } from '../features/avatar/avatarTypes';
@@ -27,6 +27,7 @@ type SessionContextValue = {
   getSessionScope: () => SessionScope;
   establishSession: (response: SessionResponse) => Promise<void>;
   refreshSession: () => Promise<boolean>;
+  rebindSession: (reason: SocketRecoveryReason) => Promise<boolean>;
   refreshUser: () => Promise<User | null>;
   refreshAvatar: () => void;
   updateAvatar: (avatar: AvatarDescriptor, userId: string) => void;
@@ -106,6 +107,15 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
 
   const getToken = useCallback(async () => sessionTransport.getToken(sessionRef.current), []);
   const getSessionScope = useCallback(() => ({ userId: scopeActive.current ? userRef.current?.id : undefined, epoch: epoch.current }), []);
+  const rebindSession = useCallback(async (reason: SocketRecoveryReason) => {
+    const ticket = epoch.current;
+    const next = await sessionTransport.rebind(sessionRef.current, reason);
+    if (ticket !== epoch.current) return false;
+    if (!next) { await clearSession(); return false; }
+    replaceSession(next);
+    if (next.user) { userRef.current = mergeAvatarVersion(userRef.current, next.user); setUser(userRef.current); }
+    return true;
+  }, [clearSession, replaceSession]);
 
   const refreshUser = useCallback(async () => {
     if (!sessionRef.current) return null;
@@ -244,12 +254,13 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
     getSessionScope,
     establishSession,
     refreshSession,
+    rebindSession,
     refreshUser,
     refreshAvatar,
     updateAvatar,
     captureActor, isActorCurrent, updateUser,
     signOut, signOutAll, changePassword, sessionNotice, endRevokedSession
-  }), [establishSession, getToken, getSessionScope, isLoaded, refreshSession, refreshUser, refreshAvatar, updateAvatar, captureActor, isActorCurrent, updateUser, session, signOut, signOutAll, changePassword, sessionNotice, endRevokedSession, user]);
+  }), [establishSession, getToken, getSessionScope, isLoaded, refreshSession, rebindSession, refreshUser, refreshAvatar, updateAvatar, captureActor, isActorCurrent, updateUser, session, signOut, signOutAll, changePassword, sessionNotice, endRevokedSession, user]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

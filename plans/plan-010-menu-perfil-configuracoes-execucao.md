@@ -47,4 +47,14 @@ Banco: container de teste com label `trocalivros.task=plan010`, tmpfs e bind exc
 - Appearance nativa usa `unspecified`, não null, para remover override: contrato efetivo do React Native0.86 instalado. Custo se mudar de RN: adaptar o valor.
 - UI de Ajuda/Sobre integra o mesmo commit de conta para não deixar imports sem implementação num host compartilhado; documentação/evidências têm commit próprio. Custo: granularidade do histórico, não comportamento.
 
+## Revisão independente e fix
+
+Epicurus revisou a branch inteira até b4cf79a somente leitura. Nenhum Critical comprovado; Important: sockets de duas abas podiam alternar refresh do cookie. Reproduzido novamente com transportes/lifecycle reais e I/O controlado, antes do fix. Solução: POST `/auth/browser/rebind` privado/Origin/HTTPS/owner+sid/família retorna acesso ao sid já vivo, sem novo sid, Set-Cookie, refresh no DTO ou extensão de TTL. Recuperação do chat web usa esse caminho, evitando outra rotação; nativo aguarda a rotação já em andamento ou renova uma credencial expirada. API antiga só usa fallback de refresh depois de liberar o lock e fora de um aviso rotated.
+
+Decisão adicional: este endpoint interno é necessário para manter ambas as abas conectadas, não apenas limitar/desligar uma. Custo se incorreto: recuperação realtime; autoridade continua no cookie/sessão viva e teste de outra família409. Suítes finais serão repetidas após o fix.
+
+Minors adiados: borda de foco de Salvar foto no escuro (white vs pastel,2.13:1) e horário de bolha própria com opacidade0.7 (contraste composto abaixo4.5). Não são corrigidos nesta passada de Important; precisam de tarefa de contraste/aceite.
+
+Limites considerados pelo revisor e mantidos conforme desenho: não publicar/migrar/alterar infra/TLS/proxy/SSH/backup; não operar R2/contas/e-mails reais; hardware/Safari/PWA instalada/assistivas/splash/chrome precisam de aceite; revogação multi-réplica exige adapter; push/inbox/categorias, exclusão/e-mail/CPF/MFA/sessões/moderação/export e cobrança ficam futuros; URLs jurídicas/suporte não inventadas; patches/audit preexistentes requerem trabalho próprio; arquivos alheios e planos históricos não são removidos/revisados integralmente. O custo desses limites é não afirmar liberação/aceite operacional, recursos futuros ou remediação fora da entrega.
+
 Os dois arquivos locais alheios a esta tarefa (`seed-book-photos.sql` e rascunho local do plano008) são preservados e excluídos dos commits.

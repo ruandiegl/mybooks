@@ -4,6 +4,7 @@ import type { AuthSessionResponse, BrowserAuthSessionResponse, ChangePasswordInp
 import type { SessionActor } from './sessionActor';
 
 export type SessionResponse = AuthSessionResponse | BrowserAuthSessionResponse;
+export type SocketRecoveryReason = 'rotated' | 'expired' | 'unauthenticated';
 
 export type SessionSnapshot = {
   accessToken: string;
@@ -17,6 +18,7 @@ export type SessionTransport = {
   accept: (response: SessionResponse) => Promise<SessionSnapshot>;
   getToken: (current: SessionSnapshot | null) => Promise<string | null>;
   refresh: (current: SessionSnapshot | null) => Promise<SessionSnapshot | null>;
+  rebind: (current: SessionSnapshot | null, reason: SocketRecoveryReason) => Promise<SessionSnapshot | null>;
   clear: () => Promise<void>;
   signOut: (current: SessionSnapshot | null, actor?: SessionActor, isCurrent?: () => boolean) => Promise<void>;
   signOutAll: (current: SessionSnapshot, actor: SessionActor, isCurrent: () => boolean) => Promise<void>;
@@ -70,6 +72,11 @@ export const sessionTransport: SessionTransport = {
     } finally {
       if (refreshPromise === ownPromise) { refreshPromise = null; refreshOwner = undefined; }
     }
+  },
+  async rebind(current, reason) {
+    if (reason !== 'rotated') return this.refresh(current);
+    if (refreshPromise && refreshOwner === current?.refreshToken) return refreshPromise;
+    return current;
   },
   async clear() { generation++; await clearTokens(); },
   async signOut(current, actor, isCurrent) {

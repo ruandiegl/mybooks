@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const requests = vi.hoisted(() => ({ refresh: vi.fn(), logout: vi.fn() }));
+const requests = vi.hoisted(() => ({ refresh: vi.fn(), logout: vi.fn(), rebind: vi.fn() }));
 vi.mock('../authApi', () => ({ authApi: requests }));
 vi.mock('../authApi.web', () => ({ authApi: requests }));
 
@@ -44,7 +44,7 @@ async function loadFreshTransport() {
 describe('browser session transport', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(authApi.refresh).mockReset(); vi.mocked(authApi.logout).mockReset();
+    vi.mocked(authApi.refresh).mockReset(); vi.mocked(authApi.logout).mockReset(); vi.mocked(authApi.rebind).mockReset();
     vi.stubGlobal('window', { sessionStorage: makeSessionStorage(), localStorage: makeSessionStorage() });
     vi.stubGlobal('navigator', { locks: makeLockManager() });
   });
@@ -202,6 +202,17 @@ describe('browser session transport', () => {
     await expect(oldRefresh).resolves.toBeNull();
     await expect(newRefresh).resolves.toMatchObject({ user: { id: 'user-2' } });
     expect(await transport.getToken(null)).toBe(next.accessToken);
+  });
+  it('ignores a delayed rebind receipt after another login was accepted', async () => {
+    let finish!: (value: any) => void, started!: () => void;
+    const sent = new Promise<void>(resolve => { started = resolve; });
+    vi.mocked(authApi.rebind).mockImplementation(async () => { started(); return await new Promise(resolve => { finish = resolve; }); });
+    const module = await loadFreshTransport(), transport = module.createWebSessionTransport({ auth: authApi, locks: makeLockManager() });
+    const old = await transport.accept(session), pending = transport.rebind(old, 'rotated'); await sent;
+    const next = { ...session, accessToken: `e30.${btoa(JSON.stringify({ sub: 'user-2', sid: '10000000-0000-4000-8000-000000000002' }))}.test`, user: { ...session.user, id: 'user-2' } };
+    await transport.accept(next); finish(session);
+    await expect(pending).resolves.toBeNull(); expect(await transport.getToken(null)).toBe(next.accessToken);
+    expect(authApi.refresh).not.toHaveBeenCalled();
   });
 
   it('keeps the in-memory session when refresh fails temporarily', async () => {

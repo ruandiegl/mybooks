@@ -134,4 +134,27 @@ integration('account locks, families and revocation with PostgreSQL', () => {
     const oldToken = await request(app).get('/auth/me').set('Authorization', 'Bearer ' + token);
     expect(oldToken.status).toBe(401);
   });
+  it('rebinds an old tab to the live cookie sid without rotating it or returning refresh secrets', async () => {
+    const { user, session } = await fixture(), repository = createAuthRepository(client), now = new Date(), nextRefresh = createOpaqueToken(48);
+    const rotated = await repository.rotateSession({ refreshTokenHash: session.refreshTokenHash, now, replacement: { refreshTokenHash: hashOpaqueToken(nextRefresh), familyId: randomUUID(), expiresAt: new Date(Date.now() + 3600000) } });
+    const app = httpApp(repository), before = await client.authSession.count({ where: { userId: user.id } });
+    const response = await request(app).post('/auth/browser/rebind').set('Origin', 'https://settings.example.test').set('X-Forwarded-Proto', 'https').set('X-Settings-Owner', user.id).set('X-Settings-Session', session.id).set('Cookie', `__Host-trocalivros_refresh=${nextRefresh}`);
+    expect(response.status).toBe(200); expect(response.headers['set-cookie']).toBeUndefined();
+    expect(response.body.data).not.toHaveProperty('refreshToken');
+    expect((await verifyAccessToken(response.body.data.accessToken)).sessionId).toBe(rotated.session.id);
+    expect(await client.authSession.count({ where: { userId: user.id } })).toBe(before);
+    expect(await repository.findActiveSession(rotated.session.id, user.id)).not.toBeNull();
+  });
+  it('never rebinds another cookie family and requires Origin/correlation/live cookie', async () => {
+    const { user, session, other, refreshToken, otherRefreshToken } = await fixture(), repository = createAuthRepository(client), app = httpApp(repository);
+    const base = () => request(app).post('/auth/browser/rebind').set('X-Forwarded-Proto', 'https');
+    const mismatch = await base().set('Origin', 'https://settings.example.test').set('X-Settings-Owner', user.id).set('X-Settings-Session', session.id).set('Cookie', `__Host-trocalivros_refresh=${otherRefreshToken}`);
+    expect(mismatch.status).toBe(409); expect(mismatch.headers['set-cookie']).toBeUndefined();
+    expect(await repository.findActiveSession(other.id, user.id)).not.toBeNull();
+    expect((await base().set('Cookie', `__Host-trocalivros_refresh=${refreshToken}`)).status).toBe(403);
+    expect((await base().set('Origin', 'https://settings.example.test').set('Cookie', `__Host-trocalivros_refresh=${refreshToken}`)).status).toBe(409);
+    await repository.revokeSession(session.refreshTokenHash, new Date());
+    const revoked = await base().set('Origin', 'https://settings.example.test').set('X-Settings-Owner', user.id).set('X-Settings-Session', session.id).set('Cookie', `__Host-trocalivros_refresh=${refreshToken}`);
+    expect(revoked.status).toBe(401); expect(revoked.headers['set-cookie']).toBeUndefined();
+  });
 });
