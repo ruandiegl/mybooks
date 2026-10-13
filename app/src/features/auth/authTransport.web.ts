@@ -9,6 +9,7 @@ const SIGNED_OUT_KEY = 'trocalivros.auth.signed-out.v1';
 type SessionMarkerStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 type BrowserAuthApi = {
   refresh(actor?: SessionActor): Promise<SessionResponse>;
+  rebind?(actor: SessionActor): Promise<SessionResponse>;
   logout(actor?: SessionActor): Promise<{ ok: boolean }>;
   logoutAll?(token: string, actor: SessionActor): Promise<{ ok: boolean }>;
   changePassword?(token: string, input: ChangePasswordInput, actor: SessionActor): Promise<{ ok: boolean }>;
@@ -120,6 +121,30 @@ export function createWebSessionTransport(dependencies: {
       refreshPromise = ownPromise; refreshGeneration = ticket;
       try { return await ownPromise; }
       finally { if (refreshPromise === ownPromise) { refreshPromise = null; refreshGeneration = -1; } }
+    },
+    async rebind(current, reason) {
+      if (signedOut()) return null;
+      const ticket = generation, origin = memorySession ?? current;
+      if (!origin?.user) return null;
+      const sessionId = accessSessionId(origin.accessToken, origin.user.id);
+      if (!sessionId) throw Error('Sessão de origem inválida. Entre novamente.');
+      const actor = { userId: origin.user.id, sessionId, epoch: 0 };
+      try {
+        return await withBrowserSessionLock(async () => {
+          if (generation !== ticket || signedOut()) return null;
+          if (!api.rebind) throw Object.assign(Error('Rebind indisponível.'), { response: { status: 404 } });
+          const response = await api.rebind(actor);
+          if (generation !== ticket || signedOut()) return null;
+          if (response.user.id !== actor.userId) throw Error('A sessão mudou.');
+          return remember(response);
+        }, undefined, locks);
+      } catch (error) {
+        const status = (error as { response?: { status?: number } })?.response?.status;
+        if (status === 401) return null;
+        // An older API does not broadcast retirement; compatibility refresh occurs after releasing the lock.
+        if (status === 404 && reason !== 'rotated' && generation === ticket) return this.refresh(current);
+        throw error;
+      }
     },
     async clear() {
       generation++; memorySession = null;

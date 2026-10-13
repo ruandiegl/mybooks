@@ -43,6 +43,9 @@ export const authApi = {
   async logout(actor?: SessionActor) {
     return data<{ ok: true }>(await publicApi.post('/api/v1/auth/browser/logout', {}, { headers: actor ? settingsActorHeaders(actor) : {} }));
   },
+  async rebind(actor: SessionActor) {
+    return data<BrowserAuthSessionResponse>(await publicApi.post('/api/v1/auth/browser/rebind', {}, { headers: settingsActorHeaders(actor) }));
+  },
   async logoutAll(accessToken: string, actor: SessionActor) {
     return data<{ ok: true }>(await publicApi.post('/api/v1/auth/browser/logout-all', {}, { headers: { ...settingsActorHeaders(actor), Authorization: 'Bearer ' + accessToken } }));
   },

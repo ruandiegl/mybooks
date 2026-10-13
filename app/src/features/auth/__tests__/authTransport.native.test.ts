@@ -44,7 +44,7 @@ describe('native session transport after the PWA merge', () => {
     const refresh = vi.spyOn(authApi, 'refresh').mockReturnValue(pending);
 
     const http = sessionTransport.refresh(previousTokens);
-    const socket = sessionTransport.refresh(previousTokens);
+    const socket = sessionTransport.rebind(previousTokens, 'rotated');
     const requests = refresh.mock.calls.length;
     finishRefresh({ accessToken: 'rotated-access', refreshToken: 'rotated-refresh', expiresAt: '2030-01-01T01:00:00Z', user });
     const snapshots = await Promise.all([http, socket]);

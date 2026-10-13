@@ -117,3 +117,13 @@ Limites considerados pelo revisor e decisões do executor:
 5. Publicação, migração, DB/R2/Railway, hardware/Safari, RAM/p50/p95/cache do SO: não aprovados por testes locais; custo: autorização de liberação e aceite reais separados. Alertas/minors preexistentes do menu seguem no registro010, não foram tratados como regressões novas da integração.
 
 Não há Minors novos adiados deste parecer. Relatórios anteriores e decisões acima são conservados no Git; apenas helpers/logs da workspace deste plano são descartados no fechamento. A candidata está pronta para escolha de integração, não equivale à main ou à PWA já publicada.
+
+## Entrega à main autorizada — 13/10/2026
+
+O usuário autorizou enviar todas as atualizações à branch principal. A entrega combina a integração de imagens/menu (`fd1a296`) com o ajuste de recuperação de chat de duas abas antes pendente no checkout principal (`0418f86`). O único conflito adicional foi no transporte nativo: rebind foi adaptado ao refreshRun por geração/token, preservando clear serializado e validação compartilhada do snapshot. O teste HTTP+socket agora usa rebind de verdade; falhou com a referência antiga refreshPromise e passou após a adaptação.
+
+Validação do conjunto: app76 arquivos/356 testes, typecheck, Web/worker/smoke e Hermes iOS/Android aprovados; API47 arquivos/285 testes e lint aprovados,6 suites/26 testes condicionais pulados. Uma execução concorrente da API excedeu5s no teste de subprocessos dos validators; a repetição completa isolada passou sem modificar teste, timeout ou segurança. O checkout principal também foi validado antes de registrar seu ajuste: app292 e API284 aprovados,26 condicionais pulados; AUTH_MODE=native foi definido somente no processo de teste porque seu .env local ainda contém o modo antigo. Nenhum .env foi alterado.
+
+O rascunho inicial não rastreado do plano011 foi movido de forma recuperável para `plans/plan-011-carregamento-imagens-sem-piscadas.local-before-main.md`, evitando sobrescrevê-lo pelo plano atualizado. Esse arquivo, o rascunho local do plano008 e `API/prisma/seed-book-photos.sql` permanecem fora do commit; nenhum arquivo pessoal, Yamaha, foto ou helper de teste novo é enviado. Secrets e configurações locais não são versionados.
+
+Este registro acompanha a preparação do envio Git; a confirmação de SHA remoto é feita depois do push. Push não constitui aceite físico ou confirmação de deploy da API/PWA. A migração UserPreferences do menu está no código, mas não foi aplicada no Railway nesta etapa; o Dockerfile da API não executa migrate deploy automaticamente.

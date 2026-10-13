@@ -71,6 +71,7 @@ export function createAuthRouter({ service, authenticateMiddleware = authenticat
   router.post('/browser/login', requireSameOriginBrowserRequest, limiter('login', config.login), asyncHandler(controller.browserLogin));
   router.post('/browser/verify-email', requireSameOriginBrowserRequest, limiter('verify', config.verify), asyncHandler(controller.browserVerifyEmail));
   router.post('/browser/refresh', requireSameOriginBrowserRequest, limiter('refresh', config.refresh), asyncHandler(controller.browserRefresh));
+  router.post('/browser/rebind', requireSameOriginBrowserRequest, limiter('rebind', config.refresh), asyncHandler(controller.browserRebind));
   router.post('/browser/logout', requireSameOriginBrowserRequest, limiter('logout', config.logout), asyncHandler(controller.browserLogout));
   router.post('/forgot-password', limiter('forgot', config.forgot), asyncHandler(controller.forgotPassword));
   router.post('/reset-password', limiter('reset', config.reset), asyncHandler(controller.resetPassword));

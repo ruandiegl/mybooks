@@ -284,6 +284,16 @@ export function createAuthRepository(database = prisma) { return {
   updatePasswordHash(userId, passwordHash) {
     return database.user.update({ where: { id: userId }, data: { passwordHash }, select: authUserSelect });
   },
+  rebindSession({ refreshTokenHash, now, correlation }) {
+    return database.$transaction(async tx => {
+      const lookup = await tx.authSession.findUnique({ where: { refreshTokenHash }, select: { userId: true } });
+      if (!lookup || !await lockAccount(tx, lookup.userId)) return { status: 'INVALID' };
+      const current = await tx.authSession.findUnique({ where: { refreshTokenHash }, include: { user: { select: authUserSelect } } });
+      if (!current || current.revokedAt || current.expiresAt <= now || !current.user.isActive || !current.user.emailVerifiedAt) return { status: 'INVALID' };
+      await bindCorrelation(tx, current, correlation);
+      return { status: 'ACTIVE', user: current.user, session: current };
+    });
+  },
 
   rotateSession({ refreshTokenHash, now, replacement, correlation }) {
     return database.$transaction(async (client) => {

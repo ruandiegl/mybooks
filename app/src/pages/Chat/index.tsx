@@ -29,7 +29,7 @@ export function Chat({ route }: Props) {
 
   const { conversationId } = route.params;
   const session = useSession();
-  const { getToken, refreshSession, captureActor, isActorCurrent, endRevokedSession } = session;
+  const { getToken, rebindSession, captureActor, isActorCurrent, endRevokedSession } = session;
   const queryClient = useQueryClient();
   const [body, setBody] = useState('');
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -59,7 +59,7 @@ export function Chat({ route }: Props) {
     createChatSocket({ getToken, onToken: token => { connectionSid = token && actor ? accessSessionId(token, actor.userId) : null; } }).then((created) => {
       if (!active) return created.close();
       current = created;
-      unbindSession = bindSocketSessionLifecycle(created, { isCurrent: () => Boolean(actor && isActorCurrent(actor)), refresh: refreshSession,
+      unbindSession = bindSocketSessionLifecycle(created, { isCurrent: () => Boolean(actor && isActorCurrent(actor)), recover: rebindSession,
         onRevoked: async () => { const latest = captureActor(); if (actor && latest?.sessionId === connectionSid && isActorCurrent(actor)) await endRevokedSession(latest); } });
       setSocket(created);
       created.on('connect', () => {
@@ -99,7 +99,7 @@ export function Chat({ route }: Props) {
       if (typingTimer.current) clearTimeout(typingTimer.current);
       current?.close();
     };
-  }, [conversationId, getToken, me.data?.id, queryClient, refreshSession, captureActor, isActorCurrent, endRevokedSession]);
+  }, [conversationId, getToken, me.data?.id, queryClient, rebindSession, captureActor, isActorCurrent, endRevokedSession]);
 
   const ordered = useMemo(() => orderMessagePages(messages.data), [messages.data]);
 

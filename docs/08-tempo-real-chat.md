@@ -2,6 +2,8 @@
 
 ## Sessões revogadas — plano010 (local)
 
+No Web, recuperação de rotação/expiração/handshake usa rebind autenticado pelo cookie e correlacionado à família; não faz nova rotação para cada aviso rotated. Isto mantém duas abas no sid vivo. Nativo reaproveita a rotação compartilhada em andamento; expiração renova normalmente. Fallback para API antiga ocorre somente após soltar o lock e não ao receber rotated.
+
 Após commit, `session:revoked` informa `terminal`, `rotated` ou `expired`; falha de consulta pode informar `unavailable`. Sockets são selecionados por sid/owner, não por todo usuário no logout atual. Eventos validam JWT e sessão viva; HTTP fallback/idempotência são preservados. O cliente reconecta uma vez por handshake inválido/rotação legítima; terminal limpa somente o actor e sid correspondentes. Listeners do servidor são removidos ao fechar. EventEmitter local pressupõe uma instância; adapter compartilhado é necessário antes de escalar réplicas.
 
 O histórico é carregado por HTTP. Socket.IO mantém entrega instantânea, presença efêmera e confirmação; se o socket cair, o app envia mensagens pelo endpoint HTTP.

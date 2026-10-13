@@ -226,6 +226,14 @@ export const createAuthService = ({
       if (result?.sessionIds?.length) notifyRevoked(result);
       return { ok: true };
     },
+    async rebind(refreshToken, correlation) {
+      if (!correlation) throw settingsSessionChanged();
+      const now = clock.now();
+      const result = await repository.rebindSession({ refreshTokenHash: hashOpaqueToken(refreshToken), now, correlation });
+      if (result.status !== 'ACTIVE') throw invalidSession();
+      // Reissue access to the already-live sid; no rotation, TTL extension or refresh disclosure.
+      return issueSession(result.user, result.session, null, now);
+    },
 
     async logoutAll(userId, options) {
       const result = await repository.revokeAllSessions(userId, clock.now(), options);
