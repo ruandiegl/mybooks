@@ -4,7 +4,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Crypto from 'expo-crypto';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { Alert } from '../../services/notice';
 import { AppScreen } from '../../components/AppScreen';
@@ -13,6 +13,7 @@ import { LikeCard } from '../../components/LikeCard';
 import { StateView } from '../../components/StateView';
 import { ToggleGroup } from '../../components/ToggleGroup';
 import { TopBar } from '../../components/TopBar';
+import { MatchModal } from '../../components/MatchModal';
 import { api, apiErrorMessage } from '../../services/api';
 import type { ApiEnvelope, Match, Paginated } from '../../types/api';
 import { likesApi } from '../../features/likes/likesApi';
@@ -48,6 +49,8 @@ export function Likes({ navigation }: Props) {
   const [activeTab, setActiveTab] = useState<TabType>('received');
   const [sort, setSort] = useState<SortType>('desc');
   const [selectedBookId, setSelectedBookId] = useState<string | undefined>();
+  const [confirmedMatch, setConfirmedMatch] = useState<Match | null>(null);
+  useLayoutEffect(() => { setConfirmedMatch(null); }, [session.user?.id, mediaBinding.scope?.epoch]);
 
   // Count Query
   const { data: countData } = useQuery({
@@ -110,27 +113,28 @@ export function Likes({ navigation }: Props) {
   });
 
   const focused = useIsFocused();
+  const focusedRef = useRef(focused); focusedRef.current = focused;
+  useLayoutEffect(() => { if (!focused) setConfirmedMatch(null); }, [focused]);
   const refreshReceivedAvatars = useAvatarRefresh(receivedData, refetchReceived, focused && activeTab === 'received' && canSeeReceivedLikeIdentities(premiumStatusQuery.data, premiumStatusQuery.isTrialLocallyExpired));
   const refreshSentAvatars = useAvatarRefresh(sentData, refetchSent, focused && activeTab === 'sent');
 
   // Interaction Mutation
   const interactionMutation = useMutation({
+    onMutate: () => ({ scope: mediaBinding.getScope() }),
     mutationFn: ({ targetBookId, action }: { targetBookId: string; action: 'LIKE' | 'PASS' }) =>
       likesApi.interact({
         targetBookId,
         action,
         clientActionId: Crypto.randomUUID(),
       }),
-    onSuccess: (data) => {
+    onSuccess: (data, _input, context) => {
       queryClient.invalidateQueries({ queryKey: ['likes'] });
       void queryClient.invalidateQueries({ queryKey: ['books', 'discover'] });
       queryClient.invalidateQueries({ queryKey: ['matches'] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
-      if (data.match) {
-        Alert.alert('Deu match!', 'Vocês curtiram os livros um do outro! A conversa já está disponível.', [
-          { text: 'Ir para Mensagens', onPress: () => navigation.navigate('Messages') },
-          { text: 'Continuar', style: 'cancel' }
-        ]);
+      const currentScope = mediaBinding.getScope();
+      if (focusedRef.current && data.match && context?.scope && currentScope && context.scope.userId === currentScope.userId && context.scope.epoch === currentScope.epoch) {
+        setConfirmedMatch(data.match);
       }
     },
     onError: (error) => {
@@ -245,6 +249,7 @@ export function Likes({ navigation }: Props) {
 
   return (
     <AppScreen>
+      <MatchModal visible={Boolean(confirmedMatch) && focused} reduceMotion={mediaBinding.transitionMs === 0} otherUserName={confirmedMatch?.otherUser.name} onClose={() => setConfirmedMatch(null)} onMessages={() => { setConfirmedMatch(null); navigation.navigate('Main', { screen: 'Messages' }); }} />
       <TopBar
         title="Curtidas"
         action={countData?.count ? <Badge label={countData.count === 1 ? '1 pendente' : `${countData.count} pendentes`} variant="violet" /> : undefined}

@@ -9,7 +9,7 @@ vi.hoisted(() => {
   window.matchMedia = (media: string) => ({ matches: false, media, onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => true });
 });
 vi.mock('react-native', async () => await import('react-native-web'));
-vi.mock('react-native-safe-area-context', async () => ({ SafeAreaView: (await import('react-native-web')).View }));
+vi.mock('react-native-safe-area-context', async () => ({ SafeAreaView: (await import('react-native-web')).View, useSafeAreaInsets: () => ({ top: 59, bottom: 34, left: 0, right: 0 }) }));
 vi.mock('@expo/vector-icons/MaterialIcons', () => ({ default: () => null }));
 vi.mock('expo-crypto', () => ({ randomUUID: () => '40000000-0000-4000-8000-000000000004' }));
 vi.mock('@react-navigation/native', () => ({ useIsFocused: () => true, useNavigation: () => ({ navigate: vi.fn() }) }));

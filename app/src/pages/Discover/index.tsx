@@ -17,6 +17,7 @@ import { Card } from '../../components/Card';
 import { IsbnBadge } from '../../components/IsbnBadge';
 import { StateView } from '../../components/StateView';
 import { TopBar } from '../../components/TopBar';
+import { MatchModal } from '../../components/MatchModal';
 import { createBookMedia } from '../../features/media/mediaIdentity';
 import { getBookGalleryPhotos } from '../../features/books/bookPresentation';
 import { api, apiErrorMessage } from '../../services/api';
@@ -44,10 +45,12 @@ export function Discover() {
   const { width, height } = useWindowDimensions();
   const landscape = width > height;
   const focused = useIsFocused();
+  const focusedRef = useRef(focused); focusedRef.current = focused;
   const { user, getSessionScope } = useSession();
   const owner = useRef(user?.id); owner.current = user?.id;
   const alive = useRef(true), sequence = useRef(0), run = useRef<InteractionRun | null>(null);
   const [outgoingBook, setOutgoingBook] = useState<Book | null>(null);
+  const [confirmedMatch, setConfirmedMatch] = useState<Match | null>(null);
   const entrancePending = useRef(false);
   const motion = useDiscoverCardMotion(focused, width, height);
   const { pan } = motion;
@@ -70,7 +73,8 @@ export function Discover() {
     alive.current = true;
     return () => { alive.current = false; run.current = null; };
   }, []);
-  useLayoutEffect(() => { run.current = null; entrancePending.current = false; setOutgoingBook(null); motion.reset(); }, [user?.id, mediaBinding.scope?.epoch, motion.reset]);
+  useLayoutEffect(() => { run.current = null; entrancePending.current = false; setOutgoingBook(null); setConfirmedMatch(null); motion.reset(); }, [user?.id, mediaBinding.scope?.epoch, motion.reset]);
+  useLayoutEffect(() => { if (!focused) setConfirmedMatch(null); }, [focused]);
   useLayoutEffect(() => {
     if (!outgoingBook && book && entrancePending.current) { entrancePending.current = false; motion.enter(); }
   }, [book?.id, outgoingBook, motion.enter]);
@@ -91,7 +95,7 @@ export function Discover() {
       motion.prepareNext(); entrancePending.current = true;
       queryClient.setQueryData<InfiniteData<Paginated<Book>, string>>(queryKey, (old) => old ? { ...old, pages: old.pages.map((page) => ({ ...page, items: page.items.filter((item) => item.id !== input.targetBookId) })) } : old);
       run.current = null; setOutgoingBook(null);
-      if (data.match) Alert.alert('Deu match!', 'Vocês gostaram dos livros um do outro. A conversa já está disponível.');
+      if (focusedRef.current && data.match) setConfirmedMatch(data.match);
       void queryClient.invalidateQueries({ queryKey: ['conversations'] });
       void queryClient.invalidateQueries({ queryKey: ['matches'] });
       void queryClient.invalidateQueries({ queryKey: ['likes'] });
@@ -140,6 +144,7 @@ export function Discover() {
 
   return (
     <AppScreen>
+      <MatchModal visible={Boolean(confirmedMatch) && focused} reduceMotion={mediaBinding.transitionMs === 0} otherUserName={confirmedMatch?.otherUser.name} onClose={() => setConfirmedMatch(null)} onMessages={() => { setConfirmedMatch(null); navigation.navigate('Main', { screen: 'Messages' }); }} />
       <TopBar eyebrow="Trocas possíveis" title="Descobrir" />
       <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
         {query.isLoading && !outgoingBook ? <StateView loading title="Buscando novas histórias" /> : query.isError && !outgoingBook ? <StateView title="A descoberta falhou" icon="cloud-off" actionLabel="Tentar novamente" onAction={retryImages} /> : !book ? <StateView title="Você chegou ao fim por agora" description="Novos livros aparecem aqui quando outros leitores publicam." icon="done-all" actionLabel="Atualizar" onAction={retryImages} /> : <>

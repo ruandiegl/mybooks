@@ -14,7 +14,7 @@ vi.mock('react-native', async () => {
     AccessibilityInfo: { isReduceMotionEnabled: () => device.delayPreference ? new Promise<boolean>(resolve => { device.resolvePreference = resolve; }) : Promise.resolve(device.reduced), addEventListener: (_event: string, listener: (value: boolean) => void) => { device.listener = listener; return { remove() { device.listener = undefined; } }; } }
   };
 });
-vi.mock('react-native-safe-area-context', async () => ({ SafeAreaView: (await import('react-native-web')).View }));
+vi.mock('react-native-safe-area-context', async () => ({ SafeAreaView: (await import('react-native-web')).View, useSafeAreaInsets: () => ({ top: 59, bottom: 34, left: 0, right: 0 }) }));
 vi.mock('@expo/vector-icons/MaterialIcons', () => ({ default: () => null }));
 vi.mock('expo-crypto', () => ({ randomUUID: () => '40000000-0000-4000-8000-000000000004' }));
 vi.mock('@react-navigation/native', () => ({ useIsFocused: () => device.focused, useNavigation: () => ({ navigate: vi.fn() }) }));

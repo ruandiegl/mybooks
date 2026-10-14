@@ -1,5 +1,11 @@
 # 3. Frontend mobile e PWA
 
+## Aviso de match
+
+Descobrir e Curtidas usam o mesmo `MatchModal`, uma sheet inferior com entrada slide, scrim, alça, cantos e tokens do padrão Premium. A preferência de movimento já lida pela tela desliga a animação quando necessário. Conteúdo rolável, limites de altura e insets preservam as áreas seguras em retrato e paisagem; fechar por X, fundo, Escape/voltar, Continuar ou arraste da alça não altera a curtida salva.
+
+`Ir para Mensagens` fecha o aviso e seleciona `Main → Messages`. O aviso só abre após a API confirmar um match na sessão atual e com a tela em foco; é limpo ao sair da aba ou trocar actor/epoch, sem reaparecer ao retornar. O diálogo tem nome acessível na PWA. Esta alteração é de apresentação: não altera a criação de matches, regras Premium, persistência ou notificações remotas.
+
 ## Continuidade de imagens — plano011
 
 `features/media` separa identidade de conteúdo, URI assinada e estado de exibição. As views passam `MediaBinding` (viewer/epoch/getter vivo/preferência de movimento) aos componentes; sujeitos são identificados por ID, nunca por nome. Foto de livro usa bookId+BookImage.id; avatar usa subjectId+avatarVersion. Sem identidade confiável, a URI completa é o fallback conservador.
