@@ -14,6 +14,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SessionProvider } from './src/providers/SessionProvider';
 import { Routes } from './src/routes';
 import { ThemeProvider, useAppTheme } from './src/providers/ThemeProvider';
+import { PwaInstallProvider } from './src/features/pwa/PwaInstallProvider';
+import { WebExperience } from './src/components/WebExperience';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,7 +27,7 @@ const queryClient = new QueryClient({
 });
 
 export default function App() {
-  return <ThemeProvider><AppContent /></ThemeProvider>;
+  return <ThemeProvider><PwaInstallProvider><AppContent /></PwaInstallProvider></ThemeProvider>;
 }
 
 function AppContent() {
@@ -58,12 +60,14 @@ function AppContent() {
 
   return (
     <SafeAreaProvider>
+      <WebExperience>
       <QueryClientProvider client={queryClient}>
         <SessionProvider>
           <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
           <Routes />
         </SessionProvider>
       </QueryClientProvider>
+      </WebExperience>
     </SafeAreaProvider>
   );
 }
