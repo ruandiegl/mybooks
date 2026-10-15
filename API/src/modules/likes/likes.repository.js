@@ -1,22 +1,38 @@
 import { prisma } from '../../shared/database/prisma.js';
 
+function actorWithoutActiveMatch(userId) {
+  return {
+    matchesAsUserA: { none: { userBId: userId, status: 'ACTIVE' } },
+    matchesAsUserB: { none: { userAId: userId, status: 'ACTIVE' } }
+  };
+}
+
 export const likesRepository = {
-  findReceivedLikes(userId, { cursor, limit, sort, bookId }) {
+  async findReceivedLikes(userId, { cursor, limit, sort, bookId }) {
+    // Resolve within this reader's books, even if the cursor's actor now has a match.
+    const anchor = cursor ? await prisma.interaction.findFirst({
+      where: { id: cursor, targetBook: { ownerId: userId } },
+      select: { id: true, createdAt: true }
+    }) : null;
+    if (cursor && !anchor) return [];
+    const comparison = sort === 'asc' ? 'gt' : 'lt';
     const where = {
       action: 'LIKE',
+      actor: actorWithoutActiveMatch(userId),
       targetBook: {
         ownerId: userId
       },
-      ...(bookId && { targetBookId: bookId })
+      ...(bookId && { targetBookId: bookId }),
+      ...(anchor && { OR: [
+        { createdAt: { [comparison]: anchor.createdAt } },
+        { createdAt: anchor.createdAt, id: { [comparison]: anchor.id } }
+      ] })
     };
 
     return prisma.interaction.findMany({
       where,
       take: limit + 1,
-      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
-      orderBy: {
-        createdAt: sort
-      },
+      orderBy: [{ createdAt: sort }, { id: sort }],
       include: {
         actor: {
           select: {
@@ -100,6 +116,12 @@ export const likesRepository = {
       WHERE i.action = 'LIKE'
         AND b.user_id = ${userId}
         AND NOT EXISTS (
+          SELECT 1 FROM "Match" m
+          WHERE m.status = 'ACTIVE'
+            AND ((m."userAId" = ${userId} AND m."userBId" = i."actorId")
+              OR (m."userBId" = ${userId} AND m."userAId" = i."actorId"))
+        )
+        AND NOT EXISTS (
           SELECT 1 FROM "Interaction" i2
           JOIN "Book" b2 ON b2.id = i2."targetBookId"
           WHERE i2."actorId" = ${userId}
@@ -115,7 +137,8 @@ export const likesRepository = {
         ownerId: userId,
         interactions: {
           some: {
-            action: 'LIKE'
+            action: 'LIKE',
+            actor: actorWithoutActiveMatch(userId)
           }
         }
       },

@@ -26,12 +26,18 @@ vi.mock('../../premium/PremiumOfferProvider', () => ({ usePremiumOffer: () => ({
 
 import { Discover } from '../../../pages/Discover';
 import { Likes } from '../../../pages/Likes';
-import type { Match } from '../../../types/api';
+import type { Match, Paginated } from '../../../types/api';
+import type { ReceivedLike } from '../../../types/likes';
+import type { InfiniteData } from '@tanstack/react-query';
 
 const book = { id: 'other-book', title: 'Dom Casmurro', authors: ['Autora'], subjects: [], availability: 'AVAILABLE', owner: { id: 'other-reader', name: 'Ana' }, images: [] };
 const match: Match = { id: 'match', status: 'ACTIVE', otherUser: { id: 'other-reader', name: 'Ana', avatarUrl: null, avatarUrlExpiresAt: null, avatarVersion: 0, city: null }, conversationId: 'conversation', createdAt: '2026-10-14T12:00:00Z', updatedAt: '2026-10-14T12:00:00Z' };
 const clients: QueryClient[] = [];
 type Origin = 'Discover' | 'Likes';
+
+function currentLikeButton(origin: Origin) {
+  return screen.getAllByRole('button', { name: origin === 'Discover' ? 'Gostei do livro' : 'Curtir de volta o livro de Ana' })[0];
+}
 
 function tree(origin: Origin, client: QueryClient) {
   return <QueryClientProvider client={client}>{origin === 'Discover' ? <Discover /> : <Likes navigation={{ navigate: boundary.navigate } as any} route={{} as any} />}</QueryClientProvider>;
@@ -59,6 +65,98 @@ beforeEach(() => {
 afterEach(() => { cleanup(); clients.splice(0).forEach(client => client.clear()); });
 
 describe.each<Origin>(['Discover', 'Likes'])('match feedback from %s', origin => {
+  it('removes the matched actor from every cached received page while the refresh is pending, without touching sent likes', async () => {
+    const { client } = await host(origin);
+    const ana: ReceivedLike = { id: 'received-ana', actor: { id: 'other-reader', name: 'Ana' }, actorBook: { id: book.id, title: book.title }, book: { id: 'own-book', title: 'Meu livro' }, likedAt: '2026-10-14T12:00:00Z' };
+    const bia: ReceivedLike = { ...ana, id: 'received-bia', actor: { id: 'unmatched-reader', name: 'Bia' } };
+    const cached: InfiniteData<Paginated<ReceivedLike>> = { pages: [
+      { items: [ana, bia], pageInfo: { hasNextPage: true, nextCursor: 'cursor' } },
+      { items: [{ ...ana, id: 'received-ana-2' }], pageInfo: { hasNextPage: false, nextCursor: null } }
+    ], pageParams: ['', 'cursor'] };
+    const filteredKey = ['likes', 'received', 'asc', 'own-book'];
+    const sent = { pages: [{ items: [{ id: 'sent-like' }], pageInfo: { hasNextPage: false, nextCursor: null } }], pageParams: [''] };
+    await act(async () => {
+      client.setQueryData(['likes', 'received', 'desc', undefined], cached);
+      client.setQueryData(filteredKey, cached);
+      client.setQueryData(['likes', 'sent', 'desc'], sent);
+    });
+    boundary.get.mockImplementation(() => new Promise(() => {}));
+    fireEvent.click(currentLikeButton(origin));
+    await screen.findByRole('dialog', { name: 'Deu match!' });
+    for (const key of [['likes', 'received', 'desc', undefined], filteredKey]) {
+      const data = client.getQueryData<InfiniteData<Paginated<ReceivedLike>>>(key)!;
+      expect(data.pages.flatMap(page => page.items).map(item => item.id)).toEqual(['received-bia']);
+      expect(data.pageParams).toEqual(['', 'cursor']);
+    }
+    expect(client.getQueryData(['likes', 'sent', 'desc'])).toEqual(sent);
+  });
+
+  it.each(['no-match', 'archived-match', 'error'])('keeps received likes on %s', async outcome => {
+    const { client } = await host(origin);
+    const key = ['likes', 'received', 'desc', undefined];
+    const cached: InfiniteData<Paginated<ReceivedLike>> = { pages: [{ items: [{
+      id: 'received-ana', actor: { id: 'other-reader', name: 'Ana' },
+      actorBook: { id: book.id, title: book.title }, book: { id: 'own-book', title: 'Meu livro' }, likedAt: '2026-10-14T12:00:00Z'
+    }], pageInfo: { hasNextPage: false, nextCursor: null } }], pageParams: [''] };
+    await act(async () => { client.setQueryData(key, cached); });
+    boundary.get.mockImplementation(() => new Promise(() => {}));
+    if (outcome === 'error') boundary.post.mockRejectedValueOnce(new Error('offline'));
+    else boundary.post.mockResolvedValueOnce({ data: { data: { interaction: { id: 'interaction' }, match: outcome === 'archived-match' ? { ...match, status: 'ARCHIVED' } : null } } });
+    fireEvent.click(currentLikeButton(origin));
+    await waitFor(() => expect(boundary.post).toHaveBeenCalledTimes(1));
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+    expect(client.getQueryData(key)).toEqual(cached);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('ignores a pre-match response for an inactive received filter after removing the matched actor', async () => {
+    const { trigger, client } = await host(origin);
+    const filter = ['likes', 'received', 'asc', 'inactive-filter'];
+    const cached: InfiniteData<Paginated<ReceivedLike>> = { pages: [{ items: [{
+      id: 'stale-ana', actor: { id: 'other-reader', name: 'Ana' }, actorBook: { id: book.id, title: book.title },
+      book: { id: 'own-book', title: 'Meu livro' }, likedAt: '2026-10-14T12:00:00Z'
+    }], pageInfo: { hasNextPage: false, nextCursor: null } }], pageParams: [''] };
+    client.setQueryData(filter, cached);
+    let completeOldRequest!: () => void;
+    let requestStarted!: () => void;
+    const started = new Promise<void>(resolve => { requestStarted = resolve; });
+    const staleRequest = client.fetchQuery({ queryKey: filter, staleTime: 0, queryFn: () => {
+      requestStarted();
+      return new Promise<typeof cached>(resolve => { completeOldRequest = () => resolve(cached); });
+    } }).catch(() => undefined);
+    await started;
+    boundary.get.mockImplementation(() => new Promise(() => {}));
+    fireEvent.click(trigger);
+    await screen.findByRole('dialog', { name: 'Deu match!' });
+    expect(client.getQueryData<typeof cached>(filter)?.pages[0].items).toEqual([]);
+    await act(async () => { completeOldRequest(); await staleRequest; });
+    expect(client.getQueryData<typeof cached>(filter)?.pages[0].items).toEqual([]);
+  });
+
+  it('rechecks the session after awaiting query cancellation', async () => {
+    const { trigger, client, mounted } = await host(origin);
+    const cancel = client.cancelQueries.bind(client);
+    let started = false;
+    let resume!: () => void;
+    const pause = new Promise<void>(resolve => { resume = resolve; });
+    vi.spyOn(client, 'cancelQueries').mockImplementation(async (filters, options) => {
+      await cancel(filters, options); started = true; await pause;
+    });
+    fireEvent.click(trigger);
+    await waitFor(() => expect(started).toBe(true));
+    viewer.id = 'next-reader'; viewer.epoch++;
+    mounted.rerender(tree(origin, client));
+    const filter = ['likes', 'received', 'asc', 'new-session'];
+    const cached: InfiniteData<Paginated<ReceivedLike>> = { pages: [{ items: [{
+      id: 'new-session-like', actor: { id: 'other-reader', name: 'Ana' }, actorBook: { id: book.id, title: book.title },
+      book: { id: 'new-session', title: 'Livro da nova sessão' }, likedAt: '2026-10-14T12:00:00Z'
+    }], pageInfo: { hasNextPage: false, nextCursor: null } }], pageParams: [''] };
+    client.setQueryData(filter, cached);
+    await act(async () => { resume(); });
+    expect(client.getQueryData(filter)).toEqual(cached);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
   it('opens an in-app dialog after a confirmed reciprocal like', async () => {
     const { trigger } = await host(origin);
     fireEvent.click(trigger);
@@ -91,8 +189,16 @@ describe.each<Origin>(['Discover', 'Likes'])('match feedback from %s', origin =>
     await act(async () => {});
     viewer.id = 'next-reader'; viewer.epoch++;
     mounted.rerender(tree(origin, client));
+    const nextSessionKey = ['likes', 'received', 'asc', 'next-session-book'];
+    const nextSessionLikes: InfiniteData<Paginated<ReceivedLike>> = { pages: [{ items: [{
+      id: 'next-session-like', actor: { id: 'other-reader', name: 'Ana' }, actorBook: { id: book.id, title: book.title },
+      book: { id: 'next-session-book', title: 'Livro da nova sessão' }, likedAt: '2026-10-14T12:00:00Z'
+    }], pageInfo: { hasNextPage: false, nextCursor: null } }], pageParams: [''] };
+    client.setQueryData(nextSessionKey, nextSessionLikes);
     await act(async () => { finish(); });
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
     expect(screen.queryByRole('dialog')).toBeNull();
+    expect(client.getQueryData(nextSessionKey)).toEqual(nextSessionLikes);
     expect(boundary.navigate).not.toHaveBeenCalled();
   });
   it.each(['close', 'backdrop', 'Escape'])('dismisses using %s without changing the saved like', async control => {
@@ -159,4 +265,20 @@ it('keeps the match accessible after liking the last book in Discover', async ()
   await screen.findByRole('dialog');
   fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
   await screen.findByText('Você chegou ao fim por agora');
+});
+
+it('refreshes received likes on returning to the tab after a match on another device', async () => {
+  const { mounted, client } = await host('Likes');
+  viewer.focused = false;
+  mounted.rerender(tree('Likes', client));
+  boundary.get.mockImplementation(async (url: string) => {
+    if (url === '/api/v1/likes/received') return { data: { data: { items: [], nextCursor: null, hasMore: false } } };
+    if (url === '/api/v1/likes/received/books') return { data: { data: [] } };
+    if (url === '/api/v1/likes/received/count') return { data: { data: { count: 0 } } };
+    throw new Error('Unexpected request: ' + url);
+  });
+  viewer.focused = true;
+  mounted.rerender(tree('Likes', client));
+  await screen.findByText('Nenhuma curtida ainda');
+  expect(screen.queryByRole('button', { name: 'Curtir de volta o livro de Ana' })).toBeNull();
 });

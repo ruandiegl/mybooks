@@ -20,6 +20,7 @@ import { TopBar } from '../../components/TopBar';
 import { MatchModal } from '../../components/MatchModal';
 import { createBookMedia } from '../../features/media/mediaIdentity';
 import { getBookGalleryPhotos } from '../../features/books/bookPresentation';
+import { removeMatchedReceivedLikes } from '../../features/likes/removeMatchedReceivedLikes';
 import { api, apiErrorMessage } from '../../services/api';
 import { Alert } from '../../services/notice';
 import { useAppTheme } from '../../providers/ThemeProvider';
@@ -95,7 +96,10 @@ export function Discover() {
       motion.prepareNext(); entrancePending.current = true;
       queryClient.setQueryData<InfiniteData<Paginated<Book>, string>>(queryKey, (old) => old ? { ...old, pages: old.pages.map((page) => ({ ...page, items: page.items.filter((item) => item.id !== input.targetBookId) })) } : old);
       run.current = null; setOutgoingBook(null);
-      if (focusedRef.current && data.match) setConfirmedMatch(data.match);
+      if (data.match?.status === 'ACTIVE') {
+        if (!await removeMatchedReceivedLikes(queryClient, data.match.otherUser.id, () => alive.current && sameScope(input))) return;
+        if (focusedRef.current) setConfirmedMatch(data.match);
+      }
       void queryClient.invalidateQueries({ queryKey: ['conversations'] });
       void queryClient.invalidateQueries({ queryKey: ['matches'] });
       void queryClient.invalidateQueries({ queryKey: ['likes'] });

@@ -61,6 +61,8 @@ A rota de Curtidas mantém o contrato já registrado em docs/05-contrato-api.md:
 
 As telas Curtidas e Descobrir invalidam as listas afetadas após uma interação confirmada pela API: remoção atualiza Descobrir, e uma nova curtida atualiza Minhas curtidas. Uma requisição que falha não modifica a fila em cache.
 
+Após match ativo confirmado, o app cancela buscas anteriores das listas recebidas (inclusive filtros inativos), confere novamente a sessão e remove as curtidas do outro usuário de todas as páginas, ordenações e filtros em cache, antes de revalidar as consultas. Contagem e opções do filtro vêm novamente da API; sem match ativo, em falha ou em resposta atrasada de outra sessão, não há essa remoção. O servidor exclui pares com match ativo na listagem, na contagem e no filtro, preservando interações e conversas; não é necessária migração de banco.
+
 ## Premium de teste
 
 O módulo `premium` centraliza a regra de trial de 30 × 24 horas, elegibilidade por conta verificada, registro de apresentação e ativação idempotente. `GET /premium/status` inclui `serverNow` para o cliente esconder benefícios exatamente no término com base em uma referência do servidor; a API continua sendo a autoridade de acesso. Curtidas recebidas com identidades passam pelo gate no service antes da consulta ao repositório.

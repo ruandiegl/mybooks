@@ -17,6 +17,7 @@ import { MatchModal } from '../../components/MatchModal';
 import { api, apiErrorMessage } from '../../services/api';
 import type { ApiEnvelope, Match, Paginated } from '../../types/api';
 import { likesApi } from '../../features/likes/likesApi';
+import { removeMatchedReceivedLikes } from '../../features/likes/removeMatchedReceivedLikes';
 import type { LikeBook, ReceivedLike, SentLike } from '../../types/likes';
 import { useAppTheme } from '../../providers/ThemeProvider';
 import { PremiumLikesGate } from '../../features/premium/PremiumLikesGate';
@@ -127,15 +128,19 @@ export function Likes({ navigation }: Props) {
         action,
         clientActionId: Crypto.randomUUID(),
       }),
-    onSuccess: (data, _input, context) => {
+    onSuccess: async (data, _input, context) => {
+      const isCurrentSession = () => {
+        const current = mediaBinding.getScope();
+        return Boolean(context?.scope && current && context.scope.userId === current.userId && context.scope.epoch === current.epoch);
+      };
+      if (data.match?.status === 'ACTIVE' && isCurrentSession()) {
+        if (!await removeMatchedReceivedLikes(queryClient, data.match.otherUser.id, isCurrentSession)) return;
+        if (focusedRef.current) setConfirmedMatch(data.match);
+      }
       queryClient.invalidateQueries({ queryKey: ['likes'] });
       void queryClient.invalidateQueries({ queryKey: ['books', 'discover'] });
       queryClient.invalidateQueries({ queryKey: ['matches'] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
-      const currentScope = mediaBinding.getScope();
-      if (focusedRef.current && data.match && context?.scope && currentScope && context.scope.userId === currentScope.userId && context.scope.epoch === currentScope.epoch) {
-        setConfirmedMatch(data.match);
-      }
     },
     onError: (error) => {
       Alert.alert('Erro', apiErrorMessage(error));

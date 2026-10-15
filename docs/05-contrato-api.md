@@ -63,6 +63,10 @@ O restante do domínio mantém `/books`, `/discover`, `/interactions`, `/matches
 | GET | `/likes/received/count` | contagem de curtidas pendentes (não respondidas) para badge |
 | GET | `/likes/received/books` | livros do usuário que possuem curtidas (para filtro) |
 
+Um match `ACTIVE` entre a conta e quem enviou a curtida exclui todas as curtidas dessa pessoa de `/likes/received`, da contagem e dos livros disponíveis no filtro. A regra considera os dois lados do par e é aplicada na consulta, antes da paginação. Matches arquivados não causam essa exclusão. As interações não são apagadas: `/likes/sent` e a conversa do match permanecem preservados.
+
+A paginação de recebidas usa `createdAt` e `id` como desempate na direção de `sort`. O cursor é resolvido apenas entre os livros da conta autenticada e continua válido se a curtida que o originou tiver sido ocultada por um match; cursor inexistente ou de outra conta resulta em página vazia.
+
 Query params para listagens: `cursor` (uuid, opcional), `limit` (1–50, padrão 20), `sort` (`desc`/`asc`, padrão `desc`), `bookId` (uuid, opcional, somente em `/likes/received`).
 
 Respostas de listagem seguem o padrão paginado: `{ data: { items: [...], nextCursor: string | null, hasMore: boolean } }`. Cada item de curtida recebida inclui `id`, `actor` (id, name, avatarUrl, city), `book` (id, title, coverUrl) e `likedAt`. Cada item de curtida enviada inclui `id`, `book` (id, title, coverUrl), `owner` (id, name, avatarUrl, city) e `likedAt`. A contagem retorna `{ data: { count: number } }`.
