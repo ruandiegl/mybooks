@@ -13,7 +13,7 @@ const groups: { title: string; rows: Row[] }[] = [
   { title: 'CONTA', rows: [{ route: 'editProfile', icon: 'edit' }, { route: 'account', icon: 'person-outline' }] },
   { title: 'PREFERÊNCIAS', rows: [{ route: 'appearance', icon: 'contrast' }, { route: 'notifications', icon: 'notifications-none' }] },
   { title: 'SEGURANÇA', rows: [{ route: 'password', icon: 'lock-outline' }] },
-  { title: 'INFORMAÇÕES', rows: [{ route: 'help', icon: 'help-outline' }, { route: 'about', icon: 'info-outline' }] },
+  { title: 'INFORMAÇÕES', rows: [{ route: 'install', icon: 'download' }, { route: 'help', icon: 'help-outline' }, { route: 'about', icon: 'info-outline' }] },
   { title: '', rows: [{ route: 'confirmSignOut', icon: 'logout' }] }
 ];
 export function ProfileSettingsModal(props: ProfileSettingsModalProps) {

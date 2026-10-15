@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppButton } from '../../components/AppButton';
+import { PwaInstallAction } from '../../components/PwaInstallAction';
 import { Card } from '../../components/Card';
 import { PasswordRequirements } from '../../components/PasswordRequirements';
 import { TextField } from '../../components/TextField';
@@ -131,7 +132,7 @@ export function Auth() {
   }, 'Aguarde e tente reenviar novamente.');
 
   if (step === 'landing') {
-    return <SafeAreaView style={styles.safe}><View style={styles.body}><Text style={styles.brand}>TrocaLivros</Text><View style={styles.hero}><View style={styles.mark}><MaterialIcons name="auto-stories" size={42} color={theme.colors.onPrimary} /></View><Text style={styles.title}>Livros parados.{"\n"}<Text style={styles.accent}>Histórias circulando.</Text></Text><Text style={styles.description}>Crie sua conta para cadastrar livros, descobrir novas leituras e combinar trocas com segurança.</Text></View><View style={styles.actions}><AppButton label="Criar minha conta" onPress={() => go('register')} /><AppButton label="Já tenho uma conta" variant="outline" onPress={() => go('login')} /></View></View></SafeAreaView>;
+    return <SafeAreaView style={styles.safe}><ScrollView contentContainerStyle={styles.body}><Text style={styles.brand}>TrocaLivros</Text><View style={styles.hero}><View style={styles.mark}><MaterialIcons name="auto-stories" size={42} color={theme.colors.onPrimary} /></View><Text style={styles.title}>Livros parados.{"\n"}<Text style={styles.accent}>Histórias circulando.</Text></Text><Text style={styles.description}>Crie sua conta para cadastrar livros, descobrir novas leituras e combinar trocas com segurança.</Text></View><View style={styles.actions}><AppButton label="Criar minha conta" onPress={() => go('register')} /><AppButton label="Já tenho uma conta" variant="outline" onPress={() => go('login')} /><PwaInstallAction /></View></ScrollView></SafeAreaView>;
   }
 
   return (

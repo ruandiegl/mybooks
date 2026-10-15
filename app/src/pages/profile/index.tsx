@@ -21,6 +21,7 @@ import { ProfileTabs, type ProfileTabKey } from '../../components/ProfileTabs';
 import { StateView } from '../../components/StateView';
 import { TopBar } from '../../components/TopBar';
 import { ProfileSettingsModal } from '../../components/ProfileSettingsModal';
+import { PwaInstallSettingsPanel } from '../../components/PwaInstallPanel';
 import { ProfileEditForm } from '../../components/ProfileEditForm';
 import { AppearanceSettingsPanel } from '../../components/AppearanceSettingsPanel';
 import { NotificationSettingsPanel } from '../../components/NotificationSettingsPanel';
@@ -250,7 +251,7 @@ export function Profile({ navigation }: Props) {
           <View style={styles.aboutRow}><MaterialIcons name="menu-book" size={20} color={theme.colors.secondary} /><View style={styles.aboutCopy}><Text style={styles.aboutLabel}>Bio</Text><Text style={styles.aboutValue}>{profile.bio || 'Você ainda não escreveu uma bio.'}</Text></View></View>
         </View>
       </ScrollView>}
-      <ProfileSettingsModal visible={settings.visible} route={settings.route} busy={busy} cropping={Boolean(avatarEditor.source)} onBack={settings.back} onClose={settings.requestClose} onRoute={openRoute} available={['editProfile', 'account', 'appearance', 'notifications', 'help', 'about', 'confirmSignOut', ...(accountPreferences.data?.capabilities.changePassword ? ['password' as const] : [])]} appearanceLabel={preference === 'system' ? 'Dispositivo' : preference === 'dark' ? 'Escuro' : 'Claro'}>
+      <ProfileSettingsModal visible={settings.visible} route={settings.route} busy={busy} cropping={Boolean(avatarEditor.source)} onBack={settings.back} onClose={settings.requestClose} onRoute={openRoute} available={['editProfile', 'account', 'appearance', 'notifications', 'help', 'about', 'confirmSignOut', ...(Platform.OS === 'web' ? ['install' as const] : []), ...(accountPreferences.data?.capabilities.changePassword ? ['password' as const] : [])]} appearanceLabel={preference === 'system' ? 'Dispositivo' : preference === 'dark' ? 'Escuro' : 'Claro'}>
         {avatarEditor.source ? <AvatarEditor key={avatarEditor.source.uri} source={avatarEditor.source} busy={avatarEditor.busy} error={avatarEditor.error} statusLabel={avatarEditor.statusLabel} previewUri={avatarEditor.previewUri} onSave={avatarEditor.save} onCancel={avatarEditor.cancel} onChooseAnother={avatarEditor.choose} />
           : settings.route === 'editProfile' ? <ProfileEditForm editor={editor} avatarEditor={avatarEditor} profile={profile} binding={mediaBinding} retryToken={imageRetryToken} onImageError={session.refreshAvatar} />
           : settings.route === 'appearance' ? <AppearanceSettingsPanel />
@@ -258,6 +259,7 @@ export function Profile({ navigation }: Props) {
           : settings.route === 'account' ? <AccountSettingsPanel />
           : settings.route === 'help' ? <ProfileHelpPanel />
           : settings.route === 'about' ? <AboutAppPanel />
+          : settings.route === 'install' ? <PwaInstallSettingsPanel />
           : settings.route === 'password' ? <PasswordChangeForm security={security} enabled={Boolean(accountPreferences.data?.capabilities.changePassword)} logoutAllEnabled={Boolean(accountPreferences.data?.capabilities.logoutAll)} onSignOutAll={() => settings.openRoute('confirmSignOutAll')} />
           : settings.route === 'confirmDiscard' ? <View style={styles.aboutSection}><Text style={styles.aboutValue}>As alterações ainda não foram salvas.</Text><AppButton label="Continuar editando" variant="outline" onPress={settings.back} /><AppButton label="Descartar alterações" onPress={settings.confirmDiscard} /></View>
           : settings.route === 'confirmSignOut' || settings.route === 'confirmSignOutAll' ? <View style={styles.aboutSection}><Text style={styles.aboutValue}>{settings.route === 'confirmSignOutAll' ? 'Todos os dispositivos serão desconectados. Você precisará entrar novamente.' : 'Você precisará entrar novamente para acessar sua conta neste dispositivo.'}</Text>{security.error ? <Text style={{ color: theme.colors.danger }} accessibilityLiveRegion="polite">{security.error}</Text> : null}<AppButton label={settings.route === 'confirmSignOutAll' ? 'Sair de todos os dispositivos' : 'Sair da conta'} loading={security.busy} onPress={() => { void (settings.route === 'confirmSignOutAll' ? security.signOutAll() : security.signOut()); }} /><AppButton label="Cancelar" variant="outline" disabled={security.busy} onPress={settings.back} /></View> : null}
