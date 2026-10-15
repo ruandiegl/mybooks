@@ -13,6 +13,20 @@
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/icons/icon-180.png" />
     <title>%WEB_TITLE%</title>
+    <script id="pwa-install-bootstrap">
+      (() => {
+        if (window.__trocalivrosPwaInstallBridge) return;
+        const bridge = { pending: null, installed: false };
+        window.__trocalivrosPwaInstallBridge = bridge;
+        const notify = () => window.dispatchEvent(new Event('trocalivros:pwa-install-change'));
+        window.addEventListener('beforeinstallprompt', event => {
+          event.preventDefault(); bridge.pending = event; notify();
+        });
+        window.addEventListener('appinstalled', () => {
+          bridge.pending = null; bridge.installed = true; notify();
+        });
+      })();
+    </script>
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
       /* These styles make the body full-height */
