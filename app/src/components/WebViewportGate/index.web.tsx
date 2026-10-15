@@ -13,12 +13,18 @@ export function WebViewportGate({ children, notice }: { children: ReactNode; not
   const [access, setAccess] = useState<Access>(readAccess);
   const entered = useRef(false);
   const dialog = useRef<HTMLDialogElement>(null);
+  const runtime = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
   if (access === 'allowed') entered.current = true;
   useLayoutEffect(() => {
     if (typeof window.matchMedia !== 'function') return;
     const query = window.matchMedia(MOBILE_MEDIA_QUERY);
-    const update = () => setAccess(readAccess());
+    const update = () => {
+      const next = readAccess();
+      // Capture before React hides the host, which would blur its focused input.
+      if (next === 'wide' && !dialog.current?.open) previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      setAccess(next);
+    };
     query.addEventListener?.('change', update); update();
     return () => query.removeEventListener?.('change', update);
   }, []);
@@ -26,19 +32,20 @@ export function WebViewportGate({ children, notice }: { children: ReactNode; not
     const surface = dialog.current;
     if (!surface) return;
     if (access === 'wide' && !surface.open) {
-      previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      if (!previousFocus.current) previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       surface.showModal();
       const heading = surface.querySelector<HTMLElement>('h1');
       heading?.setAttribute('tabindex', '-1'); heading?.focus();
     } else if (access !== 'wide' && surface.open) {
       surface.close();
       const target = previousFocus.current;
-      if (target?.isConnected && !target.closest('[hidden]')) target.focus();
+      if (target?.isConnected && target !== document.body && !target.closest('[hidden]')) target.focus({ preventScroll: true });
+      else (runtime.current?.querySelector<HTMLElement>('h1,[role="heading"]') || runtime.current)?.focus({ preventScroll: true });
     }
   }, [access]);
   // The dialog is a sibling of the hidden runtime. Its top layer also covers RN Web portals.
   return <>
-    {entered.current ? <div hidden={access !== 'allowed'} style={{ display: access === 'allowed' ? 'flex' : 'none', flex: 1, minHeight: 0, width: '100%', height: '100%' }}>{children}</div> : null}
+    {entered.current ? <div ref={runtime} tabIndex={-1} hidden={access !== 'allowed'} style={{ display: access === 'allowed' ? 'flex' : 'none', flex: 1, minHeight: 0, width: '100%', height: '100%' }}>{children}</div> : null}
     {access === 'unsupported' ? <main style={{ padding: theme.spacing.lg, color: theme.colors.foreground, background: theme.colors.background, width: '100%', overflow: 'auto', fontFamily: theme.typography.regular }}>
       <h1>Atualize seu navegador</h1><p>Abra o TrocaLivros em uma versão atual do Safari, Chrome ou Edge no celular ou tablet para continuar.</p>
     </main> : null}

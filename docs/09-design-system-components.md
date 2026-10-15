@@ -55,3 +55,9 @@ Verifique telas pequenas, teclado aberto, texto longo, capa ausente, safe area, 
 AvatarPicker é entrada/estado; AvatarEditor é conteúdo hospedado por um único modal. Mantém tokens/Be Vietnam Pro e ação magenta; círculo fixo com exterior escurecido, alvos 48 e alternativas de movimento/zoom sem gestos obrigatórios.
 
 Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).
+
+## Componentes PWA — plano 012
+
+`DesktopAccessNotice` é uma superfície informativa de texto + QR, com largura máxima 960, cores semânticas e Be Vietnam Pro. Não é dashboard ou coleção de cards. `PwaInstallPanel` compartilha os passos entre o guia público e as configurações; `InstallGuideModal` segue o bottom sheet do MatchModal, máximo 560, header/fechamento sempre alcançáveis, rolagem, Escape/backdrop, retorno de foco e reduced motion. A versão larga do guia não oferece instalar no computador.
+
+Preservar contraste, alvos 48 CSS px, reflow/zoom e safe areas com um responsável por borda. O QR mantém área de silêncio e contraste próprios em ambos os temas, com URL textual equivalente. Não colocar contas, fotos ou URLs assinadas no QR. [Execução e limitações](../plans/plan-012-acesso-mobile-tablet-instalacao-pwa-execucao.md).

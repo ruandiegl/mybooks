@@ -50,3 +50,33 @@ node web/tests/proxy-https-smoke.mjs
 O smoke test do proxy inicia uma API de teste local e Caddy, e verifica navegação profunda, asset inexistente, preservação de um 401 JSON/cookie, `/health`, WebSocket, método `POST` e cache dos arquivos exportados. O teste PWA confirma o manifesto e ícones, metadados iOS e a ausência das URLs configuradas em `app/.env` no bundle.
 
 O smoke HTTPS usa os handlers reais do Caddyfile e simula um peer de ingress fora de `private_ranges`. Confirma que o cabeçalho HTTPS da borda chega ao upstream, enquanto `http` e a ausência do cabeçalho não são promovidos a HTTPS. Para usar um executável fora do PATH, defina `CADDY_BIN` com o caminho do Caddy antes dos testes.
+
+## Acesso por largura e instalação — plano 012
+
+A web permite o app até **1024 CSS px**, inclusive. Janelas maiores recebem um informativo com QR/link público e guia; uma janela desktop reduzida também pode acessar. Essa política é de UX, não autenticação. No primeiro acesso largo a sessão não é inicializada; depois de abrir o app em largura permitida, ampliar não apaga formulários nem interrompe uploads já iniciados. O runtime continua montado e pode continuar operações de background existentes.
+
+O botão de instalação só aparece com um `beforeinstallprompt` utilizável. Sem ele, há guia em **Auth → Como instalar** e **Perfil → menu → Instalar aplicativo**. No iPhone/iPad o menu do navegador continua necessário; não há instalação automática. Abrir em standalone oculta a promoção. Instalar não habilita uso autenticado offline nem push.
+
+O QR é gerado localmente e codifica somente a raiz da origem atual, sem rota privada, query, hash, credenciais ou transferência de sessão. O manifest, proxy, cookies, R2 e política de cache não mudam.
+
+### QA opcional em navegador real
+
+Depois de `npm run build:web`, na raiz, execute em terminais separados:
+
+```powershell
+node web/tests/serve-pwa-qa.mjs
+node web/tests/serve-pwa-portals-qa.mjs
+```
+
+Ambos escutam somente no loopback. O primeiro serve o export e devolve 401 fictício para `/api`/socket, sem usar banco ou conta real. O segundo serve uma fixture dos modais React Native Web reais, substituindo somente ícones, status bar e insets do SO. Esses servidores **não são destinados à produção**.
+
+Com Playwright já disponível, sem instalar/baixar pacote por esse script:
+
+```powershell
+# Se Playwright não estiver resolvível no projeto, informe o caminho do pacote já disponível.
+$env:PWA_PLAYWRIGHT_MODULE = 'CAMINHO_ABSOLUTO_DO_PACOTE_PLAYWRIGHT'
+$env:PWA_QA_PORTAL_URL = 'http://127.0.0.1:4183/src/__tests__/fixtures/pwa-portals.html'
+node web/tests/pwa-browser-smoke.cjs
+```
+
+Opcionalmente, `PWA_QA_BROWSER=msedge` seleciona Edge; o padrão é Chrome instalado. `PWA_QA_SCREENSHOTS_DIR` aponta para um diretório existente de capturas e `PWA_QA_URL` altera o endereço do export local. O teste cobre oito larguras, primeiro boot sem API, guia/fechamento, foco, rascunho preservado e light/dark/reduced motion; com a fixture, cobre inércia de portais de configurações e match. Não é prova de instalação física nem de safe area do iOS. Encerre os dois servidores com Ctrl+C ao terminar.

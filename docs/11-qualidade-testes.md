@@ -64,3 +64,9 @@ Testes reais de grants: DATABASE_URL e AVATAR_TEST_DATABASE_URL apontam para ban
 Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).
 
 A revisão do plano 009 acrescentou testes com componentes/hooks realmente montados (RTL/jsdom), incluindo transições assíncronas, cropper real, clocks, sessão e liberação de seleção atrasada. As dependências são dev; o normalizador e o PostgreSQL têm testes separados. Evidência final: API 258 passaram/7 condicionais pulados e app 141 passaram; aceites físicos/R2 permanecem separados.
+
+## Instalação e fronteira web — plano 012
+
+As suítes `features/pwa/__tests__`, `pwaApp`, `pwaInstall`, `webViewportGate` e `pwaNativeBoundary` verificam captura antecipada, prompt one-shot, corrida de confirmação, fallback iOS, limite 1024/1025, primeiro boot sem sessão e preservação de formulário/upload/modal. O smoke do export executa o bootstrap e o worker real, mantendo o bypass de API/R2 privados.
+
+QA opcional de Chrome/Edge e fixture de portais reais: [instruções web](../web/README.md). Eventos sintéticos não confirmam instalação do navegador. Emulador de viewport/Chrome desktop não confirma notch, PWA Safari, VoiceOver ou seletor de instalação em aparelhos. Comandos, resultados e pendências ficam no [registro 012](../plans/plan-012-acesso-mobile-tablet-instalacao-pwa-execucao.md).

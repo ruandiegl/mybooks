@@ -60,3 +60,9 @@ it('updates when display mode changes and does not assume installation elsewhere
   mount(); expect(current.state).toBe('manual');
   act(() => { standalone = true; modeChanged(); }); expect(current.state).toBe('standalone');
 });
+it('clears a previous prompt error when installation is subsequently confirmed', async () => {
+  offer('dismissed', vi.fn().mockRejectedValue(new Error('denied'))); mount();
+  await act(async () => { await current.requestInstall(); }); expect(current.error).not.toBeNull();
+  act(() => { window.__trocalivrosPwaInstallBridge!.installed = true; window.dispatchEvent(new Event('trocalivros:pwa-install-change')); });
+  expect(current.state).toBe('confirmed'); expect(current.error).toBeNull();
+});

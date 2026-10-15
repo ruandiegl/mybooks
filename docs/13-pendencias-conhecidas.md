@@ -43,3 +43,9 @@ Em 11/09/2026, `npm audit --omit=dev` reportou 4 ocorrências altas no grafo Pri
 Plano 009: publicação bloqueada por R2 atualmente público/sem CORS, lifecycle de pending/avatars ausente, migração/deploy de alvo não executados, Docker Linux e aceites físicos pendentes. Expo Doctor local: 20/21, com patches preexistentes de expo/camera/image-picker atrasados.
 
 Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).
+
+## Aceite PWA — plano 012
+
+A implementação local de acesso por largura/guia não representa publicação. Permanecem separados: instalação real em Android/iOS/iPadOS, abertura por ícone e safe areas/VoiceOver em aparelho, leitura do QR da origem pública final e verificação do SHA servido após deploy autorizado. O botão direto depende de elegibilidade do navegador; no iOS usa-se o guia manual. Não há suporte novo a dados autenticados offline ou push.
+
+O npm reportou 30 advisories no grafo instalado (11 moderados, 18 altos, 1 crítico), sem entrada para `qrcode-generator`; somente esse pacote foi adicionado. Não foi executado `audit fix` nem atualização transitiva. Triagem dos advisories requer tarefa própria; ver [evidências 012](../plans/plan-012-acesso-mobile-tablet-instalacao-pwa-execucao.md).

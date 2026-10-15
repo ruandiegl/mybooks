@@ -20,7 +20,11 @@ export function PwaInstallProvider({ children }: PropsWithChildren) {
     return accepted.current ? 'accepted' : 'manual';
   }, [bridge, mode]);
   const [state, setState] = useState<InstallState>(readState);
-  const sync = useCallback(() => { if (alive.current) setState(readState()); }, [readState]);
+  const sync = useCallback(() => {
+    if (!alive.current) return;
+    const next = readState(); setState(next);
+    if (next === 'confirmed' || next === 'standalone') setError(null);
+  }, [readState]);
   useEffect(() => {
     alive.current = true; sync();
     window.addEventListener(INSTALL_CHANGED, sync);

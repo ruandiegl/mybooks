@@ -20,6 +20,19 @@ const html = await read('index.html');
 const manifest = JSON.parse(await read('manifest.json'));
 const worker = await read('sw.js');
 
+// Execute the exported early listener, not just a source-text assertion.
+const installBootstrap = html.match(/<script id="pwa-install-bootstrap">([\s\S]*?)<\/script>/)?.[1];
+assert.ok(installBootstrap, 'export must capture install events before React/fonts load');
+const installWindow = new EventTarget();
+runInNewContext(installBootstrap, { window: installWindow, Event });
+const pendingInstall = new Event('beforeinstallprompt', { cancelable: true });
+installWindow.dispatchEvent(pendingInstall);
+assert.equal(pendingInstall.defaultPrevented, true);
+assert.equal(installWindow.__trocalivrosPwaInstallBridge.pending, pendingInstall);
+installWindow.dispatchEvent(new Event('appinstalled'));
+assert.equal(installWindow.__trocalivrosPwaInstallBridge.pending, null);
+assert.equal(installWindow.__trocalivrosPwaInstallBridge.installed, true);
+
 const viewportTag = html.match(/<meta\b[^>]*\bname=["']viewport["'][^>]*>/i)?.[0];
 assert.ok(viewportTag, 'exported HTML must declare its mobile viewport');
 const viewportContent = viewportTag.match(/\bcontent=["']([^"']*)["']/i)?.[1] ?? '';
