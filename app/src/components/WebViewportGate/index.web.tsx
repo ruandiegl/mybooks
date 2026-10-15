@@ -1,8 +1,13 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { MOBILE_MEDIA_QUERY } from '../../features/pwa/viewportPolicy';
 import { useAppTheme } from '../../providers/ThemeProvider';
 
 type Access = 'allowed' | 'wide' | 'unsupported';
+function containPolicyEscape(event: ReactKeyboardEvent<HTMLDialogElement>) {
+  if (event.key !== 'Escape') return;
+  // RN Web's Modal also listens on document keyup. Preventing dialog cancel alone is insufficient.
+  event.preventDefault(); event.stopPropagation();
+}
 function readAccess(): Access {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function'
     || typeof HTMLDialogElement === 'undefined' || typeof HTMLDialogElement.prototype.showModal !== 'function') return 'unsupported';
@@ -39,8 +44,16 @@ export function WebViewportGate({ children, notice }: { children: ReactNode; not
     } else if (access !== 'wide' && surface.open) {
       surface.close();
       const target = previousFocus.current;
-      if (target?.isConnected && target !== document.body && !target.closest('[hidden]')) target.focus({ preventScroll: true });
-      else (runtime.current?.querySelector<HTMLElement>('h1,[role="heading"]') || runtime.current)?.focus({ preventScroll: true });
+      const canRestore = target?.isConnected && target !== document.body && !target.closest('[hidden],[aria-hidden="true"]') && !target.matches(':disabled');
+      if (canRestore) target.focus({ preventScroll: true });
+      if (!canRestore || document.activeElement !== target) {
+        const heading = runtime.current?.querySelector<HTMLElement>('h1,[role="heading"]');
+        if (heading && !heading.closest('[hidden],[aria-hidden="true"]')) {
+          if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
+          heading.focus({ preventScroll: true });
+        }
+        if (!heading || document.activeElement !== heading) runtime.current?.focus({ preventScroll: true });
+      }
     }
   }, [access]);
   // The dialog is a sibling of the hidden runtime. Its top layer also covers RN Web portals.
@@ -49,7 +62,7 @@ export function WebViewportGate({ children, notice }: { children: ReactNode; not
     {access === 'unsupported' ? <main style={{ padding: theme.spacing.lg, color: theme.colors.foreground, background: theme.colors.background, width: '100%', overflow: 'auto', fontFamily: theme.typography.regular }}>
       <h1>Atualize seu navegador</h1><p>Abra o TrocaLivros em uma versão atual do Safari, Chrome ou Edge no celular ou tablet para continuar.</p>
     </main> : null}
-    <dialog ref={dialog} className="tl-viewport-gate" aria-label="Acesso ao TrocaLivros em telas menores" onCancel={event => event.preventDefault()} style={{ border: 0, padding: 0, margin: 0, maxWidth: 'none', maxHeight: 'none', width: '100%', height: '100%', background: theme.colors.background, color: theme.colors.foreground }}>
+    <dialog ref={dialog} className="tl-viewport-gate" aria-label="Acesso ao TrocaLivros em telas menores" onKeyDownCapture={containPolicyEscape} onKeyUpCapture={containPolicyEscape} onCancel={event => event.preventDefault()} style={{ border: 0, padding: 0, margin: 0, maxWidth: 'none', maxHeight: 'none', width: '100%', height: '100%', background: theme.colors.background, color: theme.colors.foreground }}>
       {access === 'wide' ? notice : null}
     </dialog>
     <style>{`.tl-viewport-gate{box-sizing:border-box;overflow:auto;overscroll-behavior:contain}.tl-viewport-gate::backdrop{background:${theme.colors.background}}@supports(height:100dvh){.tl-viewport-gate{height:100dvh!important}}`}</style>

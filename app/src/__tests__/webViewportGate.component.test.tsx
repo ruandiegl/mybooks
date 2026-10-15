@@ -45,3 +45,16 @@ it('gives useful browser guidance rather than booting a session when required AP
   Object.defineProperty(window, 'matchMedia', { configurable: true, value: undefined }); mount();
   expect(screen.getByRole('heading', { name: 'Atualize seu navegador' })).toBeTruthy(); expect(boot).not.toHaveBeenCalled();
 });
+it.each(['removed', 'disabled'])('focuses the screen heading when the previous field becomes %s while blocked', kind => {
+  let removeField!: () => void;
+  function ChangingRuntime() {
+    const [show, setShow] = useState(true); removeField = () => setShow(false);
+    return <><h1>Minha biblioteca</h1>{show || kind === 'disabled' ? <input disabled={!show} aria-label="Campo temporário" /> : null}</>;
+  }
+  allowed = true;
+  render(<WebViewportGate notice={<h1>Continue no celular ou tablet</h1>}><ChangingRuntime /></WebViewportGate>);
+  screen.getByLabelText('Campo temporário').focus();
+  act(() => { allowed = false; notify(); }); act(removeField);
+  act(() => { allowed = true; notify(); });
+  expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Minha biblioteca' }));
+});

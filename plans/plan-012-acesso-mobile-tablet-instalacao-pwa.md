@@ -1,8 +1,8 @@
 # Plano 012 — Acesso mobile/tablet e instalação da PWA
 
-> **Para execução por agentes:** usar `superpowers:executing-plans` na execução sequencial recomendada, ou `superpowers:subagent-driven-development` se esse método for escolhido pelo usuário. Executar e verificar uma tarefa por vez; as caixas abaixo não indicam implementação concluída.
+> **Para execução por agentes:** usar `superpowers:executing-plans` na execução sequencial recomendada, ou `superpowers:subagent-driven-development` se esse método for escolhido pelo usuário. O resultado está no [registro de execução](./plan-012-acesso-mobile-tablet-instalacao-pwa-execucao.md); as caixas abaixo preservam o roteiro original e não substituem o status desse registro.
 
-**Estado:** planejado, não implementado. **Data:** 15/10/2026.
+**Estado:** implementação local concluída em `codex/mobile-pwa-access`, com revisão independente e correções verificadas; integração, publicação e aceites físicos pendentes. **Data:** 15/10/2026.
 
 **Objetivo:** apresentar um informativo em janelas web acima de 1024 px e facilitar o acesso e a instalação da PWA em celulares e tablets, preservando o app Expo e a identidade visual existente.
 

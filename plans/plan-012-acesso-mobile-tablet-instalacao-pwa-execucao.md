@@ -2,7 +2,7 @@
 
 **Data:** 15/10/2026. **Branch:** `codex/mobile-pwa-access`. **Base:** `a79829c3509e04b5f94d282196f61b8ade7adbb9`.
 
-Implementação local do [plano](./plan-012-acesso-mobile-tablet-instalacao-pwa.md), sem merge, push ou publicação. Atualização de evidências finais/revisão em andamento.
+Implementação local do [plano](./plan-012-acesso-mobile-tablet-instalacao-pwa.md) concluída, sem merge, push ou publicação. Revisão independente realizada e ambos os achados corrigidos em uma rodada de TDD; aceites em aparelhos continuam separados.
 
 ## Entregas
 
@@ -51,4 +51,31 @@ Não houve execução de `audit fix`, atualização do Expo, mudanças de creden
 - Produção e SHA servido não foram verificados; nenhum push/deploy foi feito. A integração/publicação precisa de autorização.
 - Artefatos de build nativo/QA desta execução não serão incluídos no Git; os arquivos locais preexistentes do usuário ficam preservados.
 
-**Revisão independente e verificação final:** pendentes de registro abaixo antes da entrega.
+## Revisão independente e verificação final
+
+Revisor Dewey, somente leitura, sobre `a79829c..2048c9e`. Sem achados críticos. Foram encontrados:
+
+1. **Importante:** Escape no aviso alcançava o `keyup` global do Modal RN Web e podia fechar configurações/match ou cancelar recorte. Chrome reproduziu o fechamento indevido (`0 !== 1`). O gate agora contém `keydown` e `keyup` de Escape; o browser smoke confirma configurações, estado de recorte do host e match preservados após Escape e redimensionamento.
+2. **Foco:** o revisor classificou como menor o fallback para título sem `tabindex`; foi reclassificado como importante pelo efeito em teclado/leitor de tela e pelo contrato do plano. Dois casos foram observados vermelhos, com campo removido e desabilitado. O título recebe `tabindex=-1` quando necessário; a recuperação verifica o foco e recorre ao host se o alvo não puder recebê-lo.
+
+Ambos foram corrigidos em uma única rodada, com testes vermelho → verde. Não houve segunda revisão; a verificação das correções foi feita pelos testes. Nenhuma sugestão menor ficou adiada.
+
+O revisor separou três comportamentos; as decisões do executor são:
+
+| Decisão sobre item separado da revisão | Limite / custo residual |
+| --- | --- |
+| Instalação física, Safari/VoiceOver e safe areas permanecem aceite manual | Chrome não exclui defeitos específicos de aparelho |
+| Deploy/SHA de produção não foram julgados, porque não houve publicação autorizada | A origem publicada ainda precisará de verificação após deploy |
+| Não suspender toda a rede ao ampliar; preservar runtime segue a especificação | O gate é de UX e operações de background existentes podem continuar |
+
+Verificação final na árvore corrigida:
+
+- **87 arquivos / 442 testes passaram** (`npm test -- --reporter=dot`); somente depreciações RN Web já existentes.
+- **TypeScript passou**, export web e smoke PWA passaram, mantendo o bypass de API/R2 privados.
+- **Chrome headless passou** com os servidores de QA versionados, oito larguras, guia/cabeçalho, foco, formulário e portais; regressão de Escape cobre configurações, modo de recorte do host e MatchModal. Ícones/insets/status bar são as únicas fronteiras de SO substituídas nessa fixture, não as implementações dos modais.
+- **iOS e Android exportaram** nesta execução. Os últimos ajustes são exclusivamente web/testes; isso não atesta funcionamento em aparelho.
+- **`git diff --check` passou.** Dependências alteradas: somente `qrcode-generator@2.0.4`; sem atualização de SDK/transitivas.
+
+Os builds `app/dist-ios-qa`/`app/dist-android-qa` e a pasta temporária exclusiva do plano foram removidos após a validação; podem ser recriados pelos comandos de export/QA. Os servidores locais da tarefa foram encerrados. Permaneceram intactos os três arquivos locais preexistentes (seed SQL e duas cópias históricas de planos). O export `app/dist`, já ignorado pelo projeto, foi preservado.
+
+**Entrega:** branch local pronta para a decisão de integração. Não houve merge em `main`, push, deploy ou modificação em Railway/R2/PostgreSQL.
