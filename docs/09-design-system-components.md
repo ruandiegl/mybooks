@@ -1,5 +1,9 @@
 # 9. Design system e componentes
 
+## Identidade de abertura — plano 013 (local)
+
+Ícones web usam livro branco sobre magenta, com variante maskable separada. `BootSplash` usa fundo/foreground/primary semânticos, marca96 e título24, sem cards, shimmer ou duração mínima. Antes das fontes, usa fonte de sistema; erro mantém nome mesmo sem imagem. Botão web de recuperação tem alvo48 e foco visível sem alterar borda/tamanho. Splash nativa usa PNG transparente e variante escura; SVG local atende o HTML. Launcher nativo não foi redesenhado. [Evidências e limites](../plans/plan-013-identidade-web-splashscreen-execucao.md).
+
 ## Apresentação de mídia — plano011
 
 Avatar/BookPhoto continuam responsáveis por fallback, paleta, dimensões e acessibilidade; RemoteMediaImage apenas apresenta a mídia. Reservar o slot e usar fallback estático, sem shimmer. Revelação nova recebe120 ms quando permitida; redução de movimento/desconhecida recebe0 ms. Não repetir a revelação em assinatura renovada/retry com frame pronto. Na Web, texto alternativo/fit atualizam sem recarregar os pixels e o movimento próprio é cancelado se a preferência mudar.

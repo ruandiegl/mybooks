@@ -47,6 +47,15 @@ it('cancels pending presentation on unmount', () => {
   fireEvent.load(container.querySelector('img')!); unmount(); act(() => vi.advanceTimersByTime(100));
   expect(presented).not.toHaveBeenCalled();
 });
+it('gives the recovery action a visible keyboard focus without changing its border size', () => {
+  render(<BootSplash phase="resources" fontsReady={false} issue="resource-error" />);
+  const button = screen.getByRole('button', { name: 'Recarregar aplicativo' });
+  const before = getComputedStyle(button).borderTopWidth;
+  act(() => button.focus());
+  expect(getComputedStyle(button).borderTopWidth).toBe('2px');
+  expect(getComputedStyle(button).borderTopColor).toBe('rgb(39, 23, 25)');
+  expect(getComputedStyle(button).borderTopWidth).toBe(before);
+});
 it('catches initial render failures without needing a working theme or custom font', () => {
   vi.spyOn(console, 'error').mockImplementation(() => {});
   function Broken(): React.JSX.Element { throw Error('fixture'); }

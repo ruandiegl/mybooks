@@ -1,5 +1,9 @@
 # 15. Matriz de validação do MVP
 
+## Identidade/boot — plano 013 (16/10/2026)
+
+Validações da branch local, QA de Chrome com fixtures e pendências de preview/release físico estão no [registro 013](../plans/plan-013-identidade-web-splashscreen-execucao.md). Não somar aos totais históricos abaixo nem interpretar export de bundles como teste de splash do SO ou como deploy Railway.
+
 ## Plano011 — validação local (09/10/2026)
 
 Branch `codex/media-image-continuity`, base bbca847; sem publicação/merge ou alterações R2/DB. [Registro de execução](../plans/plan-011-carregamento-imagens-sem-piscadas-execucao.md): até a tarefa4, app57 arquivos/291 testes e types aprovados; API43 arquivos/268 testes,12 condicionais pulados e lint aprovado. Export Web, worker/smoke comportamental e Hermes iOS/Android aprovados na validação final inicial. Revisão/ensaio browser e repetição após eventuais fixes são registrados separadamente; estes resultados não aprovam hardware, Safari/PWA instalada ou deploy.

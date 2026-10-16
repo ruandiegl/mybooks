@@ -7,6 +7,6 @@ export const createStyles = (theme: AppTheme) => StyleSheet.create({
   brand: { fontSize: 24, fontWeight: '700', color: theme.colors.foreground, textAlign: 'center', marginTop: theme.spacing.sm },
   status: { fontSize: 16, lineHeight: 24, color: theme.colors.mutedForeground, textAlign: 'center' },
   heading: { fontSize: 20, fontWeight: '600', color: theme.colors.foreground, textAlign: 'center' },
-  reload: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 12, marginTop: 12, borderRadius: theme.radius.md, backgroundColor: theme.colors.primary },
+  reload: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 12, marginTop: 12, borderWidth: 2, borderRadius: theme.radius.md, backgroundColor: theme.colors.primary },
   reloadText: { fontSize: 16, fontWeight: '600', textAlign: 'center', color: theme.colors.onPrimary }
 });

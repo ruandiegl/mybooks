@@ -1,5 +1,9 @@
 # 16. Histórico de alterações
 
+## 16/10/2026 — Ícones web e abertura identificada (local)
+
+Plano 013 implementado em `codex/web-icons-splash`: favicon, ícones PWA/Apple/maskable, PNGs de splash nativa e apresentação HTML/React com o livro escolhido. Boot tem handoff, recuperação e temas sem duração mínima ou alteração de sessão/cache privado. Evidências, revisão e aceites externos em [execução 013](../plans/plan-013-identidade-web-splashscreen-execucao.md). Sem merge/push/deploy neste registro.
+
 Os resultados abaixo pertencem às execuções e branches indicadas em cada registro; não comprovam testes, deploy ou aceite da integração em curso.
 
 ## 09/10/2026 — Animação de curtir/dispensar em Descobrir (local)

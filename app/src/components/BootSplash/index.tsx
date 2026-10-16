@@ -12,6 +12,7 @@ export function BootSplash({ phase, fontsReady, issue, onPresented }: BootSplash
   const { theme, mode } = useAppTheme();
   const styles = createStyles(theme);
   const [imageSettled, setImageSettled] = useState(false);
+  const [focused, setFocused] = useState(false);
   const settle = useCallback(() => setImageSettled(true), []);
   const onLayout = useLaunchPresentation(imageSettled || Boolean(issue), onPresented);
   const error = issue === 'resource-error' || issue === 'resource-timeout';
@@ -25,7 +26,7 @@ export function BootSplash({ phase, fontsReady, issue, onPresented }: BootSplash
         {error ? 'Confira sua conexão e tente novamente.' : phase === 'session' ? 'Preparando sua conta…' : 'Abrindo o TrocaLivros…'}
       </Text>
       {issue === 'session-slow' ? <Text style={[styles.status, font]}>A conexão está demorando. Confira sua internet.</Text> : null}
-      {issue ? Platform.OS === 'web' ? <Pressable accessibilityRole="button" onPress={() => window.location.reload()} style={({ pressed }) => [styles.reload, { opacity: pressed ? .8 : 1 }]}><Text style={[styles.reloadText, font]}>Recarregar aplicativo</Text></Pressable> : <Text style={[styles.status, font]}>Feche e abra o aplicativo para tentar novamente.</Text> : null}
+      {issue ? Platform.OS === 'web' ? <Pressable accessibilityRole="button" onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} onPress={() => window.location.reload()} style={({ pressed }) => [styles.reload, { opacity: pressed ? .8 : 1, borderColor: focused ? theme.colors.foreground : 'transparent' }]}><Text style={[styles.reloadText, font]}>Recarregar aplicativo</Text></Pressable> : <Text style={[styles.status, font]}>Feche e abra o aplicativo para tentar novamente.</Text> : null}
     </View></ScrollView>
   </SafeAreaView>;
 }

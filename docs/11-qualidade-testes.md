@@ -1,5 +1,9 @@
 # 11. Qualidade e testes
 
+## Boot e ícones — plano 013
+
+`features/boot/__tests__`, `bootApp` e `bootRoutes` cobrem recursos, deadlines, primeiro frame, imagem falha, ponte nativa, sessão lenta e foco. `node --test web/tests/brand-assets.test.mjs` valida os pixels/dimensões reais; smoke PWA executa o HTML/worker exportados. QA opcional `pwa-boot-browser-smoke.cjs` testa bundle atrasado/reload, temas, falhas e larguras somente em loopback. Preview/release físico e Safari/PWA instalada são aceites separados; [registro 013](../plans/plan-013-identidade-web-splashscreen-execucao.md).
+
 ## Regressões de continuidade de mídia — plano011
 
 Executar `app: npm test`, `npm run typecheck`, `npm run build:web`, `npm run test:pwa` e exportsHermes iOS/Android; API `npm test` e `npm run lint`. A cobertura de `features/media/__tests__` exercita reducer, DOM decodificado real, ponte nativa controlada, consumidores, fila e geração da sessão. Vitest resolve adapters Web nos testes de componentes; bridges nativos usam import explícito, sem alterar o resolver Metro.

@@ -1,5 +1,11 @@
 # TrocaLivros Web / PWA
 
+## Ícones e abertura — plano 013
+
+Favicon, Apple touch icon, ícones PWA comuns/maskable e splash usam o símbolo atual. Fonte/procedência em `app/assets/brand/NOTICE.md`. Para regenerar, na raiz: `node web/scripts/generate-brand-assets.mjs` (exige `sharp` já instalado na API; não roda no build/deploy web). Os outputs são versionados; o serviço web não precisa instalar a API.
+
+HTML mostra a marca antes do bundle e oferece reload se ele demorar; React coordena fontes/tema/sessão. `/brand/*` e ícones revalidam; a política do worker para dados privados não muda. QA local adicional: com o servidor de export abaixo ativo e Playwright já disponível, `node web/tests/pwa-boot-browser-smoke.cjs`. Aceita somente loopback, usa contextos descartáveis e pode salvar screenshots via `PWA_QA_SCREENSHOTS_DIR`. Não instala nem testa a PWA no SO. [Execução e limites](../plans/plan-013-identidade-web-splashscreen-execucao.md).
+
 Este serviço publica a exportação web do app Expo e encaminha chamadas da PWA para a API TrocaLivros. O código de telas continua em `app/`; esta pasta contém a publicação e o proxy.
 
 ## Build

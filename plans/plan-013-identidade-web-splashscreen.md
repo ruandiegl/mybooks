@@ -1,8 +1,8 @@
 # Plano 013 — Logo nos ícones web e splash de abertura
 
-> **Para execução por agentes:** usar `superpowers:executing-plans` na execução sequencial recomendada, ou `superpowers:subagent-driven-development` se esse método for escolhido pelo usuário. Executar tarefa por tarefa, com TDD, commits focados e revisão final independente. As caixas abaixo representam trabalho futuro.
+> **Para execução por agentes:** usar `superpowers:executing-plans` na execução sequencial recomendada, ou `superpowers:subagent-driven-development` se esse método for escolhido pelo usuário. Executar tarefa por tarefa, com TDD, commits focados e revisão final independente. As caixas preservam o roteiro original; o status real está no [registro de execução](./plan-013-identidade-web-splashscreen-execucao.md).
 
-**Estado:** planejamento para revisão; nenhuma implementação ou publicação realizada. **Data:** 16/10/2026.
+**Estado:** execução local autorizada, implementação em validação/revisão na branch `codex/web-icons-splash`; sem integração/publicação. **Data:** 16/10/2026. Ver [registro](./plan-013-identidade-web-splashscreen-execucao.md).
 
 **Objetivo:** substituir os placeholders dos ícones web pela identidade do TrocaLivros e apresentar uma abertura identificável, leve e sem espera artificial no navegador/PWA e no app nativo.
 
@@ -14,7 +14,7 @@
 
 ## Restrições globais
 
-- Esta entrega contém apenas planejamento em `plans/`: sem código de produto, geração de imagens, instalação de dependências, commit, push, deploy ou acesso a contas externas.
+- A etapa inicial entregou apenas este planejamento. O usuário autorizou posteriormente a execução local; merge/push/deploy e builds remotos continuam sujeitos a autorização própria.
 - Preservar nome TrocaLivros, paleta, tema claro/escuro, Be Vietnam Pro e identificadores técnicos `mybooks` existentes.
 - Não redesenhar a marca. Usar o símbolo de livro atual (`auto-stories`), conforme escolha confirmada, preservando suas proporções e a paleta existente.
 - Ícones e splash são assets públicos empacotados, não fotos de usuário: **não usar R2, URLs assinadas, API ou serviço externo para carregá-los**.
@@ -289,4 +289,4 @@ Ordem recomendada: **1 → 2 → 3 → 4 → 5**, no mesmo fluxo sequencial, com
 
 Autorrevisão do planejamento: pedido coberto por tarefas com arquivos/interfaces e testes; cinco riscos ligados aos respectivos aceites; limites de Expo Go/PWA e tema nativo documentados; nenhuma alteração de autenticação, infraestrutura ou armazenamento privado prevista. Os prazos de 8/10/15 s são decisões propostas de feedback e precisam ser confirmados por ensaio, não alegações de desempenho obtido.
 
-Próximo passo: usuário revisar e aprovar a execução deste plano; a origem da logo já está confirmada. Recomenda-se execução sequencial pelo agente principal com revisão final independente. Sem implementação, merge/push/deploy nesta etapa de planejamento.
+Execução local autorizada pelo usuário e em andamento, com origem da logo confirmada e método sequencial. Próximos gates: revisão final e decisão separada de integração/publicação; consultar o registro de execução. Não executar merge/push/deploy por inferência.

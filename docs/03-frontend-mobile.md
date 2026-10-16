@@ -1,5 +1,9 @@
 # 3. Frontend mobile e PWA
 
+## Abertura identificada — plano 013 (local)
+
+HTML antecipado e `BootSplash` usam o livro atual, com temas claro/escuro e assets locais. O primeiro frame libera a superfície anterior; nativo também espera layout. Fontes/tema não retornam branco, e erros/deadlines oferecem orientação. Espera por sessão/linking reaproveita a apresentação, sem duplicar refresh ou recriar navegação. O gate web continua antes da sessão. Implementação/aceites em [execução 013](../plans/plan-013-identidade-web-splashscreen-execucao.md).
+
 ## Aviso de match
 
 Descobrir e Curtidas usam o mesmo `MatchModal`, uma sheet inferior com entrada slide, scrim, alça, cantos e tokens do padrão Premium. A preferência de movimento já lida pela tela desliga a animação quando necessário. Conteúdo rolável, limites de altura e insets preservam as áreas seguras em retrato e paisagem; fechar por X, fundo, Escape/voltar, Continuar ou arraste da alça não altera a curtida salva.
