@@ -1,11 +1,12 @@
 import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { linking } from './linking';
-import { ActivityIndicator, View } from 'react-native';
 import { useSession } from '../providers/SessionProvider';
 import { useAppTheme } from '../providers/ThemeProvider';
 import { PremiumOfferProvider } from '../features/premium/PremiumOfferProvider';
 import { AppRoutes } from './app.routes';
 import AuthRoutes from './authRoutes';
+import { BootSplash } from '../components/BootSplash';
+import { useSessionBootIssue } from '../features/boot/useSessionBootIssue';
 
 export function Routes() {
   const { theme, mode } = useAppTheme();
@@ -15,18 +16,15 @@ export function Routes() {
     border: theme.colors.outline, notification: theme.colors.primary } };
 
   const { isLoaded, isSignedIn } = useSession();
+  const bootIssue = useSessionBootIssue(!isLoaded);
 
   if (!isLoaded) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.background }}>
-        <ActivityIndicator color={theme.colors.primary} />
-      </View>
-    );
+    return <BootSplash phase="session" fontsReady issue={bootIssue} />;
   }
 
   return (
     <PremiumOfferProvider>
-      <NavigationContainer theme={navigationTheme} linking={linking}>
+      <NavigationContainer theme={navigationTheme} linking={linking} fallback={<BootSplash phase="navigation" fontsReady />}>
         {isSignedIn ? <AppRoutes /> : <AuthRoutes />}
       </NavigationContainer>
     </PremiumOfferProvider>
