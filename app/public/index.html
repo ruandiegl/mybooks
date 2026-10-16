@@ -60,6 +60,16 @@
         }
       }
     </style>
+    <style id="tl-boot-style">
+      #tl-boot[hidden], #tl-boot-reload[hidden] { display: none; }
+      #tl-boot { position: fixed; inset: 0; z-index: 2147483647; box-sizing: border-box; display: grid; place-items: center; overflow: auto; padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); background: var(--tl-boot-bg, #FFF8F7); color: var(--tl-boot-fg, #271719); font-family: system-ui, sans-serif; text-align: center; }
+      .tl-boot-inner { width: 100%; max-width: 360px; margin: auto; }
+      #tl-boot img { width: 96px; height: 96px; object-fit: contain; }
+      .tl-boot-brand { font-size: 24px; font-weight: 700; margin: 24px 0 12px; overflow-wrap: anywhere; }
+      #tl-boot-status { font-size: 16px; line-height: 1.5; margin: 0; }
+      #tl-boot-reload { margin-top: 24px; min-height: 48px; max-width: 100%; padding: 12px 24px; border: 0; border-radius: 16px; font: inherit; font-weight: 600; background: var(--tl-boot-primary, #B90041); color: var(--tl-boot-on-primary, #FFFFFF); cursor: pointer; }
+      #tl-boot-reload:focus-visible { outline: 3px solid currentColor; outline-offset: 4px; }
+    </style>
     <script>
       (() => {
         let preference = 'system';
@@ -71,6 +81,10 @@
         const color = dark ? '#181318' : '#FFF8F7';
         document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
         document.documentElement.style.backgroundColor = color;
+        document.documentElement.style.setProperty('--tl-boot-bg', color);
+        document.documentElement.style.setProperty('--tl-boot-fg', dark ? '#FFF8F7' : '#271719');
+        document.documentElement.style.setProperty('--tl-boot-primary', dark ? '#FF8FB5' : '#B90041');
+        document.documentElement.style.setProperty('--tl-boot-on-primary', dark ? '#271719' : '#FFFFFF');
         const updateChrome = () => document.querySelectorAll('meta[name="theme-color"]').forEach(tag => { tag.content = color; });
         updateChrome();
         document.addEventListener('DOMContentLoaded', () => { document.body.style.backgroundColor = color; updateChrome(); }, { once: true });
@@ -87,6 +101,47 @@
     </noscript>
     <!-- The root element for your Expo app. -->
     <div id="root"></div>
+    <section id="tl-boot" hidden aria-label="Abertura do TrocaLivros">
+      <div class="tl-boot-inner">
+        <img src="/brand/boot-mark.svg" width="96" height="96" alt="" aria-hidden="true" />
+        <p class="tl-boot-brand">TrocaLivros</p>
+        <p id="tl-boot-status" role="status" aria-live="polite">Abrindo o TrocaLivros…</p>
+        <button id="tl-boot-reload" type="button" hidden>Recarregar aplicativo</button>
+      </div>
+    </section>
+    <script id="tl-boot-bootstrap">
+      (() => {
+        if (window.__trocalivrosBoot) return;
+        const surface = document.getElementById('tl-boot');
+        const root = document.getElementById('root');
+        if (!surface || !root) return;
+        const image = surface.querySelector('img');
+        if (document.documentElement.style.colorScheme === 'dark') image.src = '/brand/boot-mark-dark.svg';
+        image.addEventListener('error', () => { image.style.visibility = 'hidden'; }, { once: true });
+        surface.hidden = false;
+        root.setAttribute('inert', '');
+        const reload = document.getElementById('tl-boot-reload');
+        reload.addEventListener('click', () => window.location.reload());
+        let released = false;
+        const timer = setTimeout(() => {
+          if (released) return;
+          document.getElementById('tl-boot-status').textContent = 'O aplicativo demorou para abrir. Confira sua conexão e tente novamente.';
+          reload.hidden = false;
+        }, 15000);
+        window.__trocalivrosBoot = { release() {
+          if (released) return;
+          released = true;
+          clearTimeout(timer);
+          root.removeAttribute('inert');
+          const hadFocus = surface.contains(document.activeElement);
+          surface.remove();
+          if (hadFocus) {
+            root.setAttribute('tabindex', '-1');
+            root.focus({ preventScroll: true });
+          }
+        } };
+      })();
+    </script>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {

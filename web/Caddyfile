@@ -40,7 +40,7 @@
 	@immutable path /_expo/static/* /assets/*
 	header @immutable Cache-Control "public, max-age=31536000, immutable"
 
-	@metadata path /manifest.json /favicon.ico /icons/* /sw.js /offline.html
+	@metadata path /manifest.json /favicon.ico /icons/* /brand/* /sw.js /offline.html
 	header @metadata Cache-Control "no-cache"
 
 	handle @htmlShell {

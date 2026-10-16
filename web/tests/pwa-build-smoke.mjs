@@ -3,6 +3,9 @@ import { readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runInNewContext } from 'node:vm';
+import { createRequire } from 'node:module';
+const require = createRequire(new URL('../../app/package.json', import.meta.url));
+const { JSDOM } = require('jsdom');
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../app/dist');
 const read = (file) => readFile(path.join(root, file), 'utf8');
@@ -19,6 +22,35 @@ async function listFiles(directory) {
 const html = await read('index.html');
 const manifest = JSON.parse(await read('manifest.json'));
 const worker = await read('sw.js');
+
+// Exercise the exported boot shell, including removal of inert and its watchdog.
+const bootDOM = new JSDOM(html, { url: 'https://fixture.invalid/', runScripts: 'outside-only' });
+const timers = new Map(); let timerId = 0;
+bootDOM.window.setTimeout = (callback, delay) => { const id = ++timerId; timers.set(id, { callback, delay }); return id; };
+bootDOM.window.clearTimeout = id => timers.delete(id);
+const bootScript = bootDOM.window.document.getElementById('tl-boot-bootstrap');
+assert.ok(bootScript, 'export must present a brand before the React bundle');
+bootDOM.window.eval(bootScript.textContent);
+assert.equal(bootDOM.window.document.getElementById('tl-boot').hidden, false);
+assert.ok(bootDOM.window.document.getElementById('root').hasAttribute('inert'));
+assert.equal(bootDOM.window.document.getElementById('tl-boot-reload').hidden, true);
+assert.equal([...timers.values()][0].delay, 15000);
+[...timers.values()][0].callback();
+assert.equal(bootDOM.window.document.getElementById('tl-boot-reload').hidden, false);
+bootDOM.window.__trocalivrosBoot.release();
+bootDOM.window.__trocalivrosBoot.release();
+assert.equal(bootDOM.window.document.getElementById('tl-boot'), null);
+assert.equal(bootDOM.window.document.getElementById('root').hasAttribute('inert'), false);
+assert.equal(timers.size, 0);
+bootDOM.window.close();
+
+const favicon = await readFile(path.join(root, 'favicon.ico'));
+assert.equal(favicon.readUInt16LE(2), 1);
+const iconSizes = Array.from({ length: favicon.readUInt16LE(4) }, (_, i) => favicon[6 + 16 * i] || 256);
+assert.ok(iconSizes.includes(16) && iconSizes.includes(32), 'exported favicon must include small browser sizes');
+const maskable = manifest.icons.find(icon => icon.purpose === 'maskable');
+assert.ok(maskable && maskable.src !== manifest.icons.find(icon => icon.purpose === 'any' && icon.sizes === '512x512').src);
+await stat(path.join(root, maskable.src.replace(/^\//, '')));
 
 // Execute the exported early listener, not just a source-text assertion.
 const installBootstrap = html.match(/<script id="pwa-install-bootstrap">([\s\S]*?)<\/script>/)?.[1];
