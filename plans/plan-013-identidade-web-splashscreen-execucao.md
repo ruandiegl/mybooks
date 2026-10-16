@@ -1,7 +1,7 @@
 # Plano 013 — Registro de execução
 
 **Data:** 16/10/2026. **Branch:** `codex/web-icons-splash`. **Base:** `16bc2c8`.
-**Estado:** implementação local e validação final em andamento; revisão independente pendente. Não integrado/publicado.
+**Estado:** implementação local concluída, testes/builds locais e revisão independente realizados; observações abaixo preservadas. Não integrado/publicado. Aceites físicos e lacunas de cobertura permanecem pendentes.
 
 ## Entrega
 
@@ -34,7 +34,7 @@ Rodada final, revisão e eventuais fixes serão registrados abaixo. Os resultado
 - Build Web e smoke PWA comportamental passaram, incluindo bypass de API/R2 no worker real e bootstrap antecipado de instalação.
 - Exports Hermes Android e iOS repetidos e aprovados após o foco de recuperação; somente bundles, sem APK/IPA ou envio EAS.
 - QA Chrome repetido: fonte pendente por 8 s mostrou o erro e avançou quando o download terminou; foco no botão visível; quatro máscaras de ícone conferidas visualmente. Zero pageerrors. Amostras locais finais 225 ms fria / 102 ms reload, sem alegação de melhoria contra baseline.
-- `git diff --check`, teste Node dos 7 assets e links dos dois registros passaram.
+- `git diff --check` das alterações ainda não commitadas, teste Node dos 7 assets e links dos registros passaram. O check completo `git diff --check 16bc2c8 HEAD`, repetido na revisão, aponta um espaço ao fim da linha5 da licença copiada; não é um check global aprovado. Ver Minor abaixo.
 
 Comandos principais: `node --test web/tests/brand-assets.test.mjs` na raiz; em `app/`, `npm test -- --reporter=dot`, `npm run typecheck`, `npm run build:web`, `npm run test:pwa`, `npx expo config --type public` e exports `--platform android/ios` para diretórios QA isolados.
 
@@ -66,4 +66,25 @@ Assets públicos medidos: SVGs 422 bytes; ícones PNG 1.954–6.659 bytes, todos
 
 ## Revisão final
 
-Pendente da avaliação independente da branch. Nada neste registro declara aceite físico ou produção pronta.
+Revisor independente, somente leitura, avaliou `16bc2c8..e3c9480`: **nenhum Critical ou Important funcional confirmado**; parecer favorável à integração de código. O revisor repetiu os 7 testes de assets e o smoke do export existente; não repetiu a suíte completa, builds ou Hermes. Os demais resultados são evidência do implementador. Não houve segunda revisão nem mudança de produto após esse parecer.
+
+### Minor e lacunas mantidas
+
+- **Whitespace da licença:** linha5 de `app/assets/brand/Apache-2.0.txt` termina com espaço, herdado da cópia local da licença Apache. Não altera o runtime; mantido como Minor nesta entrega, sem esconder o alerta do check completo. A evidência acima foi corrigida para distinguir check de worktree e range da branch.
+- **Sessão + linking reais:** os testes de App e Routes isolam essas fronteiras separadamente; não provam o caminho combinado de restauração única, resposta tardia e deep link com todos os componentes reais. Aceite integrado adicional pendente.
+- **Imagem/layout nativos integrados:** os testes de imagem e de layout/ponte são separados; não são prova conjunta de `Image.onLoadEnd`, host rápido e Strict Mode no dispositivo. Aceite adicional em preview/release pendente.
+- **Warm resume integrado:** há estabilidade de runtime/recursos e cancelamento cobertos, mas reload web não substitui teste integrado `background → active`. Registrar esse cenário no aceite físico, sem afirmar cobertura já obtida.
+
+As três lacunas são limites de cobertura, não bugs reproduzidos. Sem mudança de autenticação e sem falha funcional demonstrada, não motivaram uma refatoração adicional; custo: restauração, handoff nativo e resume exigem evidência integrada extra antes de afirmar aceite completo nesses ambientes.
+
+### Julgamento dos itens que o revisor não avaliou
+
+1. **Splash/SO e warm resume físico:** permanecem pendentes até preview/release no aparelho. Custo se omitidos: diferença nativa não detectada por Hermes/mocks.
+2. **Safari/PWA instalada:** manter aceite externo; Chrome local não aprova instalação/execução iOS. Custo: divergência do navegador real.
+3. **Atualização de ícone/máscara do SO:** artefatos corretos não garantem quando o SO atualiza o atalho; não limpar dados automaticamente. Custo: ícone anterior temporariamente visível.
+4. **VoiceOver/TalkBack/zoom/safe areas físicos:** manter teste em dispositivo. Custo: problema de acessibilidade físico não capturado por jsdom/Chrome.
+5. **Caddy real:** matcher revisado e smoke do export aprovado não comprovam headers/MIME publicados. Custo: revalidação/servidor exigem smoke após publicação autorizada.
+6. **Performance e produção:** nenhuma alegação de ganho, p95 ou deploy. Custo: medições/publicação precisam de execução posterior separada.
+7. **Launcher nativo/offline privado/advisories anteriores:** fora do escopo, não alterados nem declarados corrigidos. Custo: essas funcionalidades/pendências anteriores continuam como estavam.
+
+Servidor, capturas, bundles QA e ledger temporários desta execução são removidos após o encerramento; decisões e evidências permanecem neste registro e nos commits. O `app/dist` ignorado habitual é preservado. Arquivos locais do usuário não são removidos.

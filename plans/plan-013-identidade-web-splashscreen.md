@@ -2,7 +2,7 @@
 
 > **Para execução por agentes:** usar `superpowers:executing-plans` na execução sequencial recomendada, ou `superpowers:subagent-driven-development` se esse método for escolhido pelo usuário. Executar tarefa por tarefa, com TDD, commits focados e revisão final independente. As caixas preservam o roteiro original; o status real está no [registro de execução](./plan-013-identidade-web-splashscreen-execucao.md).
 
-**Estado:** execução local autorizada, implementação em validação/revisão na branch `codex/web-icons-splash`; sem integração/publicação. **Data:** 16/10/2026. Ver [registro](./plan-013-identidade-web-splashscreen-execucao.md).
+**Estado:** implementação local concluída na branch `codex/web-icons-splash`, com validação local e revisão independente; sem integração/publicação. Minor, lacunas de cobertura e aceites externos no [registro](./plan-013-identidade-web-splashscreen-execucao.md). **Data:** 16/10/2026.
 
 **Objetivo:** substituir os placeholders dos ícones web pela identidade do TrocaLivros e apresentar uma abertura identificável, leve e sem espera artificial no navegador/PWA e no app nativo.
 
@@ -289,4 +289,4 @@ Ordem recomendada: **1 → 2 → 3 → 4 → 5**, no mesmo fluxo sequencial, com
 
 Autorrevisão do planejamento: pedido coberto por tarefas com arquivos/interfaces e testes; cinco riscos ligados aos respectivos aceites; limites de Expo Go/PWA e tema nativo documentados; nenhuma alteração de autenticação, infraestrutura ou armazenamento privado prevista. Os prazos de 8/10/15 s são decisões propostas de feedback e precisam ser confirmados por ensaio, não alegações de desempenho obtido.
 
-Execução local autorizada pelo usuário e em andamento, com origem da logo confirmada e método sequencial. Próximos gates: revisão final e decisão separada de integração/publicação; consultar o registro de execução. Não executar merge/push/deploy por inferência.
+Execução local autorizada pelo usuário e concluída com origem da logo confirmada, método sequencial e revisão final. Próximos gates: decisão separada de integração/publicação e aceites pendentes do registro de execução. Não executar merge/push/deploy por inferência.
