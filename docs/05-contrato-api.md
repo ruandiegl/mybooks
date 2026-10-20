@@ -42,7 +42,7 @@ O restante do domínio mantém `/books`, `/discover`, `/interactions`, `/matches
 
 ## Curtidas, conversas e livros da troca
 
-`POST /interactions` recebe `targetBookId`, `action` (`LIKE` ou `PASS`) e `clientActionId`, todos validados pela API. O identificador é globalmente único e vinculado ao ator, livro e ação: repetir a mesma ação retorna a interação atual sem reaplicar a ação nem recriar um match; reutilizar o identificador com outro escopo retorna `409 ACTION_ID_CONFLICT`. Conflitos transitórios esgotados na transação retornam `409 INTERACTION_RETRY_REQUIRED` ou `409 MATCH_RETRY_REQUIRED`.
+`POST /interactions` recebe `targetBookId`, `action` (`LIKE` ou `PASS`) e `clientActionId`, todos validados pela API. O identificador é globalmente único e vinculado ao ator, livro e ação: repetir a mesma ação retorna a interação atual sem reaplicar a ação nem recriar um match, mesmo se a disponibilidade do livro mudou depois da primeira chamada; reutilizar o identificador com outro escopo retorna `409 ACTION_ID_CONFLICT`. Conflitos transitórios esgotados na transação de interação retornam `409 INTERACTION_RETRY_REQUIRED`; a remoção de match pode retornar `409 MATCH_RETRY_REQUIRED`.
 
 | Método | Caminho | Resultado |
 | --- | --- | --- |
@@ -50,7 +50,7 @@ O restante do domínio mantém `/books`, `/discover`, `/interactions`, `/matches
 | GET | `/conversations/:conversationId/exchange-books/:bookId` | `{ data: Book }` com detalhes autorizados pelo vínculo livro-match-conversa |
 | DELETE | `/matches/:matchId` | remove o match para os dois participantes; resposta vazia `204` após commit |
 
-`exchangeBooks` é `null` para matches legados sem livro identificado ou contém `{ mine, theirs }`, orientado para quem fez a consulta. Cada resumo inclui somente `id`, `title`, `authors`, `coverUrl` e `availability`; cada lado pode ser `null` quando seu livro foi removido. O endpoint contextual exige participação na conversa e associação exata ao livro do match. Livros `RESERVED` e `EXCHANGED` continuam acessíveis nesse contexto. Conversa inexistente/não autorizada retorna `404 CONVERSATION_NOT_FOUND`; livro contextual ausente, não vinculado ou inacessível retorna o mesmo `404 EXCHANGE_BOOK_NOT_FOUND`, sem revelar a existência de dados de terceiros.
+`exchangeBooks` é `null` para matches legados sem livro identificado ou contém `{ mine, theirs }`, orientado para quem fez a consulta. Cada resumo inclui somente `id`, `title`, `authors`, `coverUrl` e `availability`; cada lado pode ser `null` quando seu livro foi removido. O endpoint contextual exige participação na conversa e associação exata ao livro do match. Livros `RESERVED` e `EXCHANGED` continuam acessíveis nesse contexto. Conversa inexistente, pessoa não participante, livro ausente ou sem vínculo retornam o mesmo `404 EXCHANGE_BOOK_NOT_FOUND`, sem revelar a existência de dados de terceiros.
 
 `DELETE /matches/:matchId` aceita somente UUID e participante. Match inexistente e chamada por pessoa externa recebem o mesmo `404 MATCH_NOT_FOUND`. A transação serializável muda para `PASS` as curtidas atuais entre o par e apaga o match; a cascata elimina conversa, membros e mensagens. Os recibos de interação não são apagados pela remoção. A API publica `match:removed` aos dois usuários apenas depois do commit; o socket é removido da sala da conversa. O app reconcilia resultados sem confirmação HTTP conclusiva pela lista de conversas.
 

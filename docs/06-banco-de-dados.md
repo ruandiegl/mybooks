@@ -16,7 +16,7 @@ A migração `20261020120000_match_exchange_books_and_interaction_receipts` adic
 
 `InteractionActionReceipt` mantém o `clientActionId` como chave global única, além de ator, livro-alvo, ação e data original. A migração faz backfill usando os valores já registrados em `Interaction`. O recibo não possui relação com `Match`: portanto, continua após a remoção do match e impede que um identificador antigo reproduza uma curtida. A exclusão do usuário ou do livro-alvo apaga os recibos correspondentes por cascata.
 
-Criar interação, recibo, match e conversa ocorre em transação serializável. Remover um match também é serializável: as curtidas atuais do par passam a `PASS`, o match é excluído e as relações em cascata apagam conversa, membros e histórico de mensagens. Um match futuro entre o mesmo par depende de novas curtidas com novos `clientActionId`; recibos anteriores não reativam a relação.
+Cada ação inédita aceita grava ou atualiza seu registro de interação e cria um recibo durável em transação serializável; um replay válido consulta o recibo e retorna a interação atual sem reprocessar a ação. Somente quando há curtidas recíprocas válidas entre os dois donos a transação cria ou reutiliza um match e sua conversa. Remover um match também é serializável: as curtidas atuais do par passam a `PASS`, o match é excluído e as relações em cascata apagam conversa, membros e histórico de mensagens. Um match futuro entre o mesmo par depende de novas curtidas com novos `clientActionId`; recibos anteriores não reativam a relação.
 
 ## Migração nativa
 

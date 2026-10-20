@@ -38,13 +38,14 @@ Testes de Resend/R2 e validações de sessão/WebSocket em serviços e dispositi
 
 | Área | Verificação | Resultado |
 | --- | --- | --- |
-| API | Suíte unitária/rota após os contratos de conversas | 29 arquivos passaram, 1 ignorado; 231 testes passaram, 1 ignorado. Lint passou. |
-| PostgreSQL local descartável | Migração, recibos, cascatas, autorização, replay e concorrência | PostgreSQL 16 em loopback, `trocalivros_test`, sem volume persistente; 2 arquivos e 11 testes passaram. Nenhum banco Railway/produção foi usado. |
-| App | Suíte da funcionalidade antes do ajuste pós-revisão | 16 arquivos e 80 testes passaram. Após o ajuste dos alvos de toque e tipos, typecheck passou e 7 testes focados passaram; a suíte integrada final será repetida na Tarefa 7. |
-| PWA | Export web e smoke de manifesto, service worker e deep link | Exportou e smoke passou na validação da Tarefa 5; a repetição após o ajuste pós-revisão permanece na Tarefa 7. |
-| Dispositivo | Inspeção de chat em Android/iOS | Sem dispositivo local; a validação remota está autorizada, mas aguarda autenticação do MobileNext. Nenhum dispositivo remoto foi alocado. |
+| API | Suíte unitária/rota após os contratos de conversas | 29 arquivos passaram, 1 ignorado; 232 testes passaram, 1 ignorado. Lint passou. |
+| PostgreSQL local descartável | Migração, recibos, cascatas, autorização, replay e concorrência | PostgreSQL 16 em loopback, `trocalivros_test`, sem volume persistente; 2 arquivos e 12 testes passaram. Nenhum banco Railway/produção foi usado. |
+| Prisma | Validação do schema e geração do client | `npx prisma validate` e `npx prisma generate` passaram. |
+| App | Suíte, typecheck e ajustes pós-revisão | 17 arquivos e 83 testes passaram; `npm run typecheck` passou. |
+| PWA | Export web e smoke de manifesto, service worker e deep link | Export e smoke passaram após o ajuste pós-revisão; service worker gerado com 32 recursos fingerprintados. |
+| Dispositivo | Inspeção de chat em Android/iOS | Sem dispositivo local; a validação remota foi pulada a pedido do usuário. Nenhum dispositivo remoto foi alocado. |
 
-Os testes de rota cobrem o vínculo contextual e o `404` sanitizado com fronteira do Prisma simulada; não foi executado teste PostgreSQL específico para o endpoint de detalhes contextuais. Os 11 testes de integração PostgreSQL cobrem migração/backfill/FKs e o ciclo transacional de match, replay, cascatas e concorrência.
+Os testes de rota cobrem o vínculo contextual e o `404` sanitizado com fronteira do Prisma simulada; não foi executado teste PostgreSQL específico para o endpoint de detalhes contextuais. Os 12 testes de integração PostgreSQL cobrem migração/backfill/FKs e o ciclo transacional de match, replay, cascatas e concorrência. A suíte completa foi executada após as correções de replay e recuperação transitória da sessão realtime.
 
 Os exports Android e web confirmam empacotamento, não comportamento em dispositivo ou disponibilidade pública. O aceite externo precisa ser repetido em Android e iOS físicos e cobrir permissão negada/bloqueada, baixa luz, código danificado, offline, `404`, `503` e `429`, sempre verificando o fallback manual. Não há aceite do scanner na Web nem leitura física direta de ISBN-10.
 
