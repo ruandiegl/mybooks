@@ -13,9 +13,9 @@ import type { RootStackParamList } from '../../types/navigation';
 import { styles } from './styles';
 type Props = NativeStackScreenProps<RootStackParamList, 'BookDetails' | 'ExchangeBookDetails'>;
 export function BookDetails({ route, navigation }: Props) {
-  const isExchangeBook = route.name === 'ExchangeBookDetails';
+  const conversationId = 'conversationId' in route.params ? route.params.conversationId : null;
+  const isExchangeBook = conversationId !== null;
   const bookId = route.params.bookId;
-  const conversationId = isExchangeBook ? route.params.conversationId : null;
   const query = useQuery({
     queryKey: isExchangeBook ? ['exchange-book', conversationId, bookId] : ['book', bookId],
     queryFn: async ({ signal }) => {

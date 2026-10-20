@@ -3,13 +3,13 @@ import { theme } from '../../styles/theme';
 
 export const styles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end' },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: theme.colors.overlay },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: theme.colors.overlay },
   sheet: { maxHeight: '86%', backgroundColor: theme.colors.background, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: theme.spacing.lg, paddingTop: theme.spacing.sm, shadowColor: theme.shadow.color, shadowOpacity: 0.18, shadowRadius: 18, shadowOffset: { width: 0, height: -6 }, elevation: 20 },
-  handleTouch: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  handleTouch: { minHeight: 48, alignItems: 'center', justifyContent: 'center' },
   handle: { width: 42, height: 5, borderRadius: theme.radius.pill, backgroundColor: theme.colors.outline },
   heading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.xs },
   title: { color: theme.colors.foreground, fontFamily: theme.typography.bold, fontSize: 21 },
-  close: { width: 44, height: 44, borderRadius: theme.radius.pill, backgroundColor: theme.colors.surface, alignItems: 'center', justifyContent: 'center' },
+  close: { width: 48, height: 48, borderRadius: theme.radius.pill, backgroundColor: theme.colors.surface, alignItems: 'center', justifyContent: 'center' },
   intro: { color: theme.colors.mutedForeground, fontFamily: theme.typography.regular, fontSize: 13, lineHeight: 19, marginBottom: theme.spacing.md },
   list: { gap: theme.spacing.sm, paddingBottom: theme.spacing.lg },
   slot: { gap: theme.spacing.xs },

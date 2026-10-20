@@ -12,5 +12,5 @@ export const styles = StyleSheet.create({
   matchesPressed: { backgroundColor: theme.colors.surfaceStrong },
   removalNotice: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.outline, borderRadius: theme.radius.md, paddingLeft: theme.spacing.md, paddingRight: theme.spacing.xs, marginBottom: theme.spacing.sm },
   removalNoticeText: { flex: 1, color: theme.colors.foreground, fontFamily: theme.typography.medium, fontSize: 12, lineHeight: 18 },
-  dismissNotice: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: theme.radius.pill }
+  dismissNotice: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: theme.radius.pill }
 });

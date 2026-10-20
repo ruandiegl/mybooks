@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
   title: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs, flexShrink: 1, minWidth: 0 },
   name: { color: theme.colors.foreground, fontFamily: theme.typography.semibold, fontSize: 14, flexShrink: 1 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  action: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: theme.radius.pill },
+  action: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: theme.radius.pill },
   disabled: { opacity: 0.35 },
   pressed: { backgroundColor: theme.colors.surfaceMuted }
 });
