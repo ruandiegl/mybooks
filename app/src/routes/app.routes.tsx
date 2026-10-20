@@ -1,4 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import type { NavigationContainerRefWithCurrent } from '@react-navigation/native';
+import type { NavigationState } from '@react-navigation/native';
+import { useEffect, useRef, useState } from 'react';
 import { BookCreate } from '../pages/BookCreate';
 import { BookDetails } from '../pages/BookDetails';
 import { BookEdit } from '../pages/BookEdit';
@@ -7,17 +10,46 @@ import { Matches } from '../pages/Matches';
 import { OnboardingBooks } from '../pages/OnboardingBooks';
 import { OnboardingProfile } from '../pages/OnboardingProfile';
 import { deriveOnboardingState } from '../features/onboarding/onboarding';
+import { shouldNavigateForRemovedMatch } from '../features/chat/navigation';
+import { useChatRealtime } from '../providers/ChatRealtimeProvider';
 import { useSession } from '../providers/SessionProvider';
 import type { RootStackParamList } from '../types/navigation';
 import { MainTabs } from './main-tabs';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+type Props = { navigationRef: NavigationContainerRefWithCurrent<RootStackParamList> };
 
-export function AppRoutes() {
+function MatchRemovalNavigationBridge({ navigationRef }: Props) {
+  const { pendingMatchRemovals } = useChatRealtime();
+  const [state, setState] = useState<NavigationState | undefined>(() => navigationRef.getRootState());
+  const handledMatchIds = useRef(new Set<string>());
+
+  useEffect(() => {
+    const updateState = () => setState(navigationRef.getRootState());
+    const subscription = navigationRef.addListener('state', updateState);
+    updateState();
+    return subscription;
+  }, [navigationRef]);
+
+  useEffect(() => {
+    if (!state || !navigationRef.isReady()) return;
+    for (const event of pendingMatchRemovals) {
+      if (!shouldNavigateForRemovedMatch(state, event, handledMatchIds.current)) continue;
+      handledMatchIds.current.add(event.matchId);
+      navigationRef.resetRoot({ index: 0, routes: [{ name: 'Main', params: { screen: 'Messages' } }] });
+      break;
+    }
+  }, [navigationRef, pendingMatchRemovals, state]);
+
+  return null;
+}
+
+export function AppRoutes({ navigationRef }: Props) {
   const { user } = useSession();
   const { nextStep } = deriveOnboardingState(user);
 
-  return (
+  return <>
+    <MatchRemovalNavigationBridge navigationRef={navigationRef} />
     <Stack.Navigator key={nextStep}>
       {nextStep === 'profile' ? <Stack.Screen name="OnboardingProfile" component={OnboardingProfile} options={{ headerShown: false }} /> : null}
       {nextStep === 'books' ? <Stack.Screen name="OnboardingBooks" component={OnboardingBooks} options={{ headerShown: false }} /> : null}
@@ -48,5 +80,5 @@ export function AppRoutes() {
         options={({ route }) => ({ title: route.params.title || 'Conversa' })}
       />
     </Stack.Navigator>
-  );
+  </>;
 }

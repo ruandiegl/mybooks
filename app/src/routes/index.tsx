@@ -1,9 +1,11 @@
-import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
-import { linking } from './linking';
+import { DefaultTheme, NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { ActivityIndicator, View } from 'react-native';
+import { ChatRealtimeProvider } from '../providers/ChatRealtimeProvider';
 import { useSession } from '../providers/SessionProvider';
 import { theme } from '../styles/theme';
+import type { RootStackParamList } from '../types/navigation';
 import { AppRoutes } from './app.routes';
+import { linking } from './linking';
 import AuthRoutes from './authRoutes';
 
 const navigationTheme = {
@@ -21,6 +23,7 @@ const navigationTheme = {
 
 export function Routes() {
   const { isLoaded, isSignedIn } = useSession();
+  const navigationRef = useNavigationContainerRef<RootStackParamList>();
 
   if (!isLoaded) {
     return (
@@ -31,8 +34,8 @@ export function Routes() {
   }
 
   return (
-    <NavigationContainer theme={navigationTheme} linking={linking}>
-      {isSignedIn ? <AppRoutes /> : <AuthRoutes />}
+    <NavigationContainer ref={navigationRef} theme={navigationTheme} linking={linking}>
+      {isSignedIn ? <ChatRealtimeProvider><AppRoutes navigationRef={navigationRef} /></ChatRealtimeProvider> : <AuthRoutes />}
     </NavigationContainer>
   );
 }

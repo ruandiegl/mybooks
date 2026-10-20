@@ -25,4 +25,20 @@ describe('chat socket session', () => {
     await options.auth(handshake);
     expect(handshake).toHaveBeenLastCalledWith({ token: 'refreshed-access-token' });
   });
+
+  it('provides a null token when token access throws synchronously', async () => {
+    const socket = { autoConnect: false };
+    io.mockReturnValue(socket);
+    const getToken = (() => { throw new Error('session store unavailable'); }) as unknown as () => Promise<string | null>;
+    const created = await createChatSocket({ getToken });
+    const options = io.mock.calls[0][1];
+    const handshake = vi.fn();
+
+    expect(() => options.auth(handshake)).not.toThrow();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(created).toBe(socket);
+    expect(handshake).toHaveBeenCalledTimes(1);
+    expect(handshake).toHaveBeenCalledWith({ token: null });
+  });
 });
