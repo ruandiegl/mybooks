@@ -74,7 +74,10 @@ export function bindChatRealtime(socket: Socket, queryClient: QueryClient, optio
       .then((refreshed) => {
         if (active && refreshed) socket.connect();
       })
-      .catch(() => undefined)
+      .catch(() => {
+        // Keep the next Socket.IO reconnect eligible to recover a transient refresh failure.
+        if (active) authRecoveryAttempted = false;
+      })
       .finally(() => { authRecoveryInProgress = false; });
   };
 

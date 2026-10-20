@@ -177,6 +177,24 @@ describe('chat realtime lifecycle and cache effects', () => {
     realtime.dispose();
   });
 
+  it('retries session refresh after a transient refresh failure', async () => {
+    const refreshSession = vi.fn()
+      .mockRejectedValueOnce(new Error('temporary network failure'))
+      .mockResolvedValueOnce(true);
+    const realtime = bindChatRealtime(socket as unknown as Socket, queryClient, { refreshSession });
+
+    socket.fire('connect_error', new Error('UNAUTHENTICATED'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(refreshSession).toHaveBeenCalledTimes(1);
+
+    socket.fire('connect_error', new Error('UNAUTHENTICATED'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(refreshSession).toHaveBeenCalledTimes(2);
+    expect(socket.connectCalls).toBe(1);
+    realtime.dispose();
+  });
+
   it('removes only its own listeners when the session ends', () => {
     const realtime = bindChatRealtime(socket as unknown as Socket, queryClient, { refreshSession: async () => true });
     expect(socket.listeners.get('match:removed')).toHaveLength(1);
