@@ -44,8 +44,10 @@ export const sessionTransport: SessionTransport = {
     if (!current?.refreshToken) return null;
     try {
       return await this.accept(await authApi.refresh(current.refreshToken));
-    } catch {
-      return null;
+    } catch (error) {
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      if (status === 401) return null;
+      throw error;
     }
   },
   clear: clearTokens,
