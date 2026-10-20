@@ -71,6 +71,17 @@ describe('atomic match lifecycle against disposable PostgreSQL', () => {
     expect(result.match).toMatchObject({ id: match.id, bookAId: books[0], bookBId: books[1] });
   });
 
+  it('replays an active match after the original target book becomes unavailable', async () => {
+    const { match, actions } = await connect();
+    const action = actions[1];
+    await state.db.book.update({ where: { id: action.targetBookId }, data: { availability: 'EXCHANGED' } });
+
+    const replay = await matchesRepository.applyInteraction(action);
+
+    expect(replay.interaction).toMatchObject({ clientActionId: action.clientActionId, action: 'LIKE' });
+    expect(replay.match).toMatchObject({ id: match.id, status: 'ACTIVE' });
+  });
+
   it('retains old receipts over multiple removal cycles and requires new reciprocal likes', async () => {
     const oldest = [];
     for (let cycle = 0; cycle < 3; cycle++) {

@@ -40,7 +40,20 @@ export const matchesRepository = {
       const where = { actorId_targetBookId: { actorId, targetBookId } };
       if (receipt) {
         // A receipt is authoritative for retries even when the book later changes availability.
-        return { interaction: await tx.interaction.findUnique({ where }), match: null };
+        const interaction = await tx.interaction.findUnique({ where });
+        let match = null;
+        if (action === 'LIKE' && interaction?.action === 'LIKE') {
+          const targetBook = await tx.book.findUnique({ where: { id: targetBookId }, select: { ownerId: true } });
+          if (targetBook?.ownerId && targetBook.ownerId !== actorId) {
+            const [userAId, userBId] = [actorId, targetBook.ownerId].sort();
+            const existingMatch = await tx.match.findUnique({
+              where: { userAId_userBId: { userAId, userBId } },
+              include: matchInclude
+            });
+            if (existingMatch?.status === 'ACTIVE') match = existingMatch;
+          }
+        }
+        return { interaction, match };
       }
       const targetBook = await tx.book.findUnique({ where: { id: targetBookId } });
       if (!targetBook?.ownerId || targetBook.availability !== 'AVAILABLE') {

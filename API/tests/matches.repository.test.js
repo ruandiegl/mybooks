@@ -34,12 +34,18 @@ describe('atomic interactions', () => {
     expect(tx.interaction.upsert).not.toHaveBeenCalled();
     expect(tx.match.upsert).not.toHaveBeenCalled();
   });
-  it('replays a recorded action after its target book becomes unavailable', async () => {
+  it('replays a LIKE with its active match when the target book becomes unavailable', async () => {
     tx.interactionActionReceipt.findUnique.mockResolvedValue(action);
-    tx.book.findUnique.mockResolvedValue({ id: 'bookA', ownerId: b, availability: 'EXCHANGED' });
+    tx.interaction.findUnique.mockResolvedValue({ id: 'interaction', ...action });
+    tx.book.findUnique.mockResolvedValue({ id: 'bookA', ownerId: a, availability: 'EXCHANGED' });
+    const activeMatch = { id: 'match', userAId: a, userBId: b, status: 'ACTIVE', conversation: { id: 'conversation' } };
+    tx.match.findUnique.mockResolvedValue(activeMatch);
     const result = await matchesRepository.applyInteraction(action);
-    expect(result).toEqual({ interaction: { id: 'interaction', ...action, action: 'PASS' }, match: null });
-    expect(tx.book.findUnique).not.toHaveBeenCalled();
+    expect(result).toEqual({ interaction: { id: 'interaction', ...action }, match: activeMatch });
+    expect(tx.book.findUnique).toHaveBeenCalledWith({ where: { id: 'bookA' }, select: { ownerId: true } });
+    expect(tx.match.findUnique).toHaveBeenCalledWith(expect.objectContaining({
+      where: { userAId_userBId: { userAId: a, userBId: b } }
+    }));
     expect(tx.interaction.upsert).not.toHaveBeenCalled();
     expect(tx.match.upsert).not.toHaveBeenCalled();
   });
