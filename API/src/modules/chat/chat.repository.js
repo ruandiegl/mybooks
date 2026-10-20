@@ -1,11 +1,48 @@
 import { AppError } from '../../shared/errors/AppError.js';
 import { prisma } from '../../shared/database/prisma.js';
 
+const bookSummarySelect = {
+  id: true,
+  title: true,
+  authors: true,
+  availability: true,
+  coverExternalUrl: true,
+  images: {
+    select: { url: true, isCover: true },
+    orderBy: [{ isCover: 'desc' }, { createdAt: 'asc' }],
+    take: 1
+  }
+};
+
+const bookDetailsSelect = {
+  ...bookSummarySelect,
+  subtitle: true,
+  publisher: true,
+  synopsis: true,
+  year: true,
+  pageCount: true,
+  subjects: true,
+  isbn: true,
+  isbnStatus: true,
+  isbnProvider: true,
+  images: {
+    select: { id: true, url: true, isCover: true },
+    orderBy: [{ isCover: 'desc' }, { createdAt: 'asc' }]
+  },
+  owner: { select: { id: true, name: true, avatarUrl: true, city: true } },
+  createdAt: true,
+  updatedAt: true
+};
+
 const conversationInclude = {
   match: {
-    include: {
+    select: {
+      userAId: true,
+      userBId: true,
       userA: { select: { id: true, name: true, avatarUrl: true, city: true } },
-      userB: { select: { id: true, name: true, avatarUrl: true, city: true } }
+      userB: { select: { id: true, name: true, avatarUrl: true, city: true } },
+      bookA: { select: bookSummarySelect },
+      bookB: { select: bookSummarySelect }
     }
   },
   messages: {
@@ -31,6 +68,26 @@ export const chatRepository = {
       where: { members: { some: { userId } } },
       include: conversationInclude,
       orderBy: { updatedAt: 'desc' }
+    });
+  },
+
+  findExchangeBookContext(conversationId, userId, bookId) {
+    return prisma.conversation.findFirst({
+      where: {
+        id: conversationId,
+        members: { some: { userId } },
+        match: { OR: [{ bookAId: bookId }, { bookBId: bookId }] }
+      },
+      select: {
+        match: {
+          select: {
+            bookAId: true,
+            bookBId: true,
+            bookA: { select: bookDetailsSelect },
+            bookB: { select: bookDetailsSelect }
+          }
+        }
+      }
     });
   },
 

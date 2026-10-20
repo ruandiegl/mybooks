@@ -1,10 +1,18 @@
 import { AppError } from '../../shared/errors/AppError.js';
 import {
   conversationIdSchema,
+  exchangeBookParamsSchema,
   messagePaginationSchema,
   messageSchema
 } from './chat.schemas.js';
 import { chatRepository } from './chat.repository.js';
+import { serializeBook } from '../books/books.serializer.js';
+
+function serializeBookSummary(book) {
+  if (!book) return null;
+  const { id, title, authors, coverUrl, availability } = serializeBook(book);
+  return { id, title, authors, coverUrl, availability };
+}
 
 function serializeMessage(message) {
   return {
@@ -40,16 +48,39 @@ export const chatService = {
       const otherUser = conversation.match.userAId === userId
         ? conversation.match.userB
         : conversation.match.userA;
+      const bookA = serializeBookSummary(conversation.match.bookA);
+      const bookB = serializeBookSummary(conversation.match.bookB);
       return {
         id: conversation.id,
         matchId: conversation.matchId,
         otherUser,
+        exchangeBooks: bookA || bookB
+          ? (conversation.match.userAId === userId
+            ? { mine: bookA, theirs: bookB }
+            : { mine: bookB, theirs: bookA })
+          : null,
         lastMessage: conversation.messages[0]
           ? serializeMessage(conversation.messages[0])
           : null,
         updatedAt: conversation.updatedAt
       };
     });
+  },
+
+  async getExchangeBook(userId, conversationId, bookId) {
+    const params = exchangeBookParamsSchema.parse({ conversationId, bookId });
+    const context = await chatRepository.findExchangeBookContext(params.conversationId, userId, params.bookId);
+    const match = context?.match;
+    const book = match?.bookAId === bookId
+      ? match.bookA
+      : match?.bookBId === bookId ? match.bookB : null;
+    if (!book) {
+      throw new AppError('Livro da troca não encontrado.', {
+        statusCode: 404,
+        code: 'EXCHANGE_BOOK_NOT_FOUND'
+      });
+    }
+    return serializeBook(book);
   },
 
   async listMessages(userId, conversationId, query) {

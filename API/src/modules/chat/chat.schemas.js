@@ -11,3 +11,8 @@ export const messagePaginationSchema = z.object({
 });
 
 export const conversationIdSchema = z.string().uuid();
+
+export const exchangeBookParamsSchema = z.object({
+  conversationId: conversationIdSchema,
+  bookId: z.string().uuid()
+});

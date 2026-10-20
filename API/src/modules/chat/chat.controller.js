@@ -14,6 +14,15 @@ export async function listMessages(req, res) {
   return res.status(200).json({ data: result });
 }
 
+export async function getExchangeBook(req, res) {
+  const result = await chatService.getExchangeBook(
+    req.currentUser.id,
+    req.params.conversationId,
+    req.params.bookId
+  );
+  return res.status(200).json({ data: result });
+}
+
 export async function sendMessage(req, res) {
   const result = await chatService.sendMessage(
     req.currentUser.id,
