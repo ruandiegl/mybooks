@@ -4,7 +4,7 @@ import { theme } from '../../styles/theme';
 export const styles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { ...StyleSheet.absoluteFill, backgroundColor: theme.colors.overlay },
-  sheet: { maxHeight: '86%', backgroundColor: theme.colors.background, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: theme.spacing.lg, paddingTop: theme.spacing.sm, shadowColor: theme.shadow.color, shadowOpacity: 0.18, shadowRadius: 18, shadowOffset: { width: 0, height: -6 }, elevation: 20 },
+  sheet: { maxHeight: '86%', backgroundColor: theme.colors.background, borderTopLeftRadius: theme.radius.lg, borderTopRightRadius: theme.radius.lg, paddingHorizontal: theme.spacing.lg, paddingTop: theme.spacing.sm, shadowColor: theme.shadow.color, shadowOpacity: theme.shadow.opacity, shadowRadius: theme.shadow.radius, shadowOffset: { width: theme.shadow.offset.width, height: -theme.shadow.offset.height }, elevation: theme.shadow.elevation },
   handleTouch: { minHeight: 48, alignItems: 'center', justifyContent: 'center' },
   handle: { width: 42, height: 5, borderRadius: theme.radius.pill, backgroundColor: theme.colors.outline },
   heading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.xs },
