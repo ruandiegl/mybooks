@@ -129,11 +129,34 @@ describe('atomic match lifecycle against disposable PostgreSQL', () => {
 
   it('does not restore a match during concurrent removal, a new like and message sending', async () => {
     const { match, actions } = await connect();
-    const outcomes = await Promise.allSettled([
-      matchesRepository.remove(users[0], match.id),
-      matchesRepository.applyInteraction(like(users[0], books[1])),
-      chatService.sendMessage(users[1], match.conversation.id, { clientMessageId: randomUUID(), body: 'Racing' })
-    ]);
+    const database = state.db;
+    let transactionsStarted = 0;
+    let releaseStartBarrier;
+    const startBarrier = new Promise((resolve) => { releaseStartBarrier = resolve; });
+    state.db = new Proxy(database, {
+      get(target, property) {
+        if (property === '$transaction') {
+          return (operation, options) => target.$transaction(async (tx) => {
+            transactionsStarted += 1;
+            if (transactionsStarted === 3) releaseStartBarrier();
+            await startBarrier;
+            return operation(tx);
+          }, options);
+        }
+        const value = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      }
+    });
+    let outcomes;
+    try {
+      outcomes = await Promise.allSettled([
+        matchesRepository.remove(users[0], match.id),
+        matchesRepository.applyInteraction(like(users[0], books[1])),
+        chatService.sendMessage(users[1], match.conversation.id, { clientMessageId: randomUUID(), body: 'Racing' })
+      ]);
+    } finally {
+      state.db = database;
+    }
     expect(outcomes[0].status).toBe('fulfilled');
     for (const outcome of outcomes.slice(1)) {
       if (outcome.status === 'rejected') expect(['CONVERSATION_NOT_FOUND', 'MESSAGE_RETRY_REQUIRED', 'INTERACTION_RETRY_REQUIRED']).toContain(outcome.reason.code);
