@@ -7,7 +7,8 @@ import { prisma } from './shared/database/prisma.js';
 const app = createApp();
 const server = createServer(app);
 
-registerChatSocket(server);
+const io = registerChatSocket(server);
+app.set('io', io);
 
 server.listen(env.PORT, '0.0.0.0', () => {
   console.info(JSON.stringify({

@@ -4,6 +4,8 @@ import { verifyAccessToken } from '../auth/auth.crypto.js';
 import { authRepository } from '../auth/auth.repository.js';
 import { chatService } from './chat.service.js';
 import { metrics } from '../../shared/observability/metrics.js';
+import { AppError } from '../../shared/errors/AppError.js';
+import { conversationIdSchema } from './chat.schemas.js';
 
 function room(conversationId) {
   return 'conversation:' + conversationId;
@@ -37,8 +39,8 @@ function reject(ack, error) {
     ack({
       ok: false,
       error: {
-        code: error.code || 'SOCKET_ERROR',
-        message: error.message || 'Não foi possível concluir a operação.'
+        code: error instanceof AppError ? error.code : 'SOCKET_ERROR',
+        message: error instanceof AppError ? error.message : 'Não foi possível concluir a operação.'
       }
     });
   }
@@ -62,11 +64,26 @@ export function registerChatSocket(httpServer) {
     socket.on('conversation:join', async (payload, ack) => {
       try {
         await chatService.assertMember(payload?.conversationId, userId);
-        socket.join(room(payload.conversationId));
+        await socket.join(room(payload.conversationId));
+        // Removal may have committed while the adapter was joining the room.
+        await chatService.assertMember(payload.conversationId, userId);
         socket.to(room(payload.conversationId)).emit('presence:updated', {
           userId,
           status: 'online'
         });
+        ack?.({ ok: true });
+      } catch (error) {
+        if (conversationIdSchema.safeParse(payload?.conversationId).success) {
+          await socket.leave(room(payload.conversationId));
+        }
+        reject(ack, error);
+      }
+    });
+
+    socket.on('conversation:leave', async (payload, ack) => {
+      try {
+        const conversationId = conversationIdSchema.parse(payload?.conversationId);
+        await socket.leave(room(conversationId));
         ack?.({ ok: true });
       } catch (error) {
         reject(ack, error);

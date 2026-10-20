@@ -1,70 +1,105 @@
 import { prisma } from '../../shared/database/prisma.js';
+import { AppError } from '../../shared/errors/AppError.js';
 
 const matchInclude = {
-  userA: {
-    select: { id: true, name: true, avatarUrl: true, city: true }
-  },
-  userB: {
-    select: { id: true, name: true, avatarUrl: true, city: true }
-  },
-  conversation: {
-    select: { id: true, updatedAt: true }
-  }
+  userA: { select: { id: true, name: true, avatarUrl: true, city: true } },
+  userB: { select: { id: true, name: true, avatarUrl: true, city: true } },
+  conversation: { select: { id: true, updatedAt: true } }
 };
 
+function matchNotFound() {
+  return new AppError('Match não encontrado.', { statusCode: 404, code: 'MATCH_NOT_FOUND' });
+}
+
+async function serializable(operation, retryCode) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await prisma.$transaction(operation, { isolationLevel: 'Serializable' });
+    } catch (error) {
+      // A unique collision can be another request creating the receipt or pair.
+      // Start a fresh transaction so the next attempt reads the committed state.
+      if (error?.code === 'P2034' || error?.code === 'P2002') {
+        if (attempt < 2) continue;
+        throw new AppError('A operação mudou durante o envio. Tente novamente.', {
+          statusCode: 409, code: retryCode
+        });
+      }
+      if (error?.code === 'P2025' && retryCode === 'MATCH_RETRY_REQUIRED') throw matchNotFound();
+      throw error;
+    }
+  }
+}
+
 export const matchesRepository = {
-  upsertInteraction({ actorId, targetBookId, action, clientActionId }) {
-    return prisma.interaction.upsert({
-      where: { actorId_targetBookId: { actorId, targetBookId } },
-      create: { actorId, targetBookId, action, clientActionId },
-      update: { action, clientActionId }
-    });
+  applyInteraction({ actorId, targetBookId, action, clientActionId }) {
+    return serializable(async (tx) => {
+      const receipt = await tx.interactionActionReceipt.findUnique({ where: { clientActionId } });
+      if (receipt && (receipt.actorId !== actorId || receipt.targetBookId !== targetBookId || receipt.action !== action)) {
+        throw new AppError('Identificador de ação já utilizado.', { statusCode: 409, code: 'ACTION_ID_CONFLICT' });
+      }
+      const targetBook = await tx.book.findUnique({ where: { id: targetBookId } });
+      if (!targetBook?.ownerId || targetBook.availability !== 'AVAILABLE') {
+        throw new AppError('Livro indisponível para descoberta.', { statusCode: 404, code: 'DISCOVERY_BOOK_NOT_FOUND' });
+      }
+      if (targetBook.ownerId === actorId) {
+        throw new AppError('Você não pode interagir com o próprio livro.', { statusCode: 422, code: 'SELF_INTERACTION' });
+      }
+      const where = { actorId_targetBookId: { actorId, targetBookId } };
+      if (receipt) {
+        // Never replay an old action, even after the current interaction has changed.
+        return { interaction: await tx.interaction.findUnique({ where }), match: null };
+      }
+      await tx.interactionActionReceipt.create({ data: { actorId, targetBookId, action, clientActionId } });
+      const interaction = await tx.interaction.upsert({
+        where, create: { actorId, targetBookId, action, clientActionId }, update: { action, clientActionId }
+      });
+      let match = null;
+      if (action === 'LIKE') {
+        const reverseLike = await tx.interaction.findFirst({
+          where: { actorId: targetBook.ownerId, action: 'LIKE', targetBook: { ownerId: actorId, availability: 'AVAILABLE' } },
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }]
+        });
+        if (reverseLike) {
+          const [userAId, userBId] = [actorId, targetBook.ownerId].sort();
+          const bookAId = userAId === actorId ? reverseLike.targetBookId : targetBookId;
+          const bookBId = userAId === actorId ? targetBookId : reverseLike.targetBookId;
+          const pair = await tx.match.upsert({
+            where: { userAId_userBId: { userAId, userBId } },
+            create: { userAId, userBId, bookAId, bookBId },
+            update: {}
+          });
+          await tx.conversation.upsert({
+            where: { matchId: pair.id },
+            create: { matchId: pair.id, members: { create: [{ userId: userAId }, { userId: userBId }] } },
+            update: {}
+          });
+          match = await tx.match.findUnique({ where: { id: pair.id }, include: matchInclude });
+        }
+      }
+      return { interaction, match };
+    }, 'INTERACTION_RETRY_REQUIRED');
   },
 
-  findReverseLike(actorId, targetOwnerId) {
-    return prisma.interaction.findFirst({
-      where: {
-        actorId: targetOwnerId,
-        action: 'LIKE',
-        targetBook: { ownerId: actorId }
-      },
-      include: { targetBook: true }
-    });
-  },
-
-  async createMatch(userOneId, userTwoId) {
-    const [userAId, userBId] = [userOneId, userTwoId].sort();
-
-    return prisma.$transaction(async (tx) => {
-      const match = await tx.match.upsert({
-        where: { userAId_userBId: { userAId, userBId } },
-        create: { userAId, userBId },
-        update: { status: 'ACTIVE' }
+  remove(actorId, matchId) {
+    return serializable(async (tx) => {
+      const match = await tx.match.findUnique({ where: { id: matchId }, include: { conversation: { select: { id: true } } } });
+      if (!match || ![match.userAId, match.userBId].includes(actorId)) throw matchNotFound();
+      await tx.interaction.updateMany({
+        where: { action: 'LIKE', OR: [
+          { actorId: match.userAId, targetBook: { ownerId: match.userBId } },
+          { actorId: match.userBId, targetBook: { ownerId: match.userAId } }
+        ] },
+        data: { action: 'PASS' }
       });
-
-      await tx.conversation.upsert({
-        where: { matchId: match.id },
-        create: {
-          matchId: match.id,
-          members: {
-            create: [{ userId: userAId }, { userId: userBId }]
-          }
-        },
-        update: {}
-      });
-
-      return tx.match.findUnique({ where: { id: match.id }, include: matchInclude });
-    });
+      await tx.match.delete({ where: { id: matchId } });
+      return { matchId, conversationId: match.conversation?.id ?? null, participantIds: [match.userAId, match.userBId] };
+    }, 'MATCH_RETRY_REQUIRED');
   },
 
   listForUser(userId) {
     return prisma.match.findMany({
-      where: {
-        status: 'ACTIVE',
-        OR: [{ userAId: userId }, { userBId: userId }]
-      },
-      include: matchInclude,
-      orderBy: { updatedAt: 'desc' }
+      where: { status: 'ACTIVE', OR: [{ userAId: userId }, { userBId: userId }] },
+      include: matchInclude, orderBy: { updatedAt: 'desc' }
     });
   }
 };
