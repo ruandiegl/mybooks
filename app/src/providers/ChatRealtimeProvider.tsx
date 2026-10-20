@@ -17,6 +17,7 @@ type ChatRealtimeContextValue = {
   connectionState: ChatConnectionState;
   pendingMatchRemovals: MatchRemovedEvent[];
   acknowledgeMatchRemoved: (matchId: string) => void;
+  registerConfirmedMatchRemoved: (event: MatchRemovedEvent) => void;
   isConversationRemoved: (conversationId: string) => boolean;
 };
 
@@ -30,12 +31,16 @@ export function ChatRealtimeProvider({ children }: PropsWithChildren) {
   const [connectionState, setConnectionState] = useState<ChatConnectionState>('connecting');
   const [pendingMatchRemovals, setPendingMatchRemovals] = useState<MatchRemovedEvent[]>([]);
   const removedLookupRef = useRef<(conversationId: string) => boolean>(() => false);
+  const confirmedRemovalHandlerRef = useRef<((event: MatchRemovedEvent) => void) | null>(null);
+  const queuedConfirmedRemovalsRef = useRef<MatchRemovedEvent[]>([]);
 
   useEffect(() => {
     let active = true;
     let current: Socket | null = null;
     let detachRealtime: (() => void) | null = null;
     removedLookupRef.current = () => false;
+    confirmedRemovalHandlerRef.current = null;
+    queuedConfirmedRemovalsRef.current = [];
 
     if (!sessionIdentity) {
       setSocket(null);
@@ -62,6 +67,9 @@ export function ChatRealtimeProvider({ children }: PropsWithChildren) {
       });
       detachRealtime = realtime.dispose;
       removedLookupRef.current = realtime.isConversationRemoved;
+      confirmedRemovalHandlerRef.current = realtime.handleMatchRemoved;
+      for (const event of queuedConfirmedRemovalsRef.current) realtime.handleMatchRemoved(event);
+      queuedConfirmedRemovalsRef.current = [];
       setSocket(created);
     }).catch(() => {
       if (active) setConnectionState('offline');
@@ -71,11 +79,20 @@ export function ChatRealtimeProvider({ children }: PropsWithChildren) {
       active = false;
       detachRealtime?.();
       removedLookupRef.current = () => false;
+      confirmedRemovalHandlerRef.current = null;
     };
   }, [getToken, queryClient, refreshSession, sessionIdentity]);
 
   const acknowledgeMatchRemoved = useCallback((matchId: string) => {
     setPendingMatchRemovals((pending) => acknowledgePendingRemoval(pending, matchId));
+  }, []);
+  const registerConfirmedMatchRemoved = useCallback((event: MatchRemovedEvent) => {
+    const handler = confirmedRemovalHandlerRef.current;
+    if (handler) {
+      handler(event);
+      return;
+    }
+    queuedConfirmedRemovalsRef.current = addPendingRemoval(queuedConfirmedRemovalsRef.current, event);
   }, []);
   const isConversationRemoved = useCallback((conversationId: string) => removedLookupRef.current(conversationId), []);
 
@@ -84,8 +101,9 @@ export function ChatRealtimeProvider({ children }: PropsWithChildren) {
     connectionState,
     pendingMatchRemovals,
     acknowledgeMatchRemoved,
+    registerConfirmedMatchRemoved,
     isConversationRemoved
-  }), [acknowledgeMatchRemoved, connectionState, isConversationRemoved, pendingMatchRemovals, socket]);
+  }), [acknowledgeMatchRemoved, connectionState, isConversationRemoved, pendingMatchRemovals, registerConfirmedMatchRemoved, socket]);
 
   return <ChatRealtimeContext.Provider value={value}>{children}</ChatRealtimeContext.Provider>;
 }

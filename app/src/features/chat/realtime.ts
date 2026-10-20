@@ -105,6 +105,7 @@ export function bindChatRealtime(socket: Socket, queryClient: QueryClient, optio
   socket.on('match:removed', onMatchRemoved);
 
   return {
+    handleMatchRemoved: onMatchRemoved,
     dispose() {
       if (!active) return;
       active = false;
@@ -126,6 +127,7 @@ export function startChatRealtimeSession(socket: Socket, queryClient: QueryClien
 
   return {
     isConversationRemoved: realtime.isConversationRemoved,
+    handleMatchRemoved: realtime.handleMatchRemoved,
     dispose() {
       if (!active) return;
       active = false;

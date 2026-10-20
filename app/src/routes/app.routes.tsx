@@ -65,6 +65,11 @@ export function AppRoutes({ navigationRef }: Props) {
         options={{ title: 'Detalhes do livro' }}
       />
       <Stack.Screen
+        name="ExchangeBookDetails"
+        component={BookDetails}
+        options={{ title: 'Detalhes do livro da troca' }}
+      />
+      <Stack.Screen
         name="BookEdit"
         component={BookEdit}
         options={{ title: 'Editar livro', presentation: 'modal' }}
@@ -77,7 +82,7 @@ export function AppRoutes({ navigationRef }: Props) {
       <Stack.Screen
         name="Chat"
         component={Chat}
-        options={({ route }) => ({ title: route.params.title || 'Conversa' })}
+        options={{ title: 'Conversa' }}
       />
     </Stack.Navigator>
   </>;

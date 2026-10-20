@@ -33,3 +33,12 @@ export function shouldNavigateForRemovedMatch(
 ): boolean {
   return !handledMatchIds.has(event.matchId) && containsActiveConversationRoute(state, event.conversationId);
 }
+
+export type ChatEntryState = 'loading' | 'retry' | 'available' | 'unavailable';
+
+export function resolveChatEntryState(input: { isLoading: boolean; isError: boolean; containsConversation: boolean }): ChatEntryState {
+  if (input.containsConversation) return 'available';
+  if (input.isLoading) return 'loading';
+  if (input.isError) return 'retry';
+  return 'unavailable';
+}

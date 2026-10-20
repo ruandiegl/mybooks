@@ -110,6 +110,44 @@ describe('chat realtime lifecycle and cache effects', () => {
     realtime.dispose();
   });
 
+  it('applies an HTTP-confirmed removal through the same deduplicated event path', async () => {
+    queryClient.setQueryData(['messages', removed.conversationId], { pages: ['messages'] });
+    const onMatchRemoved = vi.fn();
+    const realtime = bindChatRealtime(socket as unknown as Socket, queryClient, { refreshSession: async () => true, onMatchRemoved });
+
+    socket.fire('match:removed', removed);
+    realtime.handleMatchRemoved(removed);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(onMatchRemoved).toHaveBeenCalledTimes(1);
+    expect(realtime.isConversationRemoved(removed.conversationId)).toBe(true);
+    expect(queryClient.getQueryData(['messages', removed.conversationId])).toBeUndefined();
+    realtime.dispose();
+  });
+
+  it('keeps HTTP-confirmed removal feedback and cache cleanup when the socket is offline', async () => {
+    socket.connected = false;
+    queryClient.setQueryData(['matches'], [{ id: removed.matchId }]);
+    queryClient.setQueryData(['conversations'], [{ id: removed.conversationId }]);
+    queryClient.setQueryData(['messages', removed.conversationId], { pages: ['messages'] });
+    const onMatchRemoved = vi.fn();
+    const realtime = bindChatRealtime(socket as unknown as Socket, queryClient, { refreshSession: async () => true, onMatchRemoved });
+
+    realtime.handleMatchRemoved(removed);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(onMatchRemoved).toHaveBeenCalledExactlyOnceWith(removed);
+    expect(realtime.isConversationRemoved(removed.conversationId)).toBe(true);
+    expect(queryClient.getQueryState(['matches'])?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(['conversations'])?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryData(['messages', removed.conversationId])).toBeUndefined();
+
+    socket.fire('match:removed', removed);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(onMatchRemoved).toHaveBeenCalledExactlyOnceWith(removed);
+    realtime.dispose();
+  });
+
   it('ignores malformed removal events', () => {
     const onMatchRemoved = vi.fn();
     const realtime = bindChatRealtime(socket as unknown as Socket, queryClient, { refreshSession: async () => true, onMatchRemoved });

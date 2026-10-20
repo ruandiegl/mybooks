@@ -1,29 +1,39 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Crypto from 'expo-crypto';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, Text, View } from 'react-native';
+import { AppButton } from '../../components/AppButton';
 import { ConnectionStateBanner } from '../../components/chat/ConnectionStateBanner';
+import { ChatHeader, ChatHeaderActions } from '../../components/chat/ChatHeader';
+import { ExchangeBooksSheet } from '../../components/chat/ExchangeBooksSheet';
 import { Message } from '../../components/chat/Message';
 import { MessageComposer } from '../../components/chat/MessageComposer';
 import { MessageScroller } from '../../components/chat/MessageScroller';
 import { TypingIndicator } from '../../components/chat/TypingIndicator';
 import { StateView } from '../../components/StateView';
 import { orderMessagePages, type MessagePages, updateMessageStatus, upsertMessage } from '../../features/chat/messageCache';
+import { resolveChatEntryState } from '../../features/chat/navigation';
+import { checkMatchRemovalStatus, removeMatchAfterConfirmation, type MatchRemovalStatus } from '../../features/chat/matchRemoval';
 import { joinConversationIfAuthorized, leaveConversation, updateMessagesIfConversationActive } from '../../features/chat/realtime';
 import { useChatRealtime } from '../../providers/ChatRealtimeProvider';
 import { api } from '../../services/api';
 import type { ApiEnvelope, Conversation, Message as MessageType, Paginated, User } from '../../types/api';
 import type { RootStackParamList } from '../../types/navigation';
+import { theme } from '../../styles/theme';
 import { styles } from './styles';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Chat'>;
-export function Chat({ route }: Props) {
+export function Chat({ route, navigation }: Props) {
   const { conversationId } = route.params;
   const queryClient = useQueryClient();
-  const { socket, connectionState, isConversationRemoved, pendingMatchRemovals } = useChatRealtime();
+  const { socket, connectionState, isConversationRemoved, pendingMatchRemovals, registerConfirmedMatchRemoved } = useChatRealtime();
   const [body, setBody] = useState('');
   const [otherUserTyping, setOtherUserTyping] = useState(false);
+  const [exchangeBooksVisible, setExchangeBooksVisible] = useState(false);
+  const [removalDialogVisible, setRemovalDialogVisible] = useState(false);
+  const [removalStatus, setRemovalStatus] = useState<MatchRemovalStatus | null>(null);
+  const [removalBusy, setRemovalBusy] = useState(false);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queryKey = useMemo(() => ['messages', conversationId] as const, [conversationId]);
   const me = useQuery({ queryKey: ['me'], queryFn: async () => (await api.get<ApiEnvelope<User>>('/api/v1/me')).data.data });
@@ -31,12 +41,18 @@ export function Chat({ route }: Props) {
     queryKey: ['conversations'],
     queryFn: async () => (await api.get<ApiEnvelope<Conversation[]>>('/api/v1/conversations')).data.data
   });
+  const conversation = conversations.data?.find((item) => item.id === conversationId);
   const refreshMembership = useCallback(async () => {
     const result = await conversations.refetch();
     return result.data || [];
   }, [conversations.refetch]);
   const conversationMemberConfirmed = Boolean(conversations.data?.some((item) => item.id === conversationId));
   const conversationEnded = isConversationRemoved(conversationId) || pendingMatchRemovals.some((item) => item.conversationId === conversationId);
+  const chatEntryState = resolveChatEntryState({
+    isLoading: conversations.isLoading,
+    isError: conversations.isError,
+    containsConversation: conversationMemberConfirmed
+  });
   const messages = useInfiniteQuery({
     queryKey,
     enabled: conversationMemberConfirmed && !conversationEnded,
@@ -107,6 +123,80 @@ export function Chat({ route }: Props) {
   }, [conversationId, isConversationRemoved, me.data?.id, queryClient, socket]);
 
   const ordered = useMemo(() => orderMessagePages(messages.data), [messages.data]);
+
+  const openExchangeBooks = useCallback(() => setExchangeBooksVisible(true), []);
+  const openRemovalDialog = useCallback(() => {
+    if (!conversation) return;
+    setRemovalStatus(null);
+    setRemovalDialogVisible(true);
+  }, [conversation]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: 'Conversa',
+      headerTitle: conversation
+        ? () => <ChatHeader name={conversation.otherUser.name} avatarUrl={conversation.otherUser.avatarUrl} />
+        : 'Conversa',
+      headerRight: () => <ChatHeaderActions
+        disabled={!conversation}
+        onOpenBooks={openExchangeBooks}
+        onRemoveMatch={openRemovalDialog}
+      />
+    });
+  }, [conversation, navigation, openExchangeBooks, openRemovalDialog]);
+
+  const closeRemovalDialog = useCallback(() => {
+    if (removalBusy) return;
+    setRemovalDialogVisible(false);
+    setRemovalStatus(null);
+  }, [removalBusy]);
+
+  const confirmRemoval = useCallback(async () => {
+    if (!conversation || removalBusy) return;
+    setRemovalBusy(true);
+    const result = await removeMatchAfterConfirmation({
+      confirmed: true,
+      conversationId,
+      deleteMatch: async () => {
+        const response = await api.delete('/api/v1/matches/' + conversation.matchId);
+        return { status: response.status };
+      },
+      getConversations: async () => (await api.get<ApiEnvelope<Conversation[]>>('/api/v1/conversations')).data.data.map(({ id }) => ({ id }))
+    });
+    setRemovalBusy(false);
+
+    if (result.status === 'removed') {
+      registerConfirmedMatchRemoved({ matchId: conversation.matchId, conversationId });
+      void queryClient.invalidateQueries({ queryKey: ['matches'] });
+      void queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      setRemovalDialogVisible(false);
+      setRemovalStatus(null);
+      return;
+    }
+
+    setRemovalStatus(result.status);
+  }, [conversation, conversationId, queryClient, registerConfirmedMatchRemoved, removalBusy]);
+
+  const checkRemoval = useCallback(async () => {
+    if (!conversation || removalBusy) return;
+    setRemovalBusy(true);
+    const result = await checkMatchRemovalStatus({
+      conversationId,
+      getConversations: async () => (await api.get<ApiEnvelope<Conversation[]>>('/api/v1/conversations')).data.data.map(({ id }) => ({ id }))
+    });
+    setRemovalBusy(false);
+
+    if (result.status === 'removed') {
+      registerConfirmedMatchRemoved({ matchId: conversation.matchId, conversationId });
+      void queryClient.invalidateQueries({ queryKey: ['matches'] });
+      void queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      setRemovalDialogVisible(false);
+      setRemovalStatus(null);
+      return;
+    }
+
+    setRemovalStatus(result.status);
+  }, [conversation, conversationId, queryClient, registerConfirmedMatchRemoved, removalBusy]);
 
   function updateMessages(updater: (old: MessagePages | undefined) => MessagePages | undefined) {
     return updateMessagesIfConversationActive(queryClient, conversationId, isConversationRemoved, updater);
@@ -181,8 +271,9 @@ export function Chat({ route }: Props) {
     typingTimer.current = setTimeout(stopTyping, 1200);
   }
 
-  if (conversations.isLoading) return <View style={styles.page}><StateView loading title="Validando conversa" /></View>;
-  if (conversationEnded || !conversationMemberConfirmed) return <View style={styles.page}><StateView title="Conversa não disponível" description="Esta conversa não está mais disponível para sua conta." icon="forum" /></View>;
+  if (chatEntryState === 'loading') return <View style={styles.page}><StateView loading title="Validando conversa" /></View>;
+  if (chatEntryState === 'retry') return <View style={styles.page}><StateView title="Não foi possível validar a conversa" description="Confira sua conexão e tente carregar a lista de conversas novamente." icon="cloud-off" actionLabel="Tentar novamente" onAction={() => conversations.refetch()} /></View>;
+  if (conversationEnded || chatEntryState === 'unavailable') return <View style={styles.page}><StateView title="Conversa não disponível" description="Esta conversa não está mais disponível para sua conta." icon="forum" /></View>;
   if (messages.isLoading) return <View style={styles.page}><StateView loading title="Carregando conversa" /></View>;
   if (messages.isError) return <View style={styles.page}><StateView title="Não foi possível carregar a conversa" icon="cloud-off" actionLabel="Tentar novamente" onAction={() => messages.refetch()} /></View>;
 
@@ -194,5 +285,53 @@ export function Chat({ route }: Props) {
       {otherUserTyping ? <TypingIndicator /> : null}
     </MessageScroller>
     <MessageComposer value={body} disabled={!me.data || !conversationMemberConfirmed || conversationEnded} onChangeText={changeBody} onBlur={stopTyping} onSend={send} />
+    <ExchangeBooksSheet
+      visible={exchangeBooksVisible}
+      exchangeBooks={conversation?.exchangeBooks ?? null}
+      onClose={() => setExchangeBooksVisible(false)}
+      onSelectBook={(book) => navigation.navigate('ExchangeBookDetails', { conversationId, bookId: book.id })}
+    />
+    <MatchRemovalDialog
+      visible={removalDialogVisible}
+      status={removalStatus}
+      busy={removalBusy}
+      onClose={closeRemovalDialog}
+      onConfirm={confirmRemoval}
+      onCheck={checkRemoval}
+    />
   </KeyboardAvoidingView>;
+}
+
+type RemovalDialogProps = {
+  visible: boolean;
+  status: MatchRemovalStatus | null;
+  busy: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  onCheck: () => void;
+};
+
+function MatchRemovalDialog({ visible, status, busy, onClose, onConfirm, onCheck }: RemovalDialogProps) {
+  const message = status === 'still-active'
+    ? 'A conversa ainda aparece na sua conta. Você pode tentar remover o match novamente.'
+    : status === 'uncertain'
+      ? 'Não foi possível confirmar se a remoção terminou. Verifique novamente antes de continuar.'
+      : 'A remoção encerra a conversa para as duas pessoas e apaga permanentemente o histórico de mensagens.';
+  const actionLabel = status === 'still-active' ? 'Tentar novamente' : status === 'uncertain' ? 'Verificar novamente' : 'Remover match';
+
+  return (
+    <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
+      <View style={styles.dialogOverlay}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Fechar confirmação" disabled={busy} style={styles.dialogBackdrop} onPress={onClose} />
+        <View accessibilityViewIsModal style={styles.dialog}>
+          <Text accessibilityRole="header" style={styles.dialogTitle}>{status ? 'Verifique a remoção' : 'Remover match?'}</Text>
+          <Text style={styles.dialogMessage}>{message}</Text>
+          <View style={styles.dialogActions}>
+            <AppButton label={status ? 'Fechar' : 'Cancelar'} variant="outline" disabled={busy} onPress={onClose} style={styles.dialogButton} />
+            <AppButton label={actionLabel} loading={busy} onPress={status === 'uncertain' ? onCheck : onConfirm} style={styles.dialogButton} />
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
 }

@@ -3,9 +3,17 @@ import { describe, expect, it } from 'vitest';
 import { linking } from '../linking';
 
 describe('web app deep links', () => {
-  it('maps direct book URLs to the book details route', () => {
+  it('maps direct book URLs to the generic book details route', () => {
     const state = getStateFromPath('/books/book-42', linking.config);
     expect(state?.routes.at(-1)).toMatchObject({ name: 'BookDetails', params: { bookId: 'book-42' } });
+  });
+
+  it('maps direct exchange-book URLs with both context IDs', () => {
+    const state = getStateFromPath('/conversations/conversation-7/books/book-42', linking.config);
+    expect(state?.routes.at(-1)).toMatchObject({
+      name: 'ExchangeBookDetails',
+      params: { conversationId: 'conversation-7', bookId: 'book-42' }
+    });
   });
 
   it('maps chat URLs and main tabs without requiring private data in the URL', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { shouldNavigateForRemovedMatch, type MatchRemovedEvent } from '../navigation';
+import { resolveChatEntryState, shouldNavigateForRemovedMatch, type MatchRemovedEvent } from '../navigation';
 
 const removal: MatchRemovedEvent = {
   matchId: '11111111-1111-4111-8111-111111111111',
@@ -50,5 +50,15 @@ describe('chat removal navigation', () => {
       ]
     };
     expect(shouldNavigateForRemovedMatch(state, removal, new Set())).toBe(false);
+  });
+});
+
+describe('chat entry state', () => {
+  it('offers a retry on conversation query failure before deciding membership is missing', () => {
+    expect(resolveChatEntryState({ isLoading: false, isError: true, containsConversation: false })).toBe('retry');
+  });
+
+  it('reports unavailable only after a successful query excludes the conversation', () => {
+    expect(resolveChatEntryState({ isLoading: false, isError: false, containsConversation: false })).toBe('unavailable');
   });
 });

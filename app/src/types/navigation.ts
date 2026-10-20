@@ -17,6 +17,7 @@ export type RootStackParamList = {
   OnboardingBooks: undefined;
   Main: NavigatorScreenParams<MainTabParamList>;
   BookCreate: undefined;
+  ExchangeBookDetails: { conversationId: string; bookId: string };
   BookDetails: { bookId: string };
   BookEdit: { bookId: string };
   Matches: undefined;

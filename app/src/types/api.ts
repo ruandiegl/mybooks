@@ -118,10 +118,26 @@ export type Message = {
   localStatus?: 'sending' | 'sent' | 'failed';
 };
 
+export type BookAvailability = 'AVAILABLE' | 'RESERVED' | 'EXCHANGED';
+
+export type ExchangeBookSummary = {
+  id: string;
+  title: string;
+  authors: string[];
+  coverUrl?: string | null;
+  availability: BookAvailability;
+};
+
+export type ExchangeBooks = {
+  mine: ExchangeBookSummary | null;
+  theirs: ExchangeBookSummary | null;
+};
+
 export type Conversation = {
   id: string;
   matchId: string;
   otherUser: Pick<User, 'id' | 'name' | 'avatarUrl' | 'city'>;
+  exchangeBooks: ExchangeBooks | null;
   lastMessage?: Message | null;
   updatedAt: string;
 };
