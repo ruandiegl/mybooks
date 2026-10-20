@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     clearMocks: true,
+    exclude: ['**/node_modules/**', '**/.git/**', 'tests/*.migration.integration.test.js'],
     coverage: {
       reporter: ['text', 'html'],
       include: ['src/modules/**/*.js', 'src/shared/**/*.js']
