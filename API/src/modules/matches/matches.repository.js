@@ -37,17 +37,17 @@ export const matchesRepository = {
       if (receipt && (receipt.actorId !== actorId || receipt.targetBookId !== targetBookId || receipt.action !== action)) {
         throw new AppError('Identificador de ação já utilizado.', { statusCode: 409, code: 'ACTION_ID_CONFLICT' });
       }
+      const where = { actorId_targetBookId: { actorId, targetBookId } };
+      if (receipt) {
+        // A receipt is authoritative for retries even when the book later changes availability.
+        return { interaction: await tx.interaction.findUnique({ where }), match: null };
+      }
       const targetBook = await tx.book.findUnique({ where: { id: targetBookId } });
       if (!targetBook?.ownerId || targetBook.availability !== 'AVAILABLE') {
         throw new AppError('Livro indisponível para descoberta.', { statusCode: 404, code: 'DISCOVERY_BOOK_NOT_FOUND' });
       }
       if (targetBook.ownerId === actorId) {
         throw new AppError('Você não pode interagir com o próprio livro.', { statusCode: 422, code: 'SELF_INTERACTION' });
-      }
-      const where = { actorId_targetBookId: { actorId, targetBookId } };
-      if (receipt) {
-        // Never replay an old action, even after the current interaction has changed.
-        return { interaction: await tx.interaction.findUnique({ where }), match: null };
       }
       await tx.interactionActionReceipt.create({ data: { actorId, targetBookId, action, clientActionId } });
       const interaction = await tx.interaction.upsert({

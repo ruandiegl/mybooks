@@ -34,6 +34,15 @@ describe('atomic interactions', () => {
     expect(tx.interaction.upsert).not.toHaveBeenCalled();
     expect(tx.match.upsert).not.toHaveBeenCalled();
   });
+  it('replays a recorded action after its target book becomes unavailable', async () => {
+    tx.interactionActionReceipt.findUnique.mockResolvedValue(action);
+    tx.book.findUnique.mockResolvedValue({ id: 'bookA', ownerId: b, availability: 'EXCHANGED' });
+    const result = await matchesRepository.applyInteraction(action);
+    expect(result).toEqual({ interaction: { id: 'interaction', ...action, action: 'PASS' }, match: null });
+    expect(tx.book.findUnique).not.toHaveBeenCalled();
+    expect(tx.interaction.upsert).not.toHaveBeenCalled();
+    expect(tx.match.upsert).not.toHaveBeenCalled();
+  });
   it.each([{ actorId: a }, { targetBookId: 'other' }, { action: 'PASS' }])('rejects action id with different scope (%j)', async (change) => {
     tx.interactionActionReceipt.findUnique.mockResolvedValue({ ...action, ...change });
     await expect(matchesRepository.applyInteraction(action)).rejects.toMatchObject({ statusCode: 409, code: 'ACTION_ID_CONFLICT' });
