@@ -40,6 +40,20 @@ Cada grupo tem limite configurável e headers `RateLimit`; ao exceder, responde 
 
 O restante do domínio mantém `/books`, `/discover`, `/interactions`, `/matches`, `/conversations` e as rotas de imagens de livros. Todas as respostas usam `{ data }`; erros usam `{ error: { code, message, requestId, fields? } }`.
 
+## Curtidas, conversas e livros da troca
+
+`POST /interactions` recebe `targetBookId`, `action` (`LIKE` ou `PASS`) e `clientActionId`, todos validados pela API. O identificador é globalmente único e vinculado ao ator, livro e ação: repetir a mesma ação retorna a interação atual sem reaplicar a ação nem recriar um match; reutilizar o identificador com outro escopo retorna `409 ACTION_ID_CONFLICT`. Conflitos transitórios esgotados na transação retornam `409 INTERACTION_RETRY_REQUIRED` ou `409 MATCH_RETRY_REQUIRED`.
+
+| Método | Caminho | Resultado |
+| --- | --- | --- |
+| GET | `/conversations` | conversas do usuário, incluindo `matchId`, `otherUser`, `exchangeBooks`, última mensagem e `updatedAt` |
+| GET | `/conversations/:conversationId/exchange-books/:bookId` | `{ data: Book }` com detalhes autorizados pelo vínculo livro-match-conversa |
+| DELETE | `/matches/:matchId` | remove o match para os dois participantes; resposta vazia `204` após commit |
+
+`exchangeBooks` é `null` para matches legados sem livro identificado ou contém `{ mine, theirs }`, orientado para quem fez a consulta. Cada resumo inclui somente `id`, `title`, `authors`, `coverUrl` e `availability`; cada lado pode ser `null` quando seu livro foi removido. O endpoint contextual exige participação na conversa e associação exata ao livro do match. Livros `RESERVED` e `EXCHANGED` continuam acessíveis nesse contexto. Conversa inexistente/não autorizada retorna `404 CONVERSATION_NOT_FOUND`; livro contextual ausente, não vinculado ou inacessível retorna o mesmo `404 EXCHANGE_BOOK_NOT_FOUND`, sem revelar a existência de dados de terceiros.
+
+`DELETE /matches/:matchId` aceita somente UUID e participante. Match inexistente e chamada por pessoa externa recebem o mesmo `404 MATCH_NOT_FOUND`. A transação serializável muda para `PASS` as curtidas atuais entre o par e apaga o match; a cascata elimina conversa, membros e mensagens. Os recibos de interação não são apagados pela remoção. A API publica `match:removed` aos dois usuários apenas depois do commit; o socket é removido da sala da conversa. O app reconcilia resultados sem confirmação HTTP conclusiva pela lista de conversas.
+
 ## ISBN e livros
 
 | Método | Caminho | Função |

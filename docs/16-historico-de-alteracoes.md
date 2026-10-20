@@ -1,5 +1,14 @@
 # 16. Histórico de alterações
 
+## 20/10/2026 — Livros da troca e remoção segura de match
+
+- Matches novos guardam as duas referências de livros em ordem canônica; os antigos não recebem relações inferidas. `InteractionActionReceipt` preserva os identificadores de curtida (com backfill dos existentes) para impedir que replay reative uma ação depois da remoção.
+- `GET /conversations` passou a retornar resumos de livros orientados para cada participante. `GET /conversations/:conversationId/exchange-books/:bookId` autoriza detalhes pelo membership e vínculo do livro ao match; dados ausentes ou sem acesso usam `404` sanitizado.
+- `DELETE /matches/:matchId` exige participante e remove o match, conversa, membros e mensagens para ambos, mudando as curtidas atuais do par para `PASS`. O endpoint responde sem corpo `204` após o commit e emite `match:removed` aos dois usuários.
+- O chat mostra avatar e nome no header, abre um bottom sheet para os livros e adiciona rota contextual com deep link compatível com reload na PWA. Remoção confirmada limpa os caches relacionados, mostra aviso dispensável ao outro participante e encerra a conversa ativa; resultados inconclusivos oferecem verificação/repetição.
+- Evidências: API com 29 arquivos/231 testes aprovados e um teste ignorado; PostgreSQL 16 descartável com 2 arquivos/11 testes de migração e concorrência; app com 16 arquivos/80 testes antes do ajuste pós-revisão, seguido de typecheck e 7 testes focados aprovados. Export web e smoke PWA passaram antes do ajuste pós-revisão; a repetição integrada permanece na Tarefa 7.
+- Permanece pendente a inspeção em dispositivo físico/remoto: não havia dispositivo local e a autenticação do MobileNext ainda aguarda conclusão no navegador. O teste PostgreSQL específico do endpoint contextual também não foi executado.
+
 ## 28/09/2026 — Base Web/PWA compartilhada
 
 - Foi adicionada a área `web/` com Dockerfile multi-stage, configuração Caddy, roteiro de publicação Railway e smoke test de proxy HTTP/WebSocket/cache. O proxy ainda não foi executado localmente porque Caddy não está instalado e o daemon Docker está inacessível.

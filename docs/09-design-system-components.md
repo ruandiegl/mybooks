@@ -16,6 +16,12 @@ A família oficial é Be Vietnam Pro. Títulos usam peso 700/800; corpo usa 400;
 
 `BarcodeScannerModal` é a superfície nativa de leitura em `BookCreate`. O modal mantém enquadramento legível, ação explícita para fechar e acesso visível ao cadastro manual. A permissão é pedida sob demanda; estados negado e bloqueado devem explicar o próximo passo sem impedir digitação, e leituras inválidas não substituem o ISBN atual nem disparam carregamento remoto.
 
+## Componentes de conversa e livros da troca
+
+O header do chat combina `Avatar`, nome e ações por ícone com rótulos de acessibilidade. O bottom sheet de livros da troca entra de baixo para cima, usa safe area, mantém no mínimo 48 dp/pt nos controles de toque e pode fechar pelo botão, backdrop, voltar do Android ou gesto para baixo no handle. Cada cartão mostra lado da troca, capa ou fallback, título, autores e disponibilidade; dados legados/removidos têm estado indisponível explícito.
+
+A confirmação de remoção informa que o histórico será apagado para ambos, oferece Cancelar sem efeito remoto e mantém estados distintos para match removido, ainda ativo ou resultado incerto. No resultado incerto, a ação verifica a lista de conversas; se o match seguir ativo, a pessoa pode tentar novamente. Avisos em Mensagens usam região viva acessível e podem ser dispensados individualmente.
+
 ## Regras shadcn no mobile
 
 O projeto segue princípios de composição, variantes e tokens do shadcn, implementados com primitives React Native. Não há DOM, Tailwind web ou Radix nas telas nativas. Estados de hover não substituem pressed, focus, disabled, loading, erro e acessibilidade mobile.

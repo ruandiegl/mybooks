@@ -19,6 +19,14 @@ Após confirmação, os guards derivam `auth → profile → books → app`. Per
 
 Toda tela deve tratar loading, erro, vazio e retry, respeitar safe area/teclado, usar rótulos visíveis e `accessibilityLabel` em ações por ícone.
 
+## Conversas, livros da troca e remoção de match
+
+O header do chat identifica a outra pessoa com nome e avatar do contrato de conversas e oferece ações para abrir os livros da troca e remover o match. Os livros abrem em um bottom sheet com os lados “Seu livro” e “Livro da outra pessoa”, capa/fallback, autores e disponibilidade. Um vínculo legado sem livro ou um livro removido aparece como indisponível; não se infere a associação por curtidas.
+
+Selecionar um livro abre a rota contextual `ExchangeBookDetails` com `conversationId` e `bookId`. O deep link `/conversations/:conversationId/books/:bookId` funciona também por abertura direta e reload na PWA. Essa tela consulta o endpoint contextual da conversa; um `404` oferece retorno a Mensagens. A rota genérica de detalhes `/books/:bookId` continua usando o contrato genérico de livros.
+
+Remover o match exige confirmação explícita que informa a exclusão permanente do histórico para as duas pessoas. Cancelar não envia requisição. A confirmação usa `DELETE /api/v1/matches/:matchId`; somente `204` confirma diretamente. Respostas inconclusivas são reconciliadas com a lista de conversas, com opções para verificar novamente ou tentar remover quando o match ainda consta ativo. Depois da confirmação, uma conversa removida do caminho de navegação atual leva a pessoa a Mensagens; o outro participante recebe um aviso dispensável. A sessão Socket.IO compartilhada e os detalhes de autorização estão em [tempo real e chat](08-tempo-real-chat.md).
+
 ## Imagens
 
 O app escolhe JPEG/PNG/WebP de até 8 MB, pede `presign`, envia com PUT e chama `complete`. No Safari, imagens HEIC e JPEG grandes podem ser redimensionadas e convertidas para JPEG antes do presign; se o navegador não conseguir decodificar HEIC, mostra orientação para exportar a foto como JPEG. Cancelamento da galeria não altera o estado. Uma URL arbitrária nunca é enviada como avatar.
