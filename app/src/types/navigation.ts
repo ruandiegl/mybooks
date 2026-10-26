@@ -21,5 +21,6 @@ export type RootStackParamList = {
   BookDetails: { bookId: string };
   BookEdit: { bookId: string };
   Matches: undefined;
+  StreakLeaderboard: undefined;
   Chat: { conversationId: string; title?: string };
 };

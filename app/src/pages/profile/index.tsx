@@ -2,7 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppButton } from '../../components/AppButton';
 import { AppScreen } from '../../components/AppScreen';
@@ -10,12 +10,15 @@ import { Avatar } from '../../components/Avatar';
 import { AvatarPicker } from '../../components/AvatarPicker';
 import { Badge } from '../../components/Badge';
 import { BookCard } from '../../components/BookCard';
+import { Card } from '../../components/Card';
 import { ProfileMetricRow, type ProfileMetric } from '../../components/ProfileMetricRow';
 import { ProfileTabs, type ProfileTabKey } from '../../components/ProfileTabs';
 import { StateView } from '../../components/StateView';
 import { TextField } from '../../components/TextField';
 import { TopBar } from '../../components/TopBar';
 import { maskBrazilianPhone } from '../../features/auth/inputMasks';
+import { gamificationApi, GAMIFICATION_LEADERBOARD_QUERY_KEY } from '../../features/gamification/api';
+import { presentLeaderboard } from '../../features/gamification/presentation';
 import { useSession } from '../../providers/SessionProvider';
 import { api, apiErrorMessage } from '../../services/api';
 import { Alert } from '../../services/notice';
@@ -47,6 +50,11 @@ export function Profile({ navigation }: Props) {
   const profileQuery = useQuery({
     queryKey: ['me'],
     queryFn: async () => (await api.get<ApiEnvelope<User>>('/api/v1/me')).data.data
+  });
+  const streakQuery = useQuery({
+    queryKey: GAMIFICATION_LEADERBOARD_QUERY_KEY,
+    queryFn: gamificationApi.getLeaderboard,
+    staleTime: 60_000
   });
   const booksQuery = useInfiniteQuery({
     queryKey: ['books', 'mine', 'profile'],
@@ -85,6 +93,7 @@ export function Profile({ navigation }: Props) {
   const books = booksQuery.data?.pages.flatMap((page) => page.items) || [];
   const profile = profileQuery.data;
   const stats = profile?.stats;
+  const leaderboard = streakQuery.data ? presentLeaderboard(streakQuery.data) : null;
   const metrics: ProfileMetric[] = stats ? [
     { value: stats.bookCount, label: 'livros', accessibilityLabel: `${stats.bookCount} livros na estante` },
     { value: stats.matchCount, label: 'matches', accessibilityLabel: `${stats.matchCount} matches ativos` },
@@ -131,8 +140,42 @@ export function Profile({ navigation }: Props) {
   }
 
   function refreshAll() {
-    void Promise.all([profileQuery.refetch(), booksQuery.refetch()]);
+    void Promise.all([profileQuery.refetch(), booksQuery.refetch(), streakQuery.refetch()]);
   }
+
+  const streakCard = leaderboard ? (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Sequência diária: ${leaderboard.currentUser.currentStreak} dias. ${leaderboard.currentUser.rankLabel}. Abrir ranking.`}
+      accessibilityHint="Abre o ranking de sequências diárias."
+      onPress={() => navigation.navigate('StreakLeaderboard')}
+      style={({ pressed }) => [styles.streakCard, pressed && styles.streakCardPressed]}
+    >
+      <View style={styles.streakIconWrap} importantForAccessibility="no-hide-descendants">
+        <MaterialIcons name="local-fire-department" size={26} color={theme.colors.primary} accessible={false} />
+      </View>
+      <View style={styles.streakCopy}>
+        <Text style={styles.streakEyebrow}>Sua sequência diária</Text>
+        <Text style={styles.streakValue}>
+          {leaderboard.currentUser.currentStreak > 0
+            ? `${leaderboard.currentUser.currentStreak} ${leaderboard.currentUser.currentStreak === 1 ? 'dia seguido' : 'dias seguidos'}`
+            : 'Comece uma nova sequência hoje'}
+        </Text>
+        <Text style={styles.streakRank}>{leaderboard.currentUser.rankLabel}</Text>
+      </View>
+      <MaterialIcons name="chevron-right" size={24} color={theme.colors.secondary} accessible={false} />
+    </Pressable>
+  ) : streakQuery.isLoading ? (
+    <Card style={styles.streakStateCard}>
+      <ActivityIndicator color={theme.colors.primary} />
+      <Text style={styles.streakStateText}>Carregando sua sequência diária…</Text>
+    </Card>
+  ) : (
+    <Card style={styles.streakStateCard}>
+      <Text style={styles.streakStateText}>Não foi possível carregar sua sequência agora.</Text>
+      <AppButton label="Tentar novamente" variant="outline" onPress={() => { void streakQuery.refetch(); }} />
+    </Card>
+  );
 
   const profileIntro = (
     <View style={styles.introStack}>
@@ -153,6 +196,7 @@ export function Profile({ navigation }: Props) {
         {profile?.bio ? <Text numberOfLines={3} style={styles.bio}>{profile.bio}</Text> : null}
       </View>
       {metrics.length === 3 ? <View style={styles.metrics}><ProfileMetricRow metrics={metrics} /></View> : null}
+      {streakCard}
       <ProfileTabs value={activeTab} onChange={setActiveTab} />
     </View>
   );

@@ -23,4 +23,14 @@ describe('web app deep links', () => {
     const discover = getStateFromPath('/discover', linking.config);
     expect(discover?.routes.at(-1)).toMatchObject({ name: 'Main', state: { routes: [{ name: 'Discover' }] } });
   });
+
+  it('maps the streak ranking to a stacked route and keeps Profile in the existing tabs', () => {
+    const ranking = getStateFromPath('/ranking/sequencia', linking.config);
+    expect(ranking?.routes.at(-1)).toMatchObject({ name: 'StreakLeaderboard' });
+
+    const profile = getStateFromPath('/profile', linking.config);
+    const mainRoute = profile?.routes.at(-1);
+    expect(mainRoute?.name).toBe('Main');
+    expect(mainRoute?.state?.routes.at(-1)?.name).toBe('Profile');
+  });
 });

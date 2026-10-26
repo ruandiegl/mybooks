@@ -168,3 +168,18 @@ export type GamificationCheckIn = {
   currentStreak: number;
   checkedInToday: true;
 };
+
+export type GamificationLeaderboardEntry = {
+  name: string;
+  avatarUrl: string | null;
+  currentStreak: number;
+  rank: number;
+};
+
+export type GamificationLeaderboard = {
+  currentUser: {
+    currentStreak: number;
+    rank: number | null;
+  };
+  entries: GamificationLeaderboardEntry[];
+};

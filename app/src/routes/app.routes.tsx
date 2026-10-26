@@ -7,6 +7,7 @@ import { BookDetails } from '../pages/BookDetails';
 import { BookEdit } from '../pages/BookEdit';
 import { Chat } from '../pages/Chat';
 import { Matches } from '../pages/Matches';
+import { StreakLeaderboard } from '../pages/StreakLeaderboard';
 import { OnboardingBooks } from '../pages/OnboardingBooks';
 import { OnboardingProfile } from '../pages/OnboardingProfile';
 import { deriveOnboardingState } from '../features/onboarding/onboarding';
@@ -78,6 +79,11 @@ export function AppRoutes({ navigationRef }: Props) {
         name="Matches"
         component={Matches}
         options={{ title: 'Seus matches' }}
+      />
+      <Stack.Screen
+        name="StreakLeaderboard"
+        component={StreakLeaderboard}
+        options={{ title: 'Ranking da sequência' }}
       />
       <Stack.Screen
         name="Chat"

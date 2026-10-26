@@ -25,6 +25,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
       BookDetails: 'books/:bookId',
       BookEdit: 'books/:bookId/edit',
       Matches: 'matches',
+      StreakLeaderboard: 'ranking/sequencia',
       Chat: 'chat/:conversationId'
     }
   }
