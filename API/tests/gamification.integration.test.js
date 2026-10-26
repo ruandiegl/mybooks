@@ -40,6 +40,10 @@ async function createUser({ name = 'Reader', streak = null, day = null } = {}) {
   return id;
 }
 
+function clockAt(day) {
+  return () => new Date(`${day}T12:00:00.000Z`);
+}
+
 beforeEach(async () => {
   schema = `gamification_test_${randomUUID().replaceAll('-', '')}`;
   admin = new PrismaClient({ datasources: { db: { url: databaseUrl.toString() } } });
@@ -84,14 +88,14 @@ describe('daily streak persistence against disposable PostgreSQL', () => {
   });
 
   it('starts a legacy account at one on its first check-in', async () => {
-    await expect(gamificationRepository.recordCheckIn(legacyUserId, '2026-10-26'))
+    await expect(gamificationRepository.recordCheckIn(legacyUserId, clockAt('2026-10-26')))
       .resolves.toEqual({ dayKey: '2026-10-26', currentStreak: 1, checkedInToday: true });
   });
 
   it('serializes concurrent check-ins for one user and day', async () => {
     const results = await Promise.all([
-      gamificationRepository.recordCheckIn(legacyUserId, '2026-10-26'),
-      gamificationRepository.recordCheckIn(legacyUserId, '2026-10-26')
+      gamificationRepository.recordCheckIn(legacyUserId, clockAt('2026-10-26')),
+      gamificationRepository.recordCheckIn(legacyUserId, clockAt('2026-10-26'))
     ]);
     expect(results.map(({ currentStreak }) => currentStreak)).toEqual([1, 1]);
     expect(await db.user.findUnique({ where: { id: legacyUserId }, select: { currentActiveStreak: true } }))
@@ -99,10 +103,10 @@ describe('daily streak persistence against disposable PostgreSQL', () => {
   });
 
   it('increments consecutive days and resets after a missed day', async () => {
-    await gamificationRepository.recordCheckIn(legacyUserId, '2026-10-26');
-    await expect(gamificationRepository.recordCheckIn(legacyUserId, '2026-10-27'))
+    await gamificationRepository.recordCheckIn(legacyUserId, clockAt('2026-10-26'));
+    await expect(gamificationRepository.recordCheckIn(legacyUserId, clockAt('2026-10-27')))
       .resolves.toMatchObject({ currentStreak: 2 });
-    await expect(gamificationRepository.recordCheckIn(legacyUserId, '2026-10-29'))
+    await expect(gamificationRepository.recordCheckIn(legacyUserId, clockAt('2026-10-29')))
       .resolves.toMatchObject({ currentStreak: 1 });
   });
 

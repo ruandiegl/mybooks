@@ -53,7 +53,7 @@ describe('private gamification routes', () => {
     const response = await request(authenticatedTestApp()).post('/api/v1/gamification/check-in');
     expect(response.status).toBe(200);
     expect(response.body.data).toEqual({ dayKey: '2026-10-26', currentStreak: 3, checkedInToday: true });
-    expect(mocks.gamificationRepository.recordCheckIn).toHaveBeenCalledWith(currentUserId, expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/));
+    expect(mocks.gamificationRepository.recordCheckIn).toHaveBeenCalledWith(currentUserId);
   });
 
   it('rejects client-supplied user or date fields', async () => {

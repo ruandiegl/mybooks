@@ -27,8 +27,7 @@ function serializeLeaderboard(result) {
 
 export async function checkIn(req, res) {
   checkInSchema.parse(req.body ?? {});
-  const today = getSaoPauloDayKey(new Date());
-  const result = await gamificationRepository.recordCheckIn(req.currentUser.id, today);
+  const result = await gamificationRepository.recordCheckIn(req.currentUser.id);
   return res.status(200).json({ data: serializeCheckIn(result) });
 }
 

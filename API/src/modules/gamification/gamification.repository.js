@@ -1,6 +1,6 @@
 import { prisma } from '../../shared/database/prisma.js';
 import { AppError } from '../../shared/errors/AppError.js';
-import { calculateCheckIn, isStreakActive } from './gamification.service.js';
+import { calculateCheckIn, getSaoPauloDayKey, isStreakActive } from './gamification.service.js';
 
 function toDayKey(date) {
   return date ? date.toISOString().slice(0, 10) : null;
@@ -21,10 +21,12 @@ function userNotFound() {
 }
 
 export const gamificationRepository = {
-  async recordCheckIn(userId, today) {
+  async recordCheckIn(userId, getCurrentDate = () => new Date()) {
     return prisma.$transaction(async (tx) => {
       const lockedRows = await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
       if (lockedRows.length === 0) throw userNotFound();
+
+      const today = getSaoPauloDayKey(getCurrentDate());
 
       const user = await tx.user.findUnique({
         where: { id: userId },
