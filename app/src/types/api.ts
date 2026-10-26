@@ -162,3 +162,9 @@ export type IsbnLookup = {
 export type ApiEnvelope<T> = {
   data: T;
 };
+
+export type GamificationCheckIn = {
+  dayKey: string;
+  currentStreak: number;
+  checkedInToday: true;
+};

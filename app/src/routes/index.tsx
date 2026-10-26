@@ -1,6 +1,7 @@
 import { DefaultTheme, NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { ActivityIndicator, View } from 'react-native';
 import { ChatRealtimeProvider } from '../providers/ChatRealtimeProvider';
+import { DailyCheckInCoordinator } from '../features/gamification/DailyCheckInCoordinator';
 import { useSession } from '../providers/SessionProvider';
 import { theme } from '../styles/theme';
 import type { RootStackParamList } from '../types/navigation';
@@ -35,7 +36,7 @@ export function Routes() {
 
   return (
     <NavigationContainer ref={navigationRef} theme={navigationTheme} linking={linking}>
-      {isSignedIn ? <ChatRealtimeProvider><AppRoutes navigationRef={navigationRef} /></ChatRealtimeProvider> : <AuthRoutes />}
+      {isSignedIn ? <ChatRealtimeProvider><DailyCheckInCoordinator /><AppRoutes navigationRef={navigationRef} /></ChatRealtimeProvider> : <AuthRoutes />}
     </NavigationContainer>
   );
 }
