@@ -32,6 +32,8 @@ O perfil tem uma única área de identidade em fluxo vertical, sem banner, cart�
 
 As abas “Minha estante” e “Sobre você” ficam antes do conteúdo. A estante mantém duas colunas de largura igual, inclusive com quantidade ímpar de livros, e uma ação magenta de adicionar. No estado vazio, a ação aparece junto da orientação para cadastrar o primeiro livro. Dados pessoais e saída da conta ficam em “Sobre você”, separados por linhas discretas. O avatar usa iniciais quando a imagem está ausente ou falha.
 
+O Perfil também inclui um cartão de sequência diária dentro da identidade, com dias atuais, posição e affordance para abrir o ranking. O ranking é uma tela empilhada, não uma aba: primeiro apresenta a sequência/posição da própria pessoa e depois linhas públicas com posição, avatar, nome e dias. Use os tokens existentes, ícone vetorial `local-fire-department` e alvos acessíveis; a cor não é o único modo de comunicar posição ou sequência. Estados de carregamento, erro/retry e lista vazia ficam explícitos.
+
 Referências de organização: [perfil do Spotify](https://support.spotify.com/us/article/spotify-profile/) (identidade e coleção) e [perfil do Strava](https://support.strava.com/en-us/articles/15402175-your-strava-profile-page) (resumo de atividade). A composição adapta Avatar, Tabs, Empty e Button do [shadcn/ui](https://ui.shadcn.com/docs/components) aos componentes React Native existentes. Paleta e família Be Vietnam Pro permanecem as oficiais.
 
 ## Navegação nativa no iOS

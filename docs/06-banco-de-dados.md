@@ -10,6 +10,12 @@
 
 Livros, imagens, interações, matches, conversas e mensagens mantêm ownership e índices do domínio. IDs são UUIDs e timestamps são ISO 8601 nas respostas.
 
+## Sequência diária
+
+A migração `20261026120000_daily_active_streak` acrescenta `User.lastActiveDay DATE NULL` e `User.currentActiveStreak INTEGER NULL`, com índice para a consulta temporal do ranking. Os valores legados ficam nulos porque não existe histórico confiável para backfill; o primeiro check-in registrado inicia em 1. A solução armazena somente a última data ativa e a sequência atual, sem tabela de eventos ou recorde histórico. Esses campos não fazem parte dos seletores de usuário público/autenticação.
+
+O check-in usa transação `ReadCommitted` e `SELECT ... FOR UPDATE` na linha de `User`: requisições simultâneas aguardam a primeira atualização, relêem o estado já confirmado e calculam o dia de São Paulo depois do lock, evitando gravar uma data antiga após uma espera que atravessou a meia-noite. A consulta do ranking usa snapshot `RepeatableRead`, filtra datas hoje/ontem no fuso da aplicação e calcula posição a partir da sequência positiva.
+
 ## Livros da troca e recibos de interação
 
 A migração `20261020120000_match_exchange_books_and_interaction_receipts` adiciona `Match.bookAId` e `Match.bookBId` como relações opcionais com `Book`, ambas com `ON DELETE SET NULL`. Para novos matches, A/B seguem a ordem canônica dos IDs dos donos. Matches antigos permanecem sem livros associados: a migração não tenta deduzir a troca a partir de curtidas históricas. Se um dos livros for apagado, o outro vínculo é preservado.

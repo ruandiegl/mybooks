@@ -38,3 +38,9 @@ O app usa Expo 57, React Native 0.86 e `expo-camera` 57.0.5. Em `BookCreate`, a 
 Antes de qualquer chamada HTTP, o cliente aceita somente 13 dígitos com prefixo de livro `978` ou `979` e checksum EAN-13 válido. QR, URL, texto e EAN de produto não consultam a API. Uma leitura aceita preenche o ISBN e chama automaticamente `GET /api/v1/isbn/:isbn`; os dados retornados permanecem editáveis e precisam ser revisados antes do cadastro.
 
 O cadastro manual continua disponível em todos os estados e aceita ISBN-10 válido. A leitura física direta de ISBN-10 não faz parte do scanner. Nenhum frame ou foto é enviado ou armazenado; uma capa externa retornada pela consulta também não é persistida automaticamente.
+
+## Gamificação de sequência diária
+
+`DailyCheckInCoordinator` observa a sessão já restaurada ou estabelecida e o retorno do app ao estado `active`. O scheduler faz no máximo uma chamada bem-sucedida por dia de `America/Sao_Paulo` por usuário em memória, deduplica eventos concorrentes, permite tentar novamente após falha e invalida `['gamification', 'leaderboard']`. O endpoint é idempotente e o servidor é a autoridade final.
+
+O Perfil mostra um cartão de sequência e posição; tocar abre a rota empilhada `StreakLeaderboard`, sem criar uma quinta aba. O deep link da PWA é `/ranking/sequencia`. A tela mostra primeiro a posição pessoal e depois as 20 primeiras posições, incluindo empates no corte; usa apenas nome público e avatar na lista. Loading, erro com retry e ausência de sequências ativas têm estados explícitos.

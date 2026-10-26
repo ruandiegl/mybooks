@@ -9,10 +9,11 @@ O TrocaLivros conecta leitores interessados em colocar livros em circulação. C
 - cadastro obrigatório com e-mail, senha, CPF e celular;
 - onboarding opcional e retomável de perfil e livros;
 - perfil, biblioteca, descoberta, matches e chat em tempo real;
+- gamificação básica com sequência atual de dias e ranking acessível pelo Perfil;
 - ISBN pela BrasilAPI, imagens e avatares no Cloudflare R2 e e-mails pelo Resend;
 - API e PostgreSQL preparados para Docker.
 
-Cobrança real está fora do MVP. O produto planeja simular o Premium com 30 dias de teste e 15 curtidas grátis por dia, mas essa funcionalidade ainda não está implementada neste checkout. Logística, moderação avançada, recomendação algorítmica, push e painel administrativo também continuam fora do escopo. CPF e telefone são coletados para proteção da conta e futura assinatura; a finalidade e retenção precisam de validação jurídica antes da produção.
+Cobrança real está fora do MVP. O produto planeja simular o Premium com 30 dias de teste e 15 curtidas grátis por dia, mas essa funcionalidade ainda não está implementada neste checkout. A gamificação usa somente o check-in diário e a sequência atual; não guarda histórico de acessos. Logística, moderação avançada, recomendação algorítmica, push e painel administrativo também continuam fora do escopo. CPF e telefone são coletados para proteção da conta e futura assinatura; a finalidade e retenção precisam de validação jurídica antes da produção.
 
 ## Stack
 

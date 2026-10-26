@@ -91,3 +91,10 @@
 - As alterações locais posteriores foram integradas em `main`, incluindo configuração local, seeds e capas, TrocaLivros, autenticação própria, onboarding, leitura de ISBN e documentação.
 - O arquivo `.env` da raiz permanece local e foi incluído no `.gitignore`.
 - A integração foi feita localmente; nenhum commit foi enviado ao GitHub.
+
+## 26/10/2026 — Gamificação de sequência diária
+
+- A API ganhou campos opcionais para a última data ativa e a sequência atual, endpoints privados de check-in diário e ranking, data oficial em `America/Sao_Paulo`, serialização de check-ins concorrentes e respostas públicas sem dados de contato.
+- O app registra presença após restaurar/estabelecer sessão e retornar ao primeiro plano; o Perfil apresenta a sequência e abre a rota empilhada `/ranking/sequencia`. Não foi criada uma aba adicional nem histórico diário.
+- Verificações locais: API 32 arquivos/248 testes (1 ignorado) e lint; app 19 arquivos/95 testes e typecheck; Prisma validate/generate; PWA export de 835 módulos e smoke com 32 assets fingerprintados; export Android Hermes aprovado com bundle de 2,6 MB (sem gerar APK). Teste unitário cobre a leitura da data depois do lock do check-in.
+- Pendências: integração concorrente/migração em PostgreSQL local descartável e validação visual em aparelho físico. A migração não foi aplicada à Railway nem a qualquer banco de produção.

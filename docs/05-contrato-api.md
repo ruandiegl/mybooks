@@ -63,3 +63,14 @@ O restante do domínio mantém `/books`, `/discover`, `/interactions`, `/matches
 O parâmetro aceita ISBN-10 ou ISBN-13 conforme a validação do domínio; a leitura por câmera envia somente EAN-13 de livro com prefixo `978`/`979`. A API valida formato e checksum novamente, independentemente do cliente, e valida o payload externo antes de mapeá-lo. A consulta usa cache de 10 minutos limitado a 500 entradas, timeout e limite dedicado de 30 requisições por janela de 60 segundos, por usuário autenticado e com IP como fallback.
 
 Os status esperados de falha são `404` para ISBN não encontrado, `422` para parâmetro inválido, `429` para limite excedido e `503` para indisponibilidade da consulta externa. Todos mantêm o envelope seguro de erro e permitem continuar pelo cadastro manual; o endpoint não cadastra o livro nem persiste automaticamente eventual URL de capa externa.
+
+## Gamificação
+
+Ambas as rotas são privadas e usam `req.currentUser.id`; o check-in não aceita usuário nem data no corpo.
+
+| Método | Caminho | Resultado |
+| --- | --- | --- |
+| POST | `/gamification/check-in` | `{ data: { dayKey, currentStreak, checkedInToday } }`; idempotente para o dia do servidor |
+| GET | `/gamification/leaderboard` | `{ data: { currentUser: { currentStreak, rank }, entries: [{ name, avatarUrl, currentStreak, rank }] } }` |
+
+O servidor usa o dia civil em `America/Sao_Paulo`. Primeiro check-in começa em 1; check-in repetido no mesmo dia mantém a sequência; dia consecutivo incrementa; após um dia inteiro sem presença, o próximo check-in reinicia em 1. No ranking, sequências da última presença de hoje ou ontem permanecem ativas; sequências mais antigas são excluídas antes mesmo de um novo acesso. Só sequências positivas entram. Empates usam posições competitivas (`1, 1, 3`); retornam-se as 20 primeiras posições e todos os participantes empatados no corte, além da posição pessoal mesmo fora da lista. A resposta pública não contém ID, e-mail, telefone ou datas de atividade.

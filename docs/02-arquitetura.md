@@ -19,6 +19,8 @@ Express ──► Resend (verificação, recuperação e boas-vindas)
 
 A API é a única autoridade de identidade. O cliente nunca escolhe `userId`/owner; rotas privadas usam `req.currentUser.id`. O access token contém `sub` e `sid`, e só é aceito se a sessão correspondente estiver ativa, não revogada, não expirada e vinculada a um usuário verificado.
 
+A presença diária também tem a API como autoridade: o app envia check-in após restaurar/estabelecer uma sessão e ao retornar ao primeiro plano; o servidor determina o dia no fuso `America/Sao_Paulo`, serializa atualizações concorrentes por usuário e não confia em data ou identidade vindas do cliente. O app deduplica chamadas como otimização e invalida a query do ranking após sucesso.
+
 Cada módulo da API separa rotas, controllers, services, repositories e schemas Zod. No app, `SessionProvider` usa um transporte nativo ou web: Android/iOS persiste tokens no SecureStore; a PWA mantém o access token em memória e recupera a sessão por cookie HttpOnly. `services/api.ts` injeta bearer e coordena um único refresh para respostas 401 concorrentes.
 
 Na criação de livro, o scanner nativo reconhece apenas EAN-13 e faz a primeira validação no dispositivo. Somente códigos de livro com prefixo `978`/`979` e checksum válido seguem para a rota privada de ISBN; QR, URL, texto e EAN de outros produtos são descartados antes da rede. A API repete a validação com Zod e checksum, valida e limita o payload recebido da BrasilAPI, consulta o provedor com timeout e cache de 10 minutos limitado a 500 entradas e aplica limite dedicado por usuário autenticado, com IP como fallback. O resultado apenas preenche o formulário para revisão: não cria livro nem persiste capa automaticamente.

@@ -4,7 +4,9 @@ Este diretório é a fonte de verdade das guidelines, decisões técnicas e cont
 
 ## Estado do MVP
 
-A fundação do MVP usa aplicativo Expo/React Native, API Express modular, Prisma/PostgreSQL, autenticação própria, consulta ISBN pela BrasilAPI, upload direto para Cloudflare R2, e-mail transacional por Resend, matches e chat Socket.IO. A PWA compartilha as telas do app pelo React Native Web. Build e smoke PWA locais passam; faltam publicar o serviço web na Railway, confirmar a sessão no domínio HTTPS e concluir o aceite em iPhone. Clerk não faz parte do runtime.
+A fundação do MVP usa aplicativo Expo/React Native, API Express modular, Prisma/PostgreSQL, autenticação própria, consulta ISBN pela BrasilAPI, upload direto para Cloudflare R2, e-mail transacional por Resend, matches e chat Socket.IO. A PWA compartilha as telas do app pelo React Native Web e já está publicada como serviço Railway; o aceite completo de sessão em domínio HTTPS e em iPhone continua separado da validação local. Clerk não faz parte do runtime.
+
+A gamificação básica registra uma presença por dia em `America/Sao_Paulo` e apresenta a sequência atual e um ranking no Perfil, usando endpoints privados da API. Ela não inclui cobrança, histórico diário ou recompensas.
 
 ## Índice
 

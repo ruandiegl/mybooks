@@ -79,3 +79,15 @@ Os exports Android e web confirmam empacotamento, não comportamento em disposit
 | LGPD | aprovação de finalidade, base legal e retenção de CPF/celular |
 
 Não declarar produção pronta enquanto esses itens estiverem pendentes.
+
+## Gamificação de sequência diária — 26/10/2026
+
+| Superfície | Validação | Resultado |
+| --- | --- | --- |
+| API | Regras puras, rotas autenticadas, privacidade, regressão de concorrência na virada do dia, lint e suíte completa | 32 arquivos passaram, 1 ignorado; 248 testes passaram, 1 ignorado; lint passou. |
+| Prisma | `npx prisma validate` e `npx prisma generate` com campos opcionais da sequência | Aprovados; a migração ainda não foi aplicada a nenhum banco. |
+| PostgreSQL local descartável | Migração, check-in concorrente/idempotente e corte do ranking | Pendente: serviço Docker local não iniciado; teste existe e a configuração só aceita loopback com nome `*_test` e `TEST_DATABASE_DISPOSABLE=true`. Nenhum banco Railway/produção foi usado. |
+| App | Scheduler, regras de apresentação, deep link e suíte completa | 19 arquivos e 95 testes passaram; typecheck passou. |
+| PWA | `npm run build:web` e `npm run test:pwa` | Export de 835 módulos; 32 recursos fingerprintados no service worker; smoke aprovado. |
+| Android | `npx expo export --platform android` | Export Hermes aprovado; bundle de 2,6 MB. É validação de export, não geração de APK nem aceite em aparelho. |
+| Android/iOS físico | Aparência, leitor de tela, texto ampliado e uso real | Pendente; build/typecheck não substituem validação em dispositivo. |
