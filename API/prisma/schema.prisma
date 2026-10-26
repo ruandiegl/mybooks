@@ -28,6 +28,8 @@ model User {
   avatarUrl                  String?
   bio                        String?
   city                       String?
+  lastActiveDay              DateTime?            @db.Date
+  currentActiveStreak        Int?
   books                      Book[]
   interactions               Interaction[]        @relation("InteractionActor")
   interactionActionReceipts  InteractionActionReceipt[]
@@ -41,6 +43,7 @@ model User {
   updatedAt                  DateTime             @updatedAt
 
   @@index([pendingRegistrationExpiresAt])
+  @@index([lastActiveDay, currentActiveStreak])
 }
 
 model AuthSession {

@@ -21,7 +21,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     clearMocks: true,
-    include: ['tests/*.migration.integration.test.js', 'tests/matches.integration.test.js'],
+    include: ['tests/*.migration.integration.test.js', 'tests/matches.integration.test.js', 'tests/gamification.integration.test.js'],
     fileParallelism: false,
     hookTimeout: 60000,
     testTimeout: 30000
