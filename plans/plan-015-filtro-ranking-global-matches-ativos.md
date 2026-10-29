@@ -83,4 +83,4 @@
 - [x] **Step 1: Documentar os dois filtros, critério de match visível, escopo do cartão do Perfil e `scope` opcional**.
 - [x] **Step 2: Rodar a suíte completa de API e app, lint, tipagem e build PWA**; anotar qualquer limitação de PostgreSQL ou aparelho físico sem afirmar validação ausente.
 - [x] **Step 3: Revisar diff, confirmar que nenhuma migração/schema foi alterada e commitar documentação** com `docs(gamification): describe active-match leaderboard`.
-- [ ] **Step 4: Publicar na `main` e verificar deployments API/PWA e endpoints públicos** conforme autorização de publicação vigente.
+- [x] **Step 4: Publicar na `main` e verificar deployments API/PWA e endpoints públicos** conforme autorização de publicação vigente. Deploy `691263b` bem-sucedido em ambos os serviços; `/` e `/health` responderam 200, e o ranking privado respondeu 401 sem sessão.
