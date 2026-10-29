@@ -32,9 +32,10 @@ export function StreakLeaderboard() {
       {(['global', 'matches'] as const).map((option) => (
         <Pressable
           key={option}
-          accessibilityRole="button"
+          accessibilityRole="radio"
           accessibilityLabel={option === 'global' ? 'Global' : 'Matches ativos'}
-          accessibilityState={{ selected: scope === option }}
+          accessibilityState={{ checked: scope === option }}
+          aria-checked={scope === option}
           onPress={() => setScope(option)}
           style={[styles.scopeOption, scope === option && styles.scopeOptionSelected]}
         >

@@ -87,6 +87,16 @@ describe('chat realtime lifecycle and cache effects', () => {
     realtime.dispose();
   });
 
+  it('refreshes the active-match ranking when the other person creates a match', () => {
+    queryClient.setQueryData(['gamification', 'leaderboard', 'matches'], { entries: [] });
+    const realtime = bindChatRealtime(socket as unknown as Socket, queryClient, {});
+
+    socket.fire('match:created');
+
+    expect(queryClient.getQueryState(['gamification', 'leaderboard', 'matches'])?.isInvalidated).toBe(true);
+    realtime.dispose();
+  });
+
   it('reconciles a removal missed while offline and purges an open contextual book', async () => {
     queryClient.setQueryData(['conversations'], [{ id: removed.conversationId, matchId: removed.matchId }]);
     queryClient.setQueryData(['messages', removed.conversationId], { pages: ['private messages'] });

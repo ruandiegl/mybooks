@@ -21,7 +21,7 @@ Permitir que a pessoa compare sua sequência de dias consecutivos com toda a com
 ## Implementação e limites
 
 - Estender `GET /api/v1/gamification/leaderboard` com filtro opcional, validado. Ausência do parâmetro mantém a resposta global atual. Nenhuma migração de banco.
-- Usar chaves de cache separadas por filtro. Invalidar o ranking de matches quando match ou bloqueio mudar. A API continua sendo a autoridade; o app não calcula posições.
+- Usar chaves de cache separadas por filtro. Invalidar o ranking de matches quando match ou bloqueio mudar; o servidor emite `match:created` às duas pessoas para atualizar também quem não concluiu a interação. A API continua sendo a autoridade; o app não calcula posições.
 - Mostrar seleção acessível de filtros, carregamento, erro e estado vazio contextual na mesma tela Android/PWA.
 - Não alterar check-in, pontuação de reputação, regras de Premium, navegação nem visibilidade de perfis.
 

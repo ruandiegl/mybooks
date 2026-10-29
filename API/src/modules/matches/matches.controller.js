@@ -2,6 +2,10 @@ import { matchesService } from './matches.service.js';
 
 export async function createInteraction(req, res) {
   const result = await matchesService.interact(req.currentUser.id, req.body);
+  if (result.match?.status === 'ACTIVE') {
+    const io = req.app.get('io');
+    io?.to(['user:' + req.currentUser.id, 'user:' + result.match.otherUser.id]).emit('match:created');
+  }
   return res.status(200).json({ data: result });
 }
 

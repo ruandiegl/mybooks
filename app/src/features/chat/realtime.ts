@@ -153,10 +153,15 @@ export function bindChatRealtime(socket: Socket, queryClient: QueryClient, optio
     });
   };
 
+  const onMatchCreated = () => {
+    if (active) invalidateConversationLists();
+  };
+
   socket.on('connect', onConnect);
   socket.on('disconnect', onDisconnect);
   socket.on('connect_error', onConnectError);
   socket.on('match:removed', onMatchRemoved);
+  socket.on('match:created', onMatchCreated);
 
   return {
     handleMatchRemoved: onMatchRemoved,
@@ -168,6 +173,7 @@ export function bindChatRealtime(socket: Socket, queryClient: QueryClient, optio
       socket.off('disconnect', onDisconnect);
       socket.off('connect_error', onConnectError);
       socket.off('match:removed', onMatchRemoved);
+      socket.off('match:created', onMatchCreated);
     },
     isConversationRemoved(conversationId: string) {
       return removedConversationIds.has(conversationId);

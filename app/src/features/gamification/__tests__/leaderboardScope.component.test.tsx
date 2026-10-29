@@ -56,13 +56,14 @@ describe('leaderboard scope selector', () => {
     expect(await screen.findByLabelText(/Posição 1º, Global Reader/)).toBeTruthy();
     expect(screen.getByText('7º lugar')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Matches ativos' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Matches ativos' }));
+    expect(screen.getByRole('radio', { name: 'Matches ativos' }).getAttribute('aria-checked')).toBe('true');
     expect(await screen.findByLabelText(/Posição 1º, Matched Reader/)).toBeTruthy();
     expect(screen.getByText('2º lugar')).toBeTruthy();
     expect(screen.queryByLabelText(/Global Reader/)).toBeNull();
     expect(boundary.get).toHaveBeenCalledWith('/api/v1/gamification/leaderboard', { params: { scope: 'matches' } });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Global' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Global' }));
     expect(await screen.findByLabelText(/Posição 1º, Global Reader/)).toBeTruthy();
     expect(screen.getByText('7º lugar')).toBeTruthy();
     expect(screen.queryByLabelText(/Matched Reader/)).toBeNull();
@@ -74,7 +75,7 @@ describe('leaderboard scope selector', () => {
       : globalRanking } }));
     mount();
     await screen.findByLabelText(/Posição 1º, Global Reader/);
-    fireEvent.click(screen.getByRole('button', { name: 'Matches ativos' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Matches ativos' }));
     expect(await screen.findByText(/Nenhuma sequência entre seus matches/)).toBeTruthy();
     expect(screen.getByText('4 dias seguidos')).toBeTruthy();
     expect(screen.getByText('Sem posição ainda')).toBeTruthy();
@@ -87,9 +88,9 @@ describe('leaderboard scope selector', () => {
     });
     mount();
     await screen.findByLabelText(/Posição 1º, Global Reader/);
-    fireEvent.click(screen.getByRole('button', { name: 'Matches ativos' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Matches ativos' }));
     expect(await screen.findByText(/Não foi possível abrir o ranking/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Global' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Global' }));
     await waitFor(() => expect(screen.getByLabelText(/Posição 1º, Global Reader/)).toBeTruthy());
   });
 });
