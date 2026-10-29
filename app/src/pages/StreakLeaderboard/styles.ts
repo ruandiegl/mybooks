@@ -3,7 +3,9 @@ import type { AppTheme } from '../../styles/theme';
 
 export const createStyles = (theme: AppTheme) => StyleSheet.create({
   page: { width: '100%', maxWidth: 672, alignSelf: 'center' },
-  content: { paddingTop: theme.spacing.md, paddingBottom: theme.spacing.xxl, gap: theme.spacing.lg },
+  content: { paddingTop: theme.spacing.md, paddingBottom: theme.spacing.xxl },
+  header: { gap: theme.spacing.lg, marginBottom: theme.spacing.lg },
+  entrySeparator: { height: theme.spacing.sm },
   summaryCard: { gap: theme.spacing.md },
   summaryHeading: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md },
   flameIcon: { width: 56, height: 56, alignItems: 'center', justifyContent: 'center', borderRadius: theme.radius.pill, backgroundColor: theme.colors.primarySoft },
@@ -17,7 +19,6 @@ export const createStyles = (theme: AppTheme) => StyleSheet.create({
   sectionHeading: { gap: theme.spacing.xs },
   sectionTitle: { color: theme.colors.foreground, fontFamily: theme.typography.bold, fontSize: 19, lineHeight: 27 },
   sectionDescription: { color: theme.colors.mutedForeground, fontFamily: theme.typography.regular, fontSize: 13, lineHeight: 20 },
-  entries: { gap: theme.spacing.sm },
   entry: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, paddingHorizontal: theme.spacing.sm, paddingVertical: theme.spacing.xs, borderWidth: 1, borderColor: theme.colors.outline, borderRadius: theme.radius.md, backgroundColor: theme.colors.surface },
   position: { minWidth: 44, color: theme.colors.secondary, fontFamily: theme.typography.bold, fontSize: 15, lineHeight: 22 },
   entryCopy: { flex: 1, minWidth: 0, gap: theme.spacing.xxs },

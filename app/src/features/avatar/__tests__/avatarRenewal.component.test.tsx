@@ -36,4 +36,19 @@ describe('mounted renewal clocks and foreground',()=>{
   visible=true;await act(async()=>{document.dispatchEvent(new Event('visibilitychange'));document.dispatchEvent(new Event('visibilitychange'));});
   expect(requests).toBe(1);
  });
+ it('renews a conversation header avatar and exchange cover from the shared conversation query',async()=>{
+  let requests=0;
+  renderHook(()=>{
+   const[data,setData]=useState({
+    otherUser:{avatarUrlExpiresAt:new Date(Date.now()+60000).toISOString()},
+    exchangeBooks:{mine:{coverUrlExpiresAt:new Date(Date.now()+30000).toISOString()}}
+   });
+   useAvatarRefresh(data,async()=>{requests++;setData({
+    otherUser:{avatarUrlExpiresAt:new Date(Date.now()+60000).toISOString()},
+    exchangeBooks:{mine:{coverUrlExpiresAt:new Date(Date.now()+30000).toISOString()}}
+   });});
+  });
+  await act(async()=>{await vi.advanceTimersByTimeAsync(24000);});
+  expect(requests).toBe(1);
+ });
 });

@@ -47,6 +47,8 @@ export function Chat({ route, navigation }: Props) {
     queryFn: async () => (await api.get<ApiEnvelope<Conversation[]>>('/api/v1/conversations')).data.data
   });
   const conversation = conversations.data?.find((item) => item.id === conversationId);
+  const isFocused = useIsFocused();
+  const refreshConversationMedia = useAvatarRefresh(conversation, conversations.refetch, isFocused);
   const refreshMembership = useCallback(async () => {
     const result = await conversations.refetch();
     return result.data || [];
@@ -69,7 +71,7 @@ export function Chat({ route, navigation }: Props) {
     getNextPageParam: (lastPage) => lastPage.pageInfo.hasNextPage ? lastPage.pageInfo.nextCursor || undefined : undefined
   });
 
-  useAvatarRefresh(messages.data, messages.refetch, useIsFocused());
+  useAvatarRefresh(messages.data, messages.refetch, isFocused);
 
   useEffect(() => {
     let active = true;
@@ -146,7 +148,7 @@ export function Chat({ route, navigation }: Props) {
     navigation.setOptions({
       title: 'Conversa',
       headerTitle: conversation
-        ? () => <ChatHeader subjectId={conversation.otherUser.id} name={conversation.otherUser.name} avatarUrl={conversation.otherUser.avatarUrl} avatarVersion={conversation.otherUser.avatarVersion} />
+        ? () => <ChatHeader subjectId={conversation.otherUser.id} name={conversation.otherUser.name} avatarUrl={conversation.otherUser.avatarUrl} avatarVersion={conversation.otherUser.avatarVersion} onImageError={refreshConversationMedia} />
         : 'Conversa',
       headerRight: () => <ChatHeaderActions
         disabled={!conversation}
@@ -302,6 +304,7 @@ export function Chat({ route, navigation }: Props) {
     <ExchangeBooksSheet
       visible={exchangeBooksVisible}
       exchangeBooks={conversation?.exchangeBooks ?? null}
+      onCoverError={refreshConversationMedia}
       onClose={() => setExchangeBooksVisible(false)}
       onSelectBook={(book) => navigation.navigate('ExchangeBookDetails', { conversationId, bookId: book.id })}
     />

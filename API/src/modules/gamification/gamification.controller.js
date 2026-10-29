@@ -19,6 +19,8 @@ function serializeLeaderboard(result) {
     entries: result.entries.map((entry) => ({
       name: entry.name,
       avatarUrl: entry.avatarUrl,
+      avatarUrlExpiresAt: entry.avatarUrlExpiresAt,
+      avatarVersion: entry.avatarVersion,
       currentStreak: entry.currentStreak,
       rank: entry.rank
     }))

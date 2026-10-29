@@ -86,7 +86,7 @@ export const matchesRepository = {
           const pair = await tx.match.upsert({
             where: { userAId_userBId: { userAId, userBId } },
             create: { userAId, userBId, bookAId, bookBId },
-            update: {}
+            update: { status: 'ACTIVE' }
           });
           await tx.conversation.upsert({
             where: { matchId: pair.id },

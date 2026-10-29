@@ -9,6 +9,7 @@ export type LeaderboardPresentation = {
   entries: Array<{
     name: string;
     avatarUrl: string | null;
+    avatarUrlExpiresAt: string | null;
     currentStreak: number;
     rank: number;
     rankLabel: string;
@@ -30,6 +31,7 @@ export function presentLeaderboard(data: GamificationLeaderboard): LeaderboardPr
     entries: data.entries.map((entry) => ({
       name: entry.name,
       avatarUrl: entry.avatarUrl,
+      avatarUrlExpiresAt: entry.avatarUrlExpiresAt,
       currentStreak: entry.currentStreak,
       rank: entry.rank,
       rankLabel: rankLabel(entry.rank)

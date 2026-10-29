@@ -78,7 +78,7 @@ describe('atomic interactions', () => {
       tx.interaction.findFirst.mockResolvedValue({ actorId: b, targetBookId: 'bookA', action: 'LIKE' });
     }
     await matchesRepository.applyInteraction(input);
-    expect(tx.match.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expected, update: {} }));
+    expect(tx.match.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expected, update: { status: 'ACTIVE' } }));
     expect(tx.interactionActionReceipt.create).toHaveBeenCalledWith({ data: input });
     expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining({ isolationLevel: 'Serializable' }));
   });

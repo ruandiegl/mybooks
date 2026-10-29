@@ -1,5 +1,6 @@
 import { prisma } from '../../shared/database/prisma.js';
 import { AppError } from '../../shared/errors/AppError.js';
+import { serializeAvatarUser } from '../media/avatar.serializer.js';
 import { calculateCheckIn, getSaoPauloDayKey, isStreakActive } from './gamification.service.js';
 
 function toDayKey(date) {
@@ -59,7 +60,7 @@ export const gamificationRepository = {
       currentActiveStreak: { gt: 0 }
     };
 
-    return prisma.$transaction(async (tx) => {
+    const { currentUser, rankedUsers } = await prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({
         where: { id: currentUserId },
         select: { lastActiveDay: true, currentActiveStreak: true }
@@ -85,7 +86,7 @@ export const gamificationRepository = {
             { id: 'asc' }
           ],
           take: 20,
-          select: { id: true, name: true, avatarUrl: true, currentActiveStreak: true }
+          select: { id: true, name: true, avatarStorageKey: true, avatarVersion: true, avatarUrl: true, currentActiveStreak: true }
         })
       ]);
 
@@ -99,7 +100,7 @@ export const gamificationRepository = {
             { name: 'asc' },
             { id: 'asc' }
           ],
-          select: { id: true, name: true, avatarUrl: true, currentActiveStreak: true }
+          select: { id: true, name: true, avatarStorageKey: true, avatarVersion: true, avatarUrl: true, currentActiveStreak: true }
         });
       }
 
@@ -108,13 +109,27 @@ export const gamificationRepository = {
           currentStreak,
           rank: currentUserIsEligible ? greaterUsersCount + 1 : null
         },
-        entries: rankedUsers.map((entry) => ({
-          name: entry.name,
-          avatarUrl: entry.avatarUrl,
-          currentStreak: entry.currentActiveStreak,
-          rank: 1 + rankedUsers.filter((candidate) => candidate.currentActiveStreak > entry.currentActiveStreak).length
-        }))
+        rankedUsers
       };
     }, { isolationLevel: 'RepeatableRead' });
+
+    let rank = 0;
+    let previousStreak = null;
+    const avatarCache = new Map();
+    const entries = await Promise.all(rankedUsers.map(async (entry, index) => {
+      if (entry.currentActiveStreak !== previousStreak) rank = index + 1;
+      previousStreak = entry.currentActiveStreak;
+      const entryRank = rank;
+      const avatar = await serializeAvatarUser(entry, avatarCache, false);
+      return {
+        name: avatar.name,
+        avatarUrl: avatar.avatarUrl,
+        avatarUrlExpiresAt: avatar.avatarUrlExpiresAt,
+        avatarVersion: avatar.avatarVersion,
+        currentStreak: entry.currentActiveStreak,
+        rank: entryRank
+      };
+    }));
+    return { currentUser, entries };
   }
 };

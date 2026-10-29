@@ -66,6 +66,25 @@ describe('atomic match lifecycle against disposable PostgreSQL', () => {
     expect(result.match).toMatchObject({ id: match.id, bookAId: books[0], bookBId: books[1] });
   });
 
+  it('reactivates an archived pair after new reciprocal likes while retaining its original books', async () => {
+    const { match } = await connect();
+    await state.db.match.update({ where: { id: match.id }, data: { status: 'ARCHIVED' } });
+    await state.db.interaction.updateMany({
+      where: { actorId: { in: users.slice(0, 2) } }, data: { action: 'PASS' }
+    });
+    const newBookA = await state.db.book.create({ data: { title: 'New A', ownerId: users[0] } });
+    const newBookB = await state.db.book.create({ data: { title: 'New B', ownerId: users[1] } });
+
+    expect((await matchesRepository.applyInteraction(like(users[0], newBookB.id))).match).toBeNull();
+    const result = await matchesRepository.applyInteraction(like(users[1], newBookA.id));
+
+    expect(result.match).toMatchObject({
+      id: match.id, status: 'ACTIVE', bookAId: books[0], bookBId: books[1]
+    });
+    expect(await state.db.match.count()).toBe(1);
+    expect(await state.db.conversation.count()).toBe(1);
+  });
+
   it('replays an active match after the original target book becomes unavailable', async () => {
     const { match, actions } = await connect();
     const action = actions[1];

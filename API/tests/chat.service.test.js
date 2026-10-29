@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../src/modules/chat/chat.repository.js', () => ({ chatRepository: mocks.chatRepository }));
 vi.mock('../src/modules/media/storage.service.js', () => ({
-  storageService: { getPresignedGetUrl: vi.fn().mockResolvedValue({ url: 'signed-cover' }) }
+  storageService: { getPresignedGetUrl: vi.fn().mockResolvedValue({ url: 'signed-cover', expiresAt: '2026-10-28T12:00:00.000Z' }) }
 }));
 
 const { chatService } = await import('../src/modules/chat/chat.service.js');
@@ -68,8 +68,10 @@ describe('conversation exchange books', () => {
     expect(result.otherUser.name).toBe(name);
     expect(result.exchangeBooks.mine.title).toBe(mine);
     expect(result.exchangeBooks.theirs.title).toBe(theirs);
-    expect(Object.keys(result.exchangeBooks.mine).sort()).toEqual(['authors', 'availability', 'coverUrl', 'id', 'title']);
+    expect(Object.keys(result.exchangeBooks.mine).sort()).toEqual(['authors', 'availability', 'coverUrl', 'coverUrlExpiresAt', 'id', 'title']);
     expect(result.exchangeBooks[userId === currentUserId ? 'mine' : 'theirs'].coverUrl).toBe('signed-cover');
+    expect(result.exchangeBooks[userId === currentUserId ? 'mine' : 'theirs'].coverUrlExpiresAt).toBe('2026-10-28T12:00:00.000Z');
+    expect(result.exchangeBooks[userId === currentUserId ? 'theirs' : 'mine'].coverUrlExpiresAt).toBeNull();
     expect(result.lastMessage).toBeNull();
   });
 
@@ -80,7 +82,7 @@ describe('conversation exchange books', () => {
 
   it('preserves the remaining book when one linked book was deleted', async () => {
     mocks.chatRepository.listConversations.mockResolvedValue([{ ...conversation, match: { ...match, bookAId: null, bookA: null } }]);
-    expect((await chatService.listConversations(userId))[0].exchangeBooks).toEqual({ mine: null, theirs: { id: otherBookId, title: 'Outro livro', authors: ['Autor B'], coverUrl: 'external-b', availability: 'EXCHANGED' } });
+    expect((await chatService.listConversations(userId))[0].exchangeBooks).toEqual({ mine: null, theirs: { id: otherBookId, title: 'Outro livro', authors: ['Autor B'], coverUrl: 'external-b', coverUrlExpiresAt: null, availability: 'EXCHANGED' } });
   });
 
   it.each(['RESERVED', 'EXCHANGED'])('allows %s contextual details', async (availability) => {

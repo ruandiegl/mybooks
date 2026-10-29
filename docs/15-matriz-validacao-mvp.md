@@ -215,3 +215,12 @@ Resultados: [registro 012](../plans/plan-012-acesso-mobile-tablet-instalacao-pwa
 | PWA | `npm run build:web` e `npm run test:pwa` | Export de 835 módulos; 32 recursos fingerprintados no service worker; smoke aprovado. |
 | Android | `npx expo export --platform android` | Export Hermes aprovado; bundle de 2,6 MB. É validação de export, não geração de APK nem aceite em aparelho. |
 | Android/iOS físico | Aparência, leitor de tela, texto ampliado e uso real | Pendente; build/typecheck não substituem validação em dispositivo. |
+
+## Integração pré-publicação — 29/10/2026
+
+| Superfície | Evidência local | Limite |
+| --- | --- | --- |
+| API | Lint; 55 arquivos e 364 testes aprovados, 7 arquivos/33 testes condicionais ignorados | Não substitui teste no domínio publicado. |
+| PostgreSQL 18 descartável | 13 migrações aplicadas; 3 arquivos e 18 integrações aprovados, incluindo concorrência | Banco de loopback `trocalivros_deploy_test`; Railway ainda exige backup, migração e verificação próprios. |
+| App | Typecheck; 103 arquivos e 532 testes aprovados | Testes automatizados não substituem aparelho físico. |
+| PWA | Build web e smoke aprovados; 32 recursos fingerprintados no service worker | Conferir deploy e autenticação no domínio HTTPS após publicação. |

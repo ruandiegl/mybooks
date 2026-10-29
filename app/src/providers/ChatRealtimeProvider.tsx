@@ -13,6 +13,8 @@ import {
 import { createChatSocket } from '../services/socket';
 import { bindSocketSessionLifecycle } from '../services/socketSessionLifecycle';
 import { accessSessionId } from '../features/auth/sessionActor';
+import { api } from '../services/api';
+import type { ApiEnvelope, Conversation } from '../types/api';
 
 type ChatRealtimeContextValue = {
   socket: Socket | null;
@@ -74,6 +76,7 @@ export function ChatRealtimeProvider({ children }: PropsWithChildren) {
       });
       const realtime = startChatRealtimeSession(created, queryClient, {
         onConnectionState: setConnectionState,
+        refreshConversations: async () => (await api.get<ApiEnvelope<Conversation[]>>('/api/v1/conversations')).data.data,
         onMatchRemoved: (event) => setPendingMatchRemovals((pending) => addPendingRemoval(pending, event))
       });
       detachRealtime = realtime.dispose;

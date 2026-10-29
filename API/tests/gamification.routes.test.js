@@ -36,7 +36,7 @@ beforeEach(() => {
   });
   mocks.gamificationRepository.listLeaderboard.mockReset().mockResolvedValue({
     currentUser: { currentStreak: 3, rank: 2, email: 'private@example.test' },
-    entries: [{ name: 'Reader', avatarUrl: null, currentStreak: 3, rank: 2, phone: '11999999999', lastActiveDay: '2026-10-26' }]
+    entries: [{ name: 'Reader', avatarUrl: null, avatarUrlExpiresAt: null, avatarVersion: 0, currentStreak: 3, rank: 2, phone: '11999999999', lastActiveDay: '2026-10-26', avatarStorageKey: 'private-key' }]
   });
 });
 
@@ -69,9 +69,9 @@ describe('private gamification routes', () => {
     expect(response.status).toBe(200);
     expect(response.body.data).toEqual({
       currentUser: { currentStreak: 3, rank: 2 },
-      entries: [{ name: 'Reader', avatarUrl: null, currentStreak: 3, rank: 2 }]
+      entries: [{ name: 'Reader', avatarUrl: null, avatarUrlExpiresAt: null, avatarVersion: 0, currentStreak: 3, rank: 2 }]
     });
-    expect(JSON.stringify(response.body)).not.toMatch(/email|phone|lastActiveDay|userId/i);
+    expect(JSON.stringify(response.body)).not.toMatch(/email|phone|lastActiveDay|userId|avatarStorageKey|private-key/i);
     expect(mocks.gamificationRepository.listLeaderboard).toHaveBeenCalledWith({
       currentUserId,
       today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)

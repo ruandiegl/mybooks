@@ -3,7 +3,7 @@ import { presentLeaderboard } from '../presentation';
 import type { GamificationLeaderboard } from '../../../types/api';
 
 function publicEntry(name: string, currentStreak: number, rank: number) {
-  return { name, avatarUrl: null, currentStreak, rank };
+  return { name, avatarUrl: null, avatarUrlExpiresAt: null, currentStreak, rank };
 }
 
 describe('leaderboard presentation', () => {
@@ -28,6 +28,16 @@ describe('leaderboard presentation', () => {
     expect(result.currentUser).toMatchObject({ currentStreak: 0, rank: null, rankLabel: 'Sem posição ainda' });
   });
 
+  it('keeps the signed avatar expiration needed for renewal', () => {
+    const expiresAt = '2026-10-29T12:00:30.000Z';
+    const result = presentLeaderboard({
+      currentUser: { currentStreak: 1, rank: 1 },
+      entries: [{ ...publicEntry('Ana', 1, 1), avatarUrl: 'https://signed.test/ana', avatarUrlExpiresAt: expiresAt }]
+    });
+
+    expect(result.entries[0]).toMatchObject({ avatarUrl: 'https://signed.test/ana', avatarUrlExpiresAt: expiresAt });
+  });
+
   it('projects only public fields and supports an empty ranking', () => {
     const input = {
       currentUser: { currentStreak: 1, rank: 1, email: 'private@example.test' },
@@ -36,7 +46,7 @@ describe('leaderboard presentation', () => {
 
     const result = presentLeaderboard(input);
     expect(result.entries[0]).toEqual({
-      name: 'Reader', avatarUrl: null, currentStreak: 1, rank: 1, rankLabel: '1º'
+      name: 'Reader', avatarUrl: null, avatarUrlExpiresAt: null, currentStreak: 1, rank: 1, rankLabel: '1º'
     });
     expect(JSON.stringify(result)).not.toMatch(/email|phone|lastActiveDay/i);
     expect(presentLeaderboard({ currentUser: { currentStreak: 0, rank: null }, entries: [] }).entries).toEqual([]);

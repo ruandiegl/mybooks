@@ -41,13 +41,14 @@ export function BookDetails({ route, navigation }: Props) {
     }
   });
   const me = useQuery({ queryKey: ['me'], queryFn: async () => (await api.get<ApiEnvelope<User>>('/api/v1/me')).data.data });
-  const refreshAvatar = useAvatarRefresh(query.data, query.refetch, useIsFocused());
+  const exchangeBookUnavailable = isExchangeBook && axios.isAxiosError(query.error) && query.error.response?.status === 404;
+  const refreshAvatar = useAvatarRefresh(query.data, query.refetch, useIsFocused() && !exchangeBookUnavailable);
 
   if (query.isLoading) return <View style={styles.page}><StateView loading title="Abrindo o livro" /></View>;
+  if (exchangeBookUnavailable) {
+    return <View style={styles.page}><StateView title="Detalhes da troca indisponíveis" description="O match foi removido ou este livro já não faz parte da troca." icon="menu-book" actionLabel="Ir para mensagens" onAction={() => navigation.navigate('Main', { screen: 'Messages' })} /></View>;
+  }
   if (!query.data) {
-    if (isExchangeBook && axios.isAxiosError(query.error) && query.error.response?.status === 404) {
-      return <View style={styles.page}><StateView title="Detalhes da troca indisponíveis" description="O match foi removido ou este livro já não faz parte da troca." icon="menu-book" actionLabel="Ir para mensagens" onAction={() => navigation.navigate('Main', { screen: 'Messages' })} /></View>;
-    }
     if (isExchangeBook && query.isError) {
       return <View style={styles.page}><StateView title="Não foi possível carregar os detalhes" description="Confira sua conexão e tente novamente." icon="cloud-off" actionLabel="Tentar novamente" onAction={() => query.refetch()} /></View>;
     }

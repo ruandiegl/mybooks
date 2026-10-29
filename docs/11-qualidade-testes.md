@@ -92,3 +92,9 @@ Os testes unitários da API cobrem conversão de dia em `America/Sao_Paulo`, pri
 No app, `checkInScheduler.test.ts` cobre sessão restaurada, retorno ao primeiro plano, deduplicação, retry e concorrência; `presentation.test.ts` cobre posições compartilhadas, corte com empates, posição própria fora da lista, estado vazio e projeção de dados públicos. `linking.test.ts` cobre `/ranking/sequencia` e preservação do caminho de Perfil.
 
 A API e o app passaram respectivamente 32 arquivos/248 testes (1 arquivo/1 teste ignorado) e 19 arquivos/95 testes; `npm run lint`, `npm run typecheck`, export PWA de 835 módulos, export Android Hermes e `npm run test:pwa` passaram. O bundle Android gerado foi de 2,6 MB; isso confirma export, não gera um APK nem substitui teste físico. `prisma validate` e `prisma generate` passaram. A integração PostgreSQL da gamificação ainda depende de um PostgreSQL local descartável ativo; não foi executada neste ambiente e nenhum banco Railway/produção foi usado. A validação visual em aparelho físico também permanece pendente.
+
+## Validação da integração para publicação — 29/10/2026
+
+Na árvore que integra a branch local com `origin/main`, a API passou em lint e em 55 arquivos/364 testes; 7 arquivos/33 testes condicionais foram ignorados pela suíte unitária. A integração em PostgreSQL 18 local descartável (`trocalivros_deploy_test`, loopback, `TEST_DATABASE_DISPOSABLE=true`) passou em 3 arquivos/18 testes, incluindo concorrência de match e sequência diária. `prisma migrate status` confirmou as 13 migrações aplicadas nesse banco. Nenhum teste de migração foi executado no banco Railway.
+
+O app passou em typecheck e em 103 arquivos/532 testes. `npm run build:web` e `npm run test:pwa` passaram, com 32 recursos fingerprintados no service worker. Esses resultados verificam a árvore local; deploy, migrações no banco alvo, fluxos no domínio público e inspeção em dispositivo permanecem verificações separadas.

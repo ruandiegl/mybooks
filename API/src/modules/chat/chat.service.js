@@ -11,8 +11,8 @@ import { serializeBook } from '../books/books.serializer.js';
 
 async function serializeBookSummary(book) {
   if (!book) return null;
-  const { id, title, authors, coverUrl, availability } = await serializeBook(book);
-  return { id, title, authors, coverUrl, availability };
+  const { id, title, authors, coverUrl, coverUrlExpiresAt, availability } = await serializeBook(book);
+  return { id, title, authors, coverUrl, coverUrlExpiresAt, availability };
 }
 
 async function serializeMessage(message, avatarCache = new Map()) {

@@ -45,6 +45,7 @@ vi.mock('../pages/BookEdit', () => ({ BookEdit: () => null }));
 vi.mock('../pages/BookDetails', () => ({ BookDetails: () => null }));
 vi.mock('../pages/Chat', () => ({ Chat: () => null }));
 vi.mock('../pages/Matches', () => ({ Matches: () => null }));
+vi.mock('../pages/StreakLeaderboard', () => ({ StreakLeaderboard: () => null }));
 vi.mock('../pages/OnboardingProfile', () => ({ OnboardingProfile: () => null }));
 vi.mock('../pages/OnboardingBooks', () => ({ OnboardingBooks: () => null }));
 vi.mock('../providers/SessionProvider', () => ({ useSession: () => ({ user: undefined, getSessionScope: () => ({ userId: undefined, epoch: 0 }) }) }));

@@ -6,15 +6,15 @@ import { useAppTheme } from '../../providers/ThemeProvider';
 import { useThemedStyles } from '../../styles/useThemedStyles';
 import type { AppTheme } from '../../styles/theme';
 
-type TitleProps = { subjectId: string; name: string; avatarUrl?: string | null; avatarVersion?: number };
+type TitleProps = { subjectId: string; name: string; avatarUrl?: string | null; avatarVersion?: number; onImageError?: () => void };
 type ActionsProps = { disabled?: boolean; onOpenBooks: () => void; onRemoveMatch: () => void };
 
-export function ChatHeader({ subjectId, name, avatarUrl, avatarVersion }: TitleProps) {
+export function ChatHeader({ subjectId, name, avatarUrl, avatarVersion, onImageError }: TitleProps) {
   const styles = useThemedStyles(createStyles);
   const mediaBinding = useMediaBinding();
   return (
     <View style={styles.title}>
-      <Avatar subjectId={subjectId} binding={mediaBinding} name={name} url={avatarUrl} version={avatarVersion} size={36} />
+      <Avatar subjectId={subjectId} binding={mediaBinding} name={name} url={avatarUrl} version={avatarVersion} size={36} onImageError={onImageError} />
       <Text accessibilityRole="header" numberOfLines={1} style={styles.name}>{name}</Text>
     </View>
   );

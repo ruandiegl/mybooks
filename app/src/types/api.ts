@@ -132,6 +132,7 @@ export type ExchangeBookSummary = {
   title: string;
   authors: string[];
   coverUrl?: string | null;
+  coverUrlExpiresAt?: string | null;
   availability: BookAvailability;
 };
 
@@ -186,6 +187,7 @@ export type GamificationCheckIn = {
 export type GamificationLeaderboardEntry = {
   name: string;
   avatarUrl: string | null;
+  avatarUrlExpiresAt: string | null;
   currentStreak: number;
   rank: number;
 };

@@ -85,6 +85,106 @@ describe('chat realtime lifecycle and cache effects', () => {
     realtime.dispose();
   });
 
+  it('reconciles a removal missed while offline and purges an open contextual book', async () => {
+    queryClient.setQueryData(['conversations'], [{ id: removed.conversationId, matchId: removed.matchId }]);
+    queryClient.setQueryData(['messages', removed.conversationId], { pages: ['private messages'] });
+    queryClient.setQueryData(['exchange-book', removed.conversationId, 'book-a'], { id: 'book-a' });
+    const onMatchRemoved = vi.fn();
+    const refreshConversations = vi.fn(async () => []);
+    const realtime = bindChatRealtime(socket as unknown as Socket, queryClient, { refreshConversations, onMatchRemoved });
+
+    socket.fire('disconnect');
+    socket.fire('connect');
+    await vi.waitFor(() => expect(onMatchRemoved).toHaveBeenCalledExactlyOnceWith(removed));
+
+    expect(refreshConversations).toHaveBeenCalledTimes(1);
+    expect(realtime.isConversationRemoved(removed.conversationId)).toBe(true);
+    expect(queryClient.getQueryData(['messages', removed.conversationId])).toBeUndefined();
+    expect(queryClient.getQueryData(['exchange-book', removed.conversationId, 'book-a'])).toBeUndefined();
+    expect(queryClient.getQueryData(['conversations'])).toEqual([]);
+    realtime.dispose();
+  });
+
+  it('reconciles an opened contextual detail even when the conversation list cache is absent', async () => {
+    queryClient.setQueryData(['exchange-book', removed.conversationId, 'book-a'], { id: 'book-a' });
+    const onMatchRemoved = vi.fn();
+    const realtime = bindChatRealtime(socket as unknown as Socket, queryClient, {
+      refreshConversations: async () => [], onMatchRemoved
+    });
+
+    socket.fire('connect');
+    await vi.waitFor(() => expect(onMatchRemoved).toHaveBeenCalledTimes(1));
+
+    expect(onMatchRemoved.mock.calls[0][0].conversationId).toBe(removed.conversationId);
+    expect(queryClient.getQueryData(['exchange-book', removed.conversationId, 'book-a'])).toBeUndefined();
+    socket.fire('match:removed', removed);
+    expect(onMatchRemoved).toHaveBeenCalledTimes(1);
+    realtime.dispose();
+  });
+
+  it('preserves known conversations when reconnect validation fails and retries on the next connection', async () => {
+    queryClient.setQueryData(['conversations'], [{ id: removed.conversationId, matchId: removed.matchId }]);
+    const refreshConversations = vi.fn()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce([]);
+    const onMatchRemoved = vi.fn();
+    const realtime = bindChatRealtime(socket as unknown as Socket, queryClient, { refreshConversations, onMatchRemoved });
+
+    socket.fire('connect');
+    await vi.waitFor(() => expect(refreshConversations).toHaveBeenCalledTimes(1));
+    expect(onMatchRemoved).not.toHaveBeenCalled();
+    expect(realtime.isConversationRemoved(removed.conversationId)).toBe(false);
+
+    socket.fire('disconnect');
+    socket.fire('connect');
+    await vi.waitFor(() => expect(onMatchRemoved).toHaveBeenCalledTimes(1));
+    expect(refreshConversations).toHaveBeenCalledTimes(2);
+    realtime.dispose();
+  });
+
+  it('ignores a validation result from a connection that has since dropped', async () => {
+    queryClient.setQueryData(['conversations'], [{ id: removed.conversationId, matchId: removed.matchId }]);
+    let resolveFirst: (conversations: Array<{ id: string; matchId: string }>) => void = () => undefined;
+    const refreshConversations = vi.fn()
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveFirst = resolve; }))
+      .mockResolvedValueOnce([{ id: removed.conversationId, matchId: removed.matchId }]);
+    const onMatchRemoved = vi.fn();
+    const realtime = bindChatRealtime(socket as unknown as Socket, queryClient, { refreshConversations, onMatchRemoved });
+
+    socket.fire('connect');
+    socket.fire('disconnect');
+    socket.fire('connect');
+    await vi.waitFor(() => expect(refreshConversations).toHaveBeenCalledTimes(2));
+    resolveFirst([]);
+    await Promise.resolve();
+
+    expect(onMatchRemoved).not.toHaveBeenCalled();
+    expect(realtime.isConversationRemoved(removed.conversationId)).toBe(false);
+    realtime.dispose();
+  });
+
+  it('does not restore a removed conversation from a late connection refresh', async () => {
+    const surviving = {
+      id: '33333333-3333-4333-8333-333333333333',
+      matchId: '44444444-4444-4444-8444-444444444444'
+    };
+    queryClient.setQueryData(['conversations'], [{ id: removed.conversationId, matchId: removed.matchId }, surviving]);
+    let resolveRefresh!: (conversations: Array<{ id: string; matchId: string }>) => void;
+    const refreshConversations = vi.fn(() => new Promise<Array<{ id: string; matchId: string }>>((resolve) => { resolveRefresh = resolve; }));
+    const onMatchRemoved = vi.fn();
+    const realtime = bindChatRealtime(socket as unknown as Socket, queryClient, { refreshConversations, onMatchRemoved });
+
+    socket.fire('connect');
+    expect(refreshConversations).toHaveBeenCalledOnce();
+    socket.fire('match:removed', removed);
+    resolveRefresh([{ id: removed.conversationId, matchId: removed.matchId }, surviving]);
+    await vi.waitFor(() => expect(queryClient.getQueryData(['conversations'])).toEqual([surviving]));
+
+    expect(onMatchRemoved).toHaveBeenCalledExactlyOnceWith(removed);
+    expect(realtime.isConversationRemoved(removed.conversationId)).toBe(true);
+    realtime.dispose();
+  });
+
   it('records removal synchronously and cancels then removes only that conversation caches', async () => {
     queryClient.setQueryData(['matches'], [{ id: removed.matchId }]);
     queryClient.setQueryData(['conversations'], [{ id: removed.conversationId }]);

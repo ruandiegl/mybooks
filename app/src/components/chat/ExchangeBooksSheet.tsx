@@ -13,9 +13,10 @@ type Props = {
   exchangeBooks: ExchangeBooks | null;
   onClose: () => void;
   onSelectBook: (book: ExchangeBookSummary) => void;
+  onCoverError?: () => void;
 };
 
-export function ExchangeBooksSheet({ visible, exchangeBooks, onClose, onSelectBook }: Props) {
+export function ExchangeBooksSheet({ visible, exchangeBooks, onClose, onSelectBook, onCoverError }: Props) {
   const { theme } = useAppTheme();
   const styles = useThemedStyles(createStyles);
   const { height } = useWindowDimensions();
@@ -85,7 +86,7 @@ export function ExchangeBooksSheet({ visible, exchangeBooks, onClose, onSelectBo
                   style={({ pressed }) => [styles.card, !book && styles.disabledCard, pressed && book && { opacity: 0.78 }]}
                 >
                   <View style={styles.cover}>
-                    {book?.coverUrl ? <Image source={{ uri: book.coverUrl }} style={styles.image} /> : <MaterialIcons name="menu-book" size={28} color={theme.colors.mutedForeground} />}
+                    {book?.coverUrl ? <Image source={{ uri: book.coverUrl }} style={styles.image} onError={onCoverError} /> : <MaterialIcons name="menu-book" size={28} color={theme.colors.mutedForeground} />}
                   </View>
                   {book ? <View style={styles.copy}>
                     <Text style={styles.bookTitle} numberOfLines={2}>{book.title}</Text>
