@@ -1,6 +1,6 @@
 import { getSaoPauloDayKey } from './gamification.service.js';
 import { gamificationRepository } from './gamification.repository.js';
-import { checkInSchema } from './gamification.schemas.js';
+import { checkInSchema, leaderboardQuerySchema } from './gamification.schemas.js';
 
 function serializeCheckIn(result) {
   return {
@@ -34,7 +34,8 @@ export async function checkIn(req, res) {
 }
 
 export async function getLeaderboard(req, res) {
+  const { scope } = leaderboardQuerySchema.parse(req.query);
   const today = getSaoPauloDayKey(new Date());
-  const result = await gamificationRepository.listLeaderboard({ currentUserId: req.currentUser.id, today });
+  const result = await gamificationRepository.listLeaderboard({ currentUserId: req.currentUser.id, today, scope });
   return res.status(200).json({ data: serializeLeaderboard(result) });
 }

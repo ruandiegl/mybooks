@@ -74,7 +74,25 @@ describe('private gamification routes', () => {
     expect(JSON.stringify(response.body)).not.toMatch(/email|phone|lastActiveDay|userId|avatarStorageKey|private-key/i);
     expect(mocks.gamificationRepository.listLeaderboard).toHaveBeenCalledWith({
       currentUserId,
-      today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)
+      today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      scope: 'global'
     });
+  });
+
+  it('requests the active-match ranking for the authenticated user', async () => {
+    const response = await request(authenticatedTestApp()).get('/api/v1/gamification/leaderboard?scope=matches');
+    expect(response.status).toBe(200);
+    expect(mocks.gamificationRepository.listLeaderboard).toHaveBeenCalledWith({
+      currentUserId,
+      today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      scope: 'matches'
+    });
+    expect(JSON.stringify(response.body)).not.toMatch(/email|phone|lastActiveDay|userId|avatarStorageKey|private-key/i);
+  });
+
+  it('rejects an unknown ranking scope without querying the database', async () => {
+    const response = await request(authenticatedTestApp()).get('/api/v1/gamification/leaderboard?scope=everyone');
+    expect(response.status).toBe(422);
+    expect(mocks.gamificationRepository.listLeaderboard).not.toHaveBeenCalled();
   });
 });

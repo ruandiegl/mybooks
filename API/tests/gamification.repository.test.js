@@ -84,4 +84,21 @@ describe('gamification repository', () => {
     });
     expect(clock).toHaveBeenCalledOnce();
   });
+
+  it('returns no comparison rank when the viewer has no visible active match', async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const tx = {
+      user: {
+        findUnique: vi.fn().mockResolvedValue({ lastActiveDay: new Date('2026-10-29T00:00:00.000Z'), currentActiveStreak: 4 }),
+        findMany,
+        count: vi.fn().mockResolvedValue(0)
+      },
+      match: { findFirst: vi.fn().mockResolvedValue(null) }
+    };
+    state.database = { $transaction: vi.fn(callback => callback(tx)) };
+
+    const result = await gamificationRepository.listLeaderboard({ currentUserId: userId, today: '2026-10-29', scope: 'matches' });
+    expect(result).toEqual({ currentUser: { currentStreak: 4, rank: null }, entries: [] });
+    expect(findMany).not.toHaveBeenCalled();
+  });
 });

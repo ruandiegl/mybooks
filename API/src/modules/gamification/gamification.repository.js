@@ -1,6 +1,7 @@
 import { prisma } from '../../shared/database/prisma.js';
 import { AppError } from '../../shared/errors/AppError.js';
 import { serializeAvatarUser } from '../media/avatar.serializer.js';
+import { visibleMatchFilter, visibleUserFilter } from '../moderation/moderation.visibility.js';
 import { calculateCheckIn, getSaoPauloDayKey, isStreakActive } from './gamification.service.js';
 
 function toDayKey(date) {
@@ -19,6 +20,17 @@ function previousDay(dayKey) {
 
 function userNotFound() {
   return new AppError('Usuário não encontrado.', { statusCode: 404, code: 'USER_NOT_FOUND' });
+}
+
+function activeMatchCandidateFilter(currentUserId) {
+  return {
+    ...visibleUserFilter(currentUserId),
+    OR: [
+      { id: currentUserId },
+      { matchesAsUserA: { some: { userBId: currentUserId, status: 'ACTIVE' } } },
+      { matchesAsUserB: { some: { userAId: currentUserId, status: 'ACTIVE' } } }
+    ]
+  };
 }
 
 export const gamificationRepository = {
@@ -52,12 +64,13 @@ export const gamificationRepository = {
     }, { isolationLevel: 'ReadCommitted' });
   },
 
-  async listLeaderboard({ currentUserId, today }) {
+  async listLeaderboard({ currentUserId, today, scope = 'global' }) {
     const todayDate = toUtcDate(today);
     const oldestActiveDate = toUtcDate(previousDay(today));
     const eligibleWhere = {
       lastActiveDay: { gte: oldestActiveDate, lte: todayDate },
-      currentActiveStreak: { gt: 0 }
+      currentActiveStreak: { gt: 0 },
+      ...(scope === 'matches' ? activeMatchCandidateFilter(currentUserId) : {})
     };
 
     const { currentUser, rankedUsers } = await prisma.$transaction(async (tx) => {
@@ -73,6 +86,14 @@ export const gamificationRepository = {
       };
       const currentUserIsEligible = isStreakActive(ownState, today);
       const currentStreak = currentUserIsEligible ? user.currentActiveStreak : 0;
+
+      if (scope === 'matches') {
+        const visibleMatch = await tx.match.findFirst({
+          where: { status: 'ACTIVE', OR: [{ userAId: currentUserId }, { userBId: currentUserId }], ...visibleMatchFilter(currentUserId) },
+          select: { id: true }
+        });
+        if (!visibleMatch) return { currentUser: { currentStreak, rank: null }, rankedUsers: [] };
+      }
 
       const [greaterUsersCount, topTwenty] = await Promise.all([
         currentUserIsEligible
