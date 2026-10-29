@@ -7,7 +7,7 @@ import { useThemedStyles } from '../../styles/useThemedStyles';
 import type { AppTheme } from '../../styles/theme';
 
 type TitleProps = { subjectId: string; name: string; avatarUrl?: string | null; avatarVersion?: number; onImageError?: () => void; onPress?: () => void };
-type ActionsProps = { disabled?: boolean; onOpenBooks: () => void; onRemoveMatch: () => void };
+type ActionsProps = { disabled?: boolean; onRemoveMatch: () => void };
 
 export function ChatHeader({ subjectId, name, avatarUrl, avatarVersion, onImageError, onPress }: TitleProps) {
   const styles = useThemedStyles(createStyles);
@@ -20,21 +20,11 @@ export function ChatHeader({ subjectId, name, avatarUrl, avatarVersion, onImageE
   );
 }
 
-export function ChatHeaderActions({ disabled, onOpenBooks, onRemoveMatch }: ActionsProps) {
+export function ChatHeaderActions({ disabled, onRemoveMatch }: ActionsProps) {
   const { theme } = useAppTheme();
   const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.actions}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Ver livros da troca"
-        accessibilityState={{ disabled: Boolean(disabled) }}
-        disabled={disabled}
-        onPress={onOpenBooks}
-        style={({ pressed }) => [styles.action, disabled && styles.disabled, pressed && !disabled && styles.pressed]}
-      >
-        <MaterialIcons name="menu-book" size={22} color={theme.colors.secondary} />
-      </Pressable>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Remover match"

@@ -5,6 +5,7 @@ import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '../../components/Avatar';
 import { AppButton } from '../../components/AppButton';
+import { ExchangeBooksSheet } from '../../components/chat/ExchangeBooksSheet';
 import { ReputationStars } from '../../components/ReputationStars';
 import { StateView } from '../../components/StateView';
 import { useMediaBinding } from '../../features/media/useMediaBinding';
@@ -12,13 +13,15 @@ import { getPublicProfile, reportReasons, reportUser, setUserBlocked, type Repor
 import { refreshRelationshipCaches } from '../../features/moderation/refreshRelationshipCaches';
 import { useAppTheme } from '../../providers/ThemeProvider';
 import { useSession } from '../../providers/SessionProvider';
+import { api } from '../../services/api';
+import type { ApiEnvelope, Conversation } from '../../types/api';
 import type { RootStackParamList } from '../../types/navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PublicProfile'>;
 type Dialog = 'report' | 'block' | null;
 
 export function PublicProfile({ route, navigation }: Props) {
-  const { userId } = route.params;
+  const { userId, conversationId } = route.params;
   const { theme } = useAppTheme();
   const { user } = useSession();
   const isSelf = user?.id === userId;
@@ -26,6 +29,13 @@ export function PublicProfile({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const profile = useQuery({ queryKey: ['public-profile', userId], queryFn: ({ signal }) => getPublicProfile(userId, signal) });
+  const conversations = useQuery({
+    queryKey: ['conversations'],
+    enabled: Boolean(conversationId) && !isSelf,
+    queryFn: async ({ signal }) => (await api.get<ApiEnvelope<Conversation[]>>('/api/v1/conversations', { signal })).data.data
+  });
+  const exchangeConversation = conversations.data?.find(item => item.id === conversationId && item.otherUser.id === userId);
+  const [exchangeBooksVisible, setExchangeBooksVisible] = useState(false);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [busy, setBusy] = useState(false);
@@ -80,6 +90,7 @@ export function PublicProfile({ route, navigation }: Props) {
         <ReputationStars stars={person.reputation.stars} />
         {person.bio ? <Text style={{ color: theme.colors.foreground, textAlign: 'center', lineHeight: 23 }}>{person.bio}</Text> : null}
       </View>
+      {exchangeConversation ? <AppButton label="Ver livros da troca" variant="outline" icon="menu-book" onPress={() => setExchangeBooksVisible(true)} /> : null}
       {success ? <Text accessibilityLiveRegion="polite" style={{ color: theme.colors.success }}>{success}</Text> : null}
       {error ? <Text accessibilityLiveRegion="polite" style={{ color: theme.colors.danger }}>{error}</Text> : null}
       {isSelf ? <Text style={{ color: theme.colors.mutedForeground }}>Este é seu perfil público.</Text> : person.viewer.blockedByMe
@@ -87,6 +98,13 @@ export function PublicProfile({ route, navigation }: Props) {
         : <AppButton label="Bloquear pessoa" variant="outline" icon="block" onPress={() => { setError(''); setDialog('block'); }} />}
       {!isSelf ? (!person.viewer.reportedByMe ? <AppButton label="Denunciar pessoa" variant="ghost" icon="flag" onPress={() => { setError(''); setReason(null); setDialog('report'); }} /> : <Text style={{ color: theme.colors.mutedForeground }}>Você já enviou uma denúncia sobre esta pessoa.</Text>) : null}
     </ScrollView>
+    <ExchangeBooksSheet
+      visible={exchangeBooksVisible && Boolean(exchangeConversation)}
+      exchangeBooks={exchangeConversation?.exchangeBooks ?? null}
+      onCoverError={() => { void conversations.refetch(); }}
+      onClose={() => setExchangeBooksVisible(false)}
+      onSelectBook={book => { if (exchangeConversation) navigation.navigate('ExchangeBookDetails', { conversationId: exchangeConversation.id, bookId: book.id }); }}
+    />
     <Modal visible={Boolean(dialog)} transparent animationType="fade" onRequestClose={() => { if (!busy) setDialog(null); }}>
       <Pressable accessibilityLabel="Fechar janela" onPress={() => { if (!busy) setDialog(null); }} style={{ flex: 1, backgroundColor: theme.colors.overlay, justifyContent: 'center', padding: theme.spacing.lg }}>
         <Pressable onPress={() => {}} style={{ backgroundColor: theme.colors.surface, borderRadius: theme.radius.lg, maxHeight: '85%', overflow: 'hidden' }}>

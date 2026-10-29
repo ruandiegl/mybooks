@@ -9,7 +9,6 @@ import { KeyboardAvoidingView, Modal, Platform, Pressable, Text, View } from 're
 import { AppButton } from '../../components/AppButton';
 import { ConnectionStateBanner } from '../../components/chat/ConnectionStateBanner';
 import { ChatHeader, ChatHeaderActions } from '../../components/chat/ChatHeader';
-import { ExchangeBooksSheet } from '../../components/chat/ExchangeBooksSheet';
 import { Message } from '../../components/chat/Message';
 import { MessageComposer } from '../../components/chat/MessageComposer';
 import { MessageScroller } from '../../components/chat/MessageScroller';
@@ -35,7 +34,6 @@ export function Chat({ route, navigation }: Props) {
   const { socket, connectionState, isConversationRemoved, pendingMatchRemovals, registerConfirmedMatchRemoved } = useChatRealtime();
   const [body, setBody] = useState('');
   const [otherUserTyping, setOtherUserTyping] = useState(false);
-  const [exchangeBooksVisible, setExchangeBooksVisible] = useState(false);
   const [removalDialogVisible, setRemovalDialogVisible] = useState(false);
   const [removalStatus, setRemovalStatus] = useState<MatchRemovalStatus | null>(null);
   const [removalBusy, setRemovalBusy] = useState(false);
@@ -137,7 +135,6 @@ export function Chat({ route, navigation }: Props) {
 
   const ordered = useMemo(() => orderMessagePages(messages.data), [messages.data]);
 
-  const openExchangeBooks = useCallback(() => setExchangeBooksVisible(true), []);
   const openRemovalDialog = useCallback(() => {
     if (!conversation) return;
     setRemovalStatus(null);
@@ -148,15 +145,14 @@ export function Chat({ route, navigation }: Props) {
     navigation.setOptions({
       title: 'Conversa',
       headerTitle: conversation
-        ? () => <ChatHeader subjectId={conversation.otherUser.id} name={conversation.otherUser.name} avatarUrl={conversation.otherUser.avatarUrl} avatarVersion={conversation.otherUser.avatarVersion} onImageError={refreshConversationMedia} onPress={() => navigation.navigate('PublicProfile', { userId: conversation.otherUser.id })} />
+        ? () => <ChatHeader subjectId={conversation.otherUser.id} name={conversation.otherUser.name} avatarUrl={conversation.otherUser.avatarUrl} avatarVersion={conversation.otherUser.avatarVersion} onImageError={refreshConversationMedia} onPress={() => navigation.navigate('PublicProfile', { userId: conversation.otherUser.id, conversationId })} />
         : 'Conversa',
       headerRight: () => <ChatHeaderActions
         disabled={!conversation}
-        onOpenBooks={openExchangeBooks}
         onRemoveMatch={openRemovalDialog}
       />
     });
-  }, [conversation, navigation, openExchangeBooks, openRemovalDialog]);
+  }, [conversation, conversationId, navigation, openRemovalDialog]);
 
   const closeRemovalDialog = useCallback(() => {
     if (removalBusy) return;
@@ -301,13 +297,6 @@ export function Chat({ route, navigation }: Props) {
       {otherUserTyping ? <TypingIndicator /> : null}
     </MessageScroller>
     <MessageComposer value={body} disabled={!me.data || !conversationMemberConfirmed || conversationEnded} onChangeText={changeBody} onBlur={stopTyping} onSend={send} />
-    <ExchangeBooksSheet
-      visible={exchangeBooksVisible}
-      exchangeBooks={conversation?.exchangeBooks ?? null}
-      onCoverError={refreshConversationMedia}
-      onClose={() => setExchangeBooksVisible(false)}
-      onSelectBook={(book) => navigation.navigate('ExchangeBookDetails', { conversationId, bookId: book.id })}
-    />
     <MatchRemovalDialog
       visible={removalDialogVisible}
       status={removalStatus}

@@ -20,7 +20,7 @@ export type RootStackParamList = {
   BookCreate: undefined;
   ExchangeBookDetails: { conversationId: string; bookId: string };
   BookDetails: { bookId: string };
-  PublicProfile: { userId: string };
+  PublicProfile: { userId: string; conversationId?: string };
   BookEdit: { bookId: string };
   Matches: undefined;
   StreakLeaderboard: undefined;

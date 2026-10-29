@@ -1,4 +1,4 @@
-import { getStateFromPath } from '@react-navigation/core';
+import { getPathFromState, getStateFromPath } from '@react-navigation/core';
 import { describe, expect, it, vi } from 'vitest';
 const platform = vi.hoisted(() => ({ OS: 'web' }));
 vi.mock('react-native', () => ({ Platform: platform }));
@@ -29,6 +29,13 @@ describe('web app deep links', () => {
   it('maps a public reader profile without private data in the URL', () => {
     const state = getStateFromPath('/users/reader-42', linking.config);
     expect(state?.routes.at(-1)).toMatchObject({ name: 'PublicProfile', params: { userId: 'reader-42' } });
+  });
+
+  it('preserves the exchange conversation when reloading a profile opened from chat', () => {
+    const path = getPathFromState({ routes: [{ name: 'PublicProfile', params: { userId: 'reader-42', conversationId: 'conversation-7' } }] }, linking.config);
+    expect(getStateFromPath(path, linking.config)?.routes.at(-1)).toMatchObject({
+      name: 'PublicProfile', params: { userId: 'reader-42', conversationId: 'conversation-7' }
+    });
   });
 
   it('maps direct exchange-book URLs with both context IDs', () => {

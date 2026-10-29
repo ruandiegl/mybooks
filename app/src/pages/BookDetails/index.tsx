@@ -70,7 +70,7 @@ export function BookDetails({ route, navigation }: Props) {
   return (
     <ScrollView style={styles.page} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
       {book.owner ? (
-        <Pressable accessibilityRole="button" accessibilityLabel={`Abrir perfil de ${book.owner.name}`} onPress={() => navigation.navigate('PublicProfile', { userId: book.owner!.id })} style={styles.owner}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Abrir perfil de ${book.owner.name}`} onPress={() => navigation.navigate('PublicProfile', { userId: book.owner!.id, ...(conversationId ? { conversationId } : {}) })} style={styles.owner}>
           <Avatar retryToken={imageRetryToken} subjectId={book.owner.id} binding={mediaBinding} name={book.owner.name} url={book.owner.avatarUrl} version={book.owner.avatarVersion} onImageError={refreshAvatar} />
           <View style={styles.ownerInfo}><Text style={styles.ownerCaption}>Na estante de</Text><Text style={styles.ownerName}>{book.owner.name}</Text><Text style={styles.ownerCity}>{book.owner.city || 'Localização não informada'}</Text>{typeof ownerProfile.data?.reputation?.stars === 'number' ? <ReputationStars stars={ownerProfile.data.reputation.stars} /> : null}</View>
         </Pressable>

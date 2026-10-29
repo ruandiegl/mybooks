@@ -8,7 +8,9 @@ const state = vi.hoisted(() => ({
   reportedByMe: false,
   setUserBlocked: vi.fn(),
   reportUser: vi.fn(),
-  refresh: vi.fn().mockResolvedValue(undefined)
+  refresh: vi.fn().mockResolvedValue(undefined),
+  conversations: [] as Array<{ id: string; otherUser: { id: string }; exchangeBooks: { mine: null; theirs: { id: string } } }>,
+  navigate: vi.fn()
 }));
 
 vi.mock('react-native', async () => await import('react-native-web'));
@@ -19,11 +21,13 @@ vi.mock('../../../providers/ThemeProvider', async () => {
   return { useAppTheme: () => ({ theme: lightTheme }) };
 });
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: () => ({ isLoading: false, isError: false, data: {
-    id: 'reader', name: 'Leitora', city: 'Recife', bio: 'Gosto de livros',
-    avatarUrl: null, avatarUrlExpiresAt: null, avatarVersion: 0,
-    reputation: { stars: 4.5 }, viewer: { blockedByMe: state.blockedByMe, reportedByMe: state.reportedByMe }
-  } }),
+  useQuery: ({ queryKey }: { queryKey: string[] }) => ({ isLoading: false, isError: false, refetch: vi.fn(), data: queryKey[0] === 'conversations'
+    ? state.conversations
+    : {
+      id: 'reader', name: 'Leitora', city: 'Recife', bio: 'Gosto de livros',
+      avatarUrl: null, avatarUrlExpiresAt: null, avatarVersion: 0,
+      reputation: { stars: 4.5 }, viewer: { blockedByMe: state.blockedByMe, reportedByMe: state.reportedByMe }
+    } }),
   useQueryClient: () => ({ invalidateQueries: state.refresh })
 }));
 vi.mock('../../../features/media/useMediaBinding', () => ({ useMediaBinding: () => null }));
@@ -38,14 +42,15 @@ vi.mock('../../../components/Avatar', () => ({ Avatar: () => <span>Avatar</span>
 vi.mock('../../../components/ReputationStars', () => ({ ReputationStars: ({ stars }: { stars: number }) => <span>Nota {stars}</span> }));
 vi.mock('../../../components/StateView', () => ({ StateView: ({ title }: { title: string }) => <div>{title}</div> }));
 vi.mock('../../../components/AppButton', () => ({ AppButton: ({ label, onPress, disabled }: { label: string; onPress?: () => void; disabled?: boolean }) => <button disabled={disabled} onClick={onPress}>{label}</button> }));
+vi.mock('../../../components/chat/ExchangeBooksSheet', () => ({ ExchangeBooksSheet: ({ visible, onSelectBook }: { visible: boolean; onSelectBook: (book: { id: string }) => void }) => visible ? <button onClick={() => onSelectBook({ id: 'book-2' })}>Abrir livro da troca</button> : null }));
 
 import { PublicProfile } from '../index';
 
-beforeEach(() => { state.selfId = 'viewer'; state.blockedByMe = false; state.reportedByMe = false; vi.clearAllMocks(); });
+beforeEach(() => { state.selfId = 'viewer'; state.blockedByMe = false; state.reportedByMe = false; state.conversations = []; vi.clearAllMocks(); });
 afterEach(cleanup);
 
-function mount() {
-  return render(<PublicProfile route={{ params: { userId: 'reader' } } as any} navigation={{ goBack: vi.fn() } as any} />);
+function mount(conversationId?: string) {
+  return render(<PublicProfile route={{ params: { userId: 'reader', conversationId } } as any} navigation={{ goBack: vi.fn(), navigate: state.navigate } as any} />);
 }
 
 describe('perfil público', () => {
@@ -73,5 +78,19 @@ describe('perfil público', () => {
     fireEvent.click(screen.getByRole('radio', { name: 'Fraude ou golpe' }));
     fireEvent.click(screen.getByRole('button', { name: 'Enviar denúncia' }));
     await waitFor(() => expect(state.reportUser).toHaveBeenCalledWith('reader', 'FRAUD'));
+  });
+
+  it('abre os livros da conversa no perfil e mantém o contexto ao abrir detalhes', () => {
+    state.conversations = [{ id: 'chat-1', otherUser: { id: 'reader' }, exchangeBooks: { mine: null, theirs: { id: 'book-2' } } }];
+    mount('chat-1');
+    fireEvent.click(screen.getByRole('button', { name: 'Ver livros da troca' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir livro da troca' }));
+    expect(state.navigate).toHaveBeenCalledWith('ExchangeBookDetails', { conversationId: 'chat-1', bookId: 'book-2' });
+  });
+
+  it('não mostra livros de uma conversa que não pertence ao perfil aberto', () => {
+    state.conversations = [{ id: 'chat-1', otherUser: { id: 'another-reader' }, exchangeBooks: { mine: null, theirs: { id: 'book-2' } } }];
+    mount('chat-1');
+    expect(screen.queryByRole('button', { name: 'Ver livros da troca' })).toBeNull();
   });
 });
