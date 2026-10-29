@@ -76,12 +76,14 @@ describe('chat realtime lifecycle and cache effects', () => {
   it('invalidates match and conversation lists after a connection is restored', () => {
     queryClient.setQueryData(['matches'], [{ id: 'match' }]);
     queryClient.setQueryData(['conversations'], [{ id: 'conversation' }]);
+    queryClient.setQueryData(['gamification', 'leaderboard', 'matches'], { entries: [] });
     const realtime = bindChatRealtime(socket as unknown as Socket, queryClient, { refreshSession: async () => true });
 
     socket.fire('connect');
 
     expect(queryClient.getQueryState(['matches'])?.isInvalidated).toBe(true);
     expect(queryClient.getQueryState(['conversations'])?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(['gamification', 'leaderboard', 'matches'])?.isInvalidated).toBe(true);
     realtime.dispose();
   });
 

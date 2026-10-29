@@ -82,7 +82,7 @@ export function Discover() {
   const sameScope = (input: InteractionInput) => { const scope = getSessionScope(); return scope.userId === input.scope.userId && scope.epoch === input.scope.epoch; };
   const owns = (input: InteractionInput) => alive.current && run.current?.id === input.runId && run.current.ownerId === owner.current && sameScope(input);
   function invalidateConfirmed() {
-    for (const queryKey of [['books', 'discover'], ['likes'], ['matches'], ['conversations']]) void queryClient.invalidateQueries({ queryKey });
+    for (const queryKey of [['books', 'discover'], ['likes'], ['matches'], ['conversations'], ['gamification', 'leaderboard', 'matches']]) void queryClient.invalidateQueries({ queryKey });
   }
 
   const mutation = useMutation({
@@ -102,6 +102,7 @@ export function Discover() {
       }
       void queryClient.invalidateQueries({ queryKey: ['conversations'] });
       void queryClient.invalidateQueries({ queryKey: ['matches'] });
+      if (data.match?.status === 'ACTIVE') void queryClient.invalidateQueries({ queryKey: ['gamification', 'leaderboard', 'matches'] });
       void queryClient.invalidateQueries({ queryKey: ['likes'] });
       if (books.length <= 1) void query.refetch();
     },

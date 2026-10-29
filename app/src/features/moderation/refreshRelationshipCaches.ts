@@ -1,8 +1,10 @@
 import type { QueryClient } from '@tanstack/react-query';
+import { GAMIFICATION_LEADERBOARD_MATCHES_QUERY_KEY } from '../gamification/api';
 
 const sensitiveKeys = [
   ['books', 'discover'], ['book'], ['exchange-book'], ['likes'],
-  ['matches'], ['conversations'], ['messages'], ['public-profile']
+  ['matches'], ['conversations'], ['messages'], ['public-profile'],
+  GAMIFICATION_LEADERBOARD_MATCHES_QUERY_KEY
 ];
 
 export async function refreshRelationshipCaches(queryClient: QueryClient) {

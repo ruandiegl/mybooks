@@ -178,6 +178,7 @@ export function Chat({ route, navigation }: Props) {
       registerConfirmedMatchRemoved({ matchId: conversation.matchId, conversationId });
       void queryClient.invalidateQueries({ queryKey: ['matches'] });
       void queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      void queryClient.invalidateQueries({ queryKey: ['gamification', 'leaderboard', 'matches'] });
       setRemovalDialogVisible(false);
       setRemovalStatus(null);
       return;
@@ -199,6 +200,7 @@ export function Chat({ route, navigation }: Props) {
       registerConfirmedMatchRemoved({ matchId: conversation.matchId, conversationId });
       void queryClient.invalidateQueries({ queryKey: ['matches'] });
       void queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      void queryClient.invalidateQueries({ queryKey: ['gamification', 'leaderboard', 'matches'] });
       setRemovalDialogVisible(false);
       setRemovalStatus(null);
       return;

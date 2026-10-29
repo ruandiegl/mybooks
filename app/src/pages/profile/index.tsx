@@ -117,7 +117,7 @@ export function Profile({ navigation }: Props) {
   }, [premiumOffer.setPresentationBlocked, settings.visible, viewingPhoto]);
   const streakQuery = useQuery({
     queryKey: GAMIFICATION_LEADERBOARD_QUERY_KEY,
-    queryFn: gamificationApi.getLeaderboard,
+    queryFn: () => gamificationApi.getLeaderboard(),
     staleTime: 60_000
   });
   const booksQuery = useInfiniteQuery({

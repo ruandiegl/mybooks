@@ -1,6 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 import type { Socket } from 'socket.io-client';
 import type { MessagePages } from './messageCache';
+import { GAMIFICATION_LEADERBOARD_MATCHES_QUERY_KEY } from '../gamification/api';
 
 export type ChatConnectionState = 'connecting' | 'connected' | 'offline';
 export type MatchRemovedEvent = { matchId: string; conversationId: string };
@@ -75,6 +76,7 @@ export function bindChatRealtime(socket: Socket, queryClient: QueryClient, optio
   const invalidateConversationLists = () => {
     void queryClient.invalidateQueries({ queryKey: ['matches'] });
     void queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    void queryClient.invalidateQueries({ queryKey: GAMIFICATION_LEADERBOARD_MATCHES_QUERY_KEY });
   };
 
   const onConnect = () => {
@@ -91,6 +93,7 @@ export function bindChatRealtime(socket: Socket, queryClient: QueryClient, optio
     const known = knownConversations();
     void queryClient.invalidateQueries({ queryKey: ['matches'] });
     void queryClient.invalidateQueries({ queryKey: ['conversations'], refetchType: 'none' });
+    void queryClient.invalidateQueries({ queryKey: GAMIFICATION_LEADERBOARD_MATCHES_QUERY_KEY });
     void refreshConversations().then((fresh) => {
       if (!active || epoch !== connectionEpoch) return;
       const presentIds = new Set(fresh.map((conversation) => conversation.id));

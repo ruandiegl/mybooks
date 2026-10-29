@@ -4,6 +4,11 @@ import type { AppTheme } from '../../styles/theme';
 export const createStyles = (theme: AppTheme) => StyleSheet.create({
   page: { width: '100%', maxWidth: 672, alignSelf: 'center' },
   content: { paddingTop: theme.spacing.md, paddingBottom: theme.spacing.xxl },
+  scopeSelector: { flexDirection: 'row', gap: theme.spacing.xs, marginTop: theme.spacing.md, padding: theme.spacing.xxs, borderRadius: theme.radius.pill, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.outline },
+  scopeOption: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 42, paddingHorizontal: theme.spacing.sm, borderRadius: theme.radius.pill },
+  scopeOptionSelected: { backgroundColor: theme.colors.primary },
+  scopeOptionText: { color: theme.colors.mutedForeground, fontFamily: theme.typography.semibold, fontSize: 13 },
+  scopeOptionTextSelected: { color: theme.colors.onPrimary },
   header: { gap: theme.spacing.lg, marginBottom: theme.spacing.lg },
   entrySeparator: { height: theme.spacing.sm },
   summaryCard: { gap: theme.spacing.md },
