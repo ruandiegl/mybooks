@@ -15,6 +15,7 @@ import { bindSocketSessionLifecycle } from '../services/socketSessionLifecycle';
 import { accessSessionId } from '../features/auth/sessionActor';
 import { api } from '../services/api';
 import type { ApiEnvelope, Conversation } from '../types/api';
+import { refreshRelationshipCaches } from '../features/moderation/refreshRelationshipCaches';
 
 type ChatRealtimeContextValue = {
   socket: Socket | null;
@@ -79,7 +80,11 @@ export function ChatRealtimeProvider({ children }: PropsWithChildren) {
         refreshConversations: async () => (await api.get<ApiEnvelope<Conversation[]>>('/api/v1/conversations')).data.data,
         onMatchRemoved: (event) => setPendingMatchRemovals((pending) => addPendingRemoval(pending, event))
       });
-      detachRealtime = realtime.dispose;
+      const onRelationshipChanged = () => {
+        void refreshRelationshipCaches(queryClient);
+      };
+      created.on('relationship:changed', onRelationshipChanged);
+      detachRealtime = () => { created.off('relationship:changed', onRelationshipChanged); realtime.dispose(); };
       removedLookupRef.current = realtime.isConversationRemoved;
       confirmedRemovalHandlerRef.current = realtime.handleMatchRemoved;
       for (const event of queuedConfirmedRemovalsRef.current) realtime.handleMatchRemoved(event);

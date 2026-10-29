@@ -10,6 +10,8 @@ import {
   updateBookSchema
 } from './books.schemas.js';
 import { serializeBook } from './books.serializer.js';
+import { isBlockedPair } from '../moderation/moderation.visibility.js';
+import { prisma } from '../../shared/database/prisma.js';
 
 async function withPagination(rows, limit) {
   const avatarCache = new Map();
@@ -81,6 +83,10 @@ export const booksService = {
         statusCode: 404,
         code: 'BOOK_NOT_FOUND'
       });
+    }
+
+    if (book.ownerId && book.ownerId !== currentUserId && await isBlockedPair(prisma, currentUserId, book.ownerId)) {
+      throw new AppError('Livro não encontrado.', { statusCode: 404, code: 'BOOK_NOT_FOUND' });
     }
 
     if (book.ownerId !== currentUserId && book.availability !== 'AVAILABLE') {

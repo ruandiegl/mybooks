@@ -13,12 +13,14 @@ import { mediaRouter } from '../modules/media/media.routes.js';
 import { usersRouter } from '../modules/users/users.routes.js';
 import { authRouter } from '../modules/auth/auth.routes.js';
 import { settingsRouter } from '../modules/settings/settings.routes.js';
+import { moderationRouter } from '../modules/moderation/moderation.routes.js';
 
 export const apiRouter = Router();
 
 apiRouter.use('/auth', authRouter);
 apiRouter.use(authenticate, asyncHandler(attachCurrentUser));
 apiRouter.use(settingsRouter);
+apiRouter.use(moderationRouter);
 apiRouter.use('/premium', premiumRouter);
 apiRouter.use('/likes', likesRouter);
 apiRouter.use('/gamification', gamificationRouter);

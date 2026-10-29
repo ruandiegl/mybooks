@@ -6,17 +6,17 @@ import { useAppTheme } from '../../providers/ThemeProvider';
 import { useThemedStyles } from '../../styles/useThemedStyles';
 import type { AppTheme } from '../../styles/theme';
 
-type TitleProps = { subjectId: string; name: string; avatarUrl?: string | null; avatarVersion?: number; onImageError?: () => void };
+type TitleProps = { subjectId: string; name: string; avatarUrl?: string | null; avatarVersion?: number; onImageError?: () => void; onPress?: () => void };
 type ActionsProps = { disabled?: boolean; onOpenBooks: () => void; onRemoveMatch: () => void };
 
-export function ChatHeader({ subjectId, name, avatarUrl, avatarVersion, onImageError }: TitleProps) {
+export function ChatHeader({ subjectId, name, avatarUrl, avatarVersion, onImageError, onPress }: TitleProps) {
   const styles = useThemedStyles(createStyles);
   const mediaBinding = useMediaBinding();
   return (
-    <View style={styles.title}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`Abrir perfil de ${name}`} onPress={onPress} style={styles.title}>
       <Avatar subjectId={subjectId} binding={mediaBinding} name={name} url={avatarUrl} version={avatarVersion} size={36} onImageError={onImageError} />
       <Text accessibilityRole="header" numberOfLines={1} style={styles.name}>{name}</Text>
-    </View>
+    </Pressable>
   );
 }
 

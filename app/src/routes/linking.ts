@@ -27,6 +27,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
       BookCreate: 'books/new',
       ExchangeBookDetails: 'conversations/:conversationId/books/:bookId',
       BookDetails: 'books/:bookId',
+      PublicProfile: 'users/:userId',
       BookEdit: 'books/:bookId/edit',
       Matches: 'matches',
       StreakLeaderboard: 'ranking/sequencia',

@@ -1,4 +1,5 @@
 import { prisma } from '../../shared/database/prisma.js';
+import { visibleUserFilter } from '../moderation/moderation.visibility.js';
 
 const includeBook = {
   images: {
@@ -47,7 +48,8 @@ export const booksRepository = {
     };
     const availableBooks = {
       ownerId: { not: ownerId },
-      availability: 'AVAILABLE'
+      availability: 'AVAILABLE',
+      owner: visibleUserFilter(ownerId)
     };
     const unseen = await prisma.book.findMany({
       where: {

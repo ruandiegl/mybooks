@@ -1,5 +1,9 @@
 # 1. Visão geral
 
+## Segurança entre pessoas — plano 014 (implementação local)
+
+O MVP passa a incluir denúncia única por pessoa, bloqueio reversível e reputação pública de cinco estrelas no perfil acessado pelo livro/chat. O bloqueio oculta a relação e preserva o histórico; desbloquear restaura. Revisão humana, contestação e painel administrativo continuam fora do fluxo implementado e são necessários antes de operação ampla. Veja o [plano 014](../plans/plan-014-denuncias-bloqueios-reputacao.md).
+
 ## Configurações de conta (plano010)
 
 O perfil reúne edição, dados da conta, aparência, senha, indicador de Curtidas, ajuda e saída em um menu. Push, exclusão de conta, troca de e-mail/CPF e cobrança não são oferecidos nesta entrega. A implementação ainda é local; consulte [evidências e liberação](../plans/plan-010-menu-perfil-configuracoes-execucao.md).

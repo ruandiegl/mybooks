@@ -216,6 +216,16 @@ Resultados: [registro 012](../plans/plan-012-acesso-mobile-tablet-instalacao-pwa
 | Android | `npx expo export --platform android` | Export Hermes aprovado; bundle de 2,6 MB. É validação de export, não geração de APK nem aceite em aparelho. |
 | Android/iOS físico | Aparência, leitor de tela, texto ampliado e uso real | Pendente; build/typecheck não substituem validação em dispositivo. |
 
+## Moderação básica — plano 014 (implementação local)
+
+| Superfície | Evidência | Limite |
+| --- | --- | --- |
+| API | Prisma validate/generate, lint, testes unitários/HTTP e regras de visibilidade | Não equivale a dados migrados no Railway |
+| PostgreSQL descartável | Migração 014 aplicada; denúncia única, bloqueio concorrente, curtidas ocultas e histórico restaurado | Somente banco local `trocalivros_moderation_test` |
+| App/PWA | Typecheck, testes de navegação/componente, export e smoke | Safari/iPhone e duas contas reais pendentes |
+
+Publicar exige backup do banco alvo, migração da API antes do cliente e confirmação real de Socket.IO, bloqueio/desbloqueio e acessibilidade. Esta execução não publica.
+
 ## Integração pré-publicação — 29/10/2026
 
 | Superfície | Evidência local | Limite |

@@ -40,7 +40,11 @@ O acesso gratuito, os limites, a tela de oferta e a sessão segura da PWA estão
 
 ## Segurança/dependências
 
-Em 11/09/2026, `npm audit --omit=dev` reportou 4 ocorrências altas no grafo Prisma (`deepmerge-ts`, sem correção compatível) e 36 vulnerabilidades moderadas transitivas no grafo Expo/React Navigation, sem correção disponível. Os relatórios precisam de triagem por advisory e alcance no runtime. Não executar `npm audit fix --force`; uma atualização incompatível exige avaliação separada e repetição do aceite. MFA, bloqueio adaptativo, moderação e painel de revogação administrativa ficam para evolução posterior.
+Em 11/09/2026, `npm audit --omit=dev` reportou 4 ocorrências altas no grafo Prisma (`deepmerge-ts`, sem correção compatível) e 36 vulnerabilidades moderadas transitivas no grafo Expo/React Navigation, sem correção disponível. Os relatórios precisam de triagem por advisory e alcance no runtime. Não executar `npm audit fix --force`; uma atualização incompatível exige avaliação separada e repetição do aceite. MFA, bloqueio adaptativo, revisão humana de denúncias e painel de revogação administrativa ficam para evolução posterior.
+
+## Denúncia, bloqueio e reputação — plano 014 (local)
+
+O fluxo básico foi implementado localmente. Antes de disponibilizá-lo amplamente, definir equipe e prazo de revisão, contestação de denúncia, retenção/remoção dos relatos e proteção contra múltiplas contas coordenadas. A nota cai imediatamente no MVP e por isso não deve ser interpretada como veredito de segurança. Validar bloqueio com duas contas em aparelhos físicos, conectadas por Socket.IO, além de VoiceOver/TalkBack e Safari/PWA iOS. Migração 014 deve ser aplicada na API antes de publicar um cliente que usa as novas rotas; esta tarefa não publica nada.
 
 ## Foto de perfil — plano 009 (implementação não publicada)
 

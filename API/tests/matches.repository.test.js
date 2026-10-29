@@ -21,7 +21,8 @@ beforeEach(() => {
       findUnique: vi.fn().mockResolvedValue({ id: 'match', userAId: a, userBId: b, conversation: { id: 'conversation' } }),
       delete: vi.fn()
     },
-    conversation: { upsert: vi.fn() }
+    conversation: { upsert: vi.fn() },
+    userBlock: { findFirst: vi.fn().mockResolvedValue(null) }
   };
   prisma.$transaction.mockReset().mockImplementation(async (callback) => callback(tx));
 });
@@ -100,6 +101,11 @@ describe('atomic interactions', () => {
     await expect(matchesRepository.applyInteraction({ ...action, actorId: a })).rejects.toMatchObject({ code: 'SELF_INTERACTION' });
     expect(tx.interaction.upsert).not.toHaveBeenCalled();
   });
+  it('rejects interaction while either person has blocked the other', async () => {
+    tx.userBlock.findFirst.mockResolvedValue({ blockerId: a });
+    await expect(matchesRepository.applyInteraction(action)).rejects.toMatchObject({ code: 'DISCOVERY_BOOK_NOT_FOUND' });
+    expect(tx.interactionActionReceipt.create).not.toHaveBeenCalled();
+  });
   it.each(['P2034', 'P2002'])('retries transaction conflicts then returns authoritative receipt state (%s)', async (code) => {
     prisma.$transaction.mockRejectedValueOnce({ code });
     tx.interactionActionReceipt.findUnique.mockResolvedValue(action);
@@ -113,6 +119,11 @@ describe('atomic interactions', () => {
   });
 });
 describe('match removal', () => {
+  it('preserves match and history while blocked', async () => {
+    tx.userBlock.findFirst.mockResolvedValue({ blockerId: a });
+    await expect(matchesRepository.remove(a, 'match')).rejects.toMatchObject({ code: 'MATCH_NOT_FOUND' });
+    expect(tx.match.delete).not.toHaveBeenCalled();
+  });
   it('clears both owners current likes, cascades the match, and retains receipts', async () => {
     expect(await matchesRepository.remove(a, 'match')).toEqual({ matchId: 'match', conversationId: 'conversation', participantIds: [a, b] });
     expect(tx.interaction.updateMany).toHaveBeenCalledWith({ where: { action: 'LIKE', OR: [ { actorId: a, targetBook: { ownerId: b } }, { actorId: b, targetBook: { ownerId: a } } ] }, data: { action: 'PASS' } });

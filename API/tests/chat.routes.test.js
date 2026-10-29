@@ -27,7 +27,7 @@ describe('contextual exchange book route', () => {
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ data: [] });
     const query = mocks.conversation.findMany.mock.calls[0][0];
-    expect(query.where).toEqual({ members: { some: { userId } } });
+    expect(query.where).toMatchObject({ members: { some: { userId } } });
     for (const side of ['bookA', 'bookB']) {
       expect(query.include.match.select[side]).toEqual({ select: {
         id: true, title: true, authors: true, availability: true, coverExternalUrl: true,
@@ -58,7 +58,7 @@ describe('contextual exchange book route', () => {
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ data: expect.objectContaining({ id: bookId, title: 'Livro', availability, hasIsbnBadge: true, owner: { id: userId, name: 'Pessoa', avatarUrl: null, avatarUrlExpiresAt: null, avatarVersion: 0, city: 'Recife' } }) });
     const query = mocks.conversation.findFirst.mock.calls[0][0];
-    expect(query.where).toEqual({ id: conversationId, members: { some: { userId } }, match: { OR: [{ bookAId: bookId }, { bookBId: bookId }] } });
+    expect(query.where).toMatchObject({ id: conversationId, members: { some: { userId } }, match: { OR: [{ bookAId: bookId }, { bookBId: bookId }] } });
     for (const side of ['bookA', 'bookB']) {
       const selection = query.select.match.select[side].select;
       expect(selection.owner).toEqual({ select: { id: true, name: true, avatarStorageKey: true, avatarVersion: true, avatarUrl: true, city: true } });

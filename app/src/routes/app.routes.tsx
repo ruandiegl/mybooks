@@ -6,6 +6,7 @@ import type { NavigationState } from '@react-navigation/native';
 import { useEffect, useRef, useState } from 'react';
 import { BookCreate } from '../pages/BookCreate';
 import { BookDetails } from '../pages/BookDetails';
+import { PublicProfile } from '../pages/PublicProfile';
 import { BookEdit } from '../pages/BookEdit';
 import { Chat } from '../pages/Chat';
 import { Matches } from '../pages/Matches';
@@ -73,6 +74,7 @@ export function AppRoutes({ navigationRef }: Props) {
         component={BookDetails}
         options={{ title: 'Detalhes do livro' }}
       />
+      <Stack.Screen name="PublicProfile" component={PublicProfile} options={{ title: 'Perfil' }} />
       <Stack.Screen
         name="ExchangeBookDetails"
         component={BookDetails}

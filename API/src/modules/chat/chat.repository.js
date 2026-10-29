@@ -1,5 +1,6 @@
 import { AppError } from '../../shared/errors/AppError.js';
 import { prisma } from '../../shared/database/prisma.js';
+import { visibleMatchFilter } from '../moderation/moderation.visibility.js';
 
 const bookSummarySelect = {
   id: true,
@@ -58,14 +59,14 @@ function conversationNotFound() {
 
 export const chatRepository = {
   findMembership(conversationId, userId) {
-    return prisma.conversationMember.findUnique({
-      where: { conversationId_userId: { conversationId, userId } }
+    return prisma.conversationMember.findFirst({
+      where: { conversationId, userId, conversation: { match: visibleMatchFilter(userId) } }
     });
   },
 
   listConversations(userId) {
     return prisma.conversation.findMany({
-      where: { members: { some: { userId } } },
+      where: { members: { some: { userId } }, match: visibleMatchFilter(userId) },
       include: conversationInclude,
       orderBy: { updatedAt: 'desc' }
     });
@@ -76,7 +77,7 @@ export const chatRepository = {
       where: {
         id: conversationId,
         members: { some: { userId } },
-        match: { OR: [{ bookAId: bookId }, { bookBId: bookId }] }
+        match: { OR: [{ bookAId: bookId }, { bookBId: bookId }], ...visibleMatchFilter(userId) }
       },
       select: {
         match: {
@@ -91,9 +92,9 @@ export const chatRepository = {
     });
   },
 
-  listMessages(conversationId, { cursor, limit }) {
+  listMessages(conversationId, userId, { cursor, limit }) {
     return prisma.message.findMany({
-      where: { conversationId },
+      where: { conversationId, conversation: { match: visibleMatchFilter(userId) } },
       include: {
         sender: { select: { id: true, name: true, avatarStorageKey: true, avatarVersion: true, avatarUrl: true } }
       },
@@ -107,8 +108,8 @@ export const chatRepository = {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         return await prisma.$transaction(async (tx) => {
-          const membership = await tx.conversationMember.findUnique({
-            where: { conversationId_userId: { conversationId, userId: senderId } }
+          const membership = await tx.conversationMember.findFirst({
+            where: { conversationId, userId: senderId, conversation: { match: visibleMatchFilter(senderId) } }
           });
           if (!membership) throw conversationNotFound();
           const existing = await tx.message.findUnique({
@@ -139,8 +140,8 @@ export const chatRepository = {
     }
   },
   markRead(conversationId, userId) {
-    return prisma.conversationMember.update({
-      where: { conversationId_userId: { conversationId, userId } },
+    return prisma.conversationMember.updateMany({
+      where: { conversationId, userId, conversation: { match: visibleMatchFilter(userId) } },
       data: { lastReadAt: new Date() }
     });
   }

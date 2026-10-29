@@ -1,4 +1,5 @@
 import { prisma } from '../../shared/database/prisma.js';
+import { visibleMatchFilter } from '../moderation/moderation.visibility.js';
 
 export const publicUserSelect = {
   id: true,
@@ -40,11 +41,12 @@ export const usersRepository = {
       prisma.match.count({
         where: {
           status: 'ACTIVE',
-          OR: [{ userAId: id }, { userBId: id }]
+          OR: [{ userAId: id }, { userBId: id }],
+          ...visibleMatchFilter(id)
         }
       }),
       prisma.conversation.count({
-        where: { members: { some: { userId: id } } }
+        where: { members: { some: { userId: id } }, match: visibleMatchFilter(id) }
       })
     ]);
 

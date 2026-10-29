@@ -18,6 +18,10 @@ Livros, imagens, interações, matches, conversas e mensagens mantêm ownership 
 
 A migração `20260930120000_book_image_order_cleanup` primeiro aborta se houver livro com mais de três fotos ou mais de uma capa, depois faz backfill estável por `isCover DESC, createdAt ASC, id ASC` e promove a primeira foto como capa. Antes de produção, execute a consulta somente-leitura `API/prisma/book-image-preflight.sql` sobre um backup/alvo e resolva cada exceção explicitamente; a migração não exclui fotos. A migração não foi aplicada ao banco Railway durante esta execução.
 
+## Moderação básica — plano 014 (implementação local)
+
+`20261029140000_user_moderation` cria `UserReport` (par único denunciante/denunciado, motivo, descrição privada, timestamp) e `UserBlock` (par único bloqueador/bloqueado, timestamp). Índices reversos dão suporte à contagem de reputação e ao filtro de relações. Exclusão de conta remove as linhas associadas em cascata. Contas existentes não recebem registros fictícios: reputação derivada começa em 5,0. Cada denúncia distinta reduz 0,5 e cada bloqueio ativo recebido reduz 0,25; piso 1,0. Desbloqueio remove a linha e devolve a parcela da nota. Não há coluna de nota persistida nem banimento automático.
+
 ## Sequência diária
 
 A migração `20261026120000_daily_active_streak` acrescenta `User.lastActiveDay DATE NULL` e `User.currentActiveStreak INTEGER NULL`, com índice para a consulta temporal do ranking. Os valores legados ficam nulos porque não existe histórico confiável para backfill; o primeiro check-in registrado inicia em 1. A solução armazena somente a última data ativa e a sequência atual, sem tabela de eventos ou recorde histórico. Esses campos não fazem parte dos seletores de usuário público/autenticação.

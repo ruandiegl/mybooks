@@ -45,3 +45,6 @@ O refresh cookie fica fora do JavaScript e o refresh entre abas usa Web Locks pa
 O preflight real de 05/10/2026 mostrou o bucket trocalivros público (domínio e r2.dev), sem CORS. A política de privacidade documentada é requisito, não configuração aprovada de produção. Não liberar avatares privados antes de migrar referências e fechar ambas as exposições em operação autorizada; GET assinado sozinho não resolve.
 
 Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).
+## Ações de segurança pessoal — plano 014 (implementação local)
+
+Denúncia e bloqueio usam a identidade da sessão, não IDs de ator enviados pelo cliente. Pares únicos impedem múltiplas penalidades pela mesma conta. Razões e denunciantes permanecem privados. Rotas de escrita possuem limite por conta; em múltiplas réplicas, esse limitador em memória precisa de armazenamento compartilhado. A nota do MVP cai imediatamente por denúncia, portanto revisão humana, contestação, prevenção de contas falsas e política de retenção de denúncias são requisitos antes de uso amplo.

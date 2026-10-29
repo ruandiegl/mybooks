@@ -6,15 +6,17 @@ import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppButton } from '../../components/AppButton';
 import { Avatar } from '../../components/Avatar';
 import { Badge } from '../../components/Badge';
 import { BookGallery } from '../../components/BookGallery';
 import { IsbnBadge } from '../../components/IsbnBadge';
+import { ReputationStars } from '../../components/ReputationStars';
 import { StateView } from '../../components/StateView';
 import { getBookGalleryPhotos } from '../../features/books/bookPresentation';
+import { getPublicProfile } from '../../features/moderation/api';
 import { api } from '../../services/api';
 import type { ApiEnvelope, Book, User } from '../../types/api';
 import type { RootStackParamList } from '../../types/navigation';
@@ -41,13 +43,20 @@ export function BookDetails({ route, navigation }: Props) {
     }
   });
   const me = useQuery({ queryKey: ['me'], queryFn: async () => (await api.get<ApiEnvelope<User>>('/api/v1/me')).data.data });
+  const ownerProfile = useQuery({
+    queryKey: ['public-profile', query.data?.owner?.id],
+    queryFn: ({ signal }) => getPublicProfile(query.data!.owner!.id, signal),
+    enabled: Boolean(query.data?.owner?.id)
+  });
   const exchangeBookUnavailable = isExchangeBook && axios.isAxiosError(query.error) && query.error.response?.status === 404;
+  const bookUnavailable = !isExchangeBook && axios.isAxiosError(query.error) && query.error.response?.status === 404;
   const refreshAvatar = useAvatarRefresh(query.data, query.refetch, useIsFocused() && !exchangeBookUnavailable);
 
   if (query.isLoading) return <View style={styles.page}><StateView loading title="Abrindo o livro" /></View>;
   if (exchangeBookUnavailable) {
     return <View style={styles.page}><StateView title="Detalhes da troca indisponíveis" description="O match foi removido ou este livro já não faz parte da troca." icon="menu-book" actionLabel="Ir para mensagens" onAction={() => navigation.navigate('Main', { screen: 'Messages' })} /></View>;
   }
+  if (bookUnavailable) return <View style={styles.page}><StateView title="Livro não disponível" description="Este livro não pode ser exibido agora." icon="menu-book" actionLabel="Voltar" onAction={() => navigation.goBack()} /></View>;
   if (!query.data) {
     if (isExchangeBook && query.isError) {
       return <View style={styles.page}><StateView title="Não foi possível carregar os detalhes" description="Confira sua conexão e tente novamente." icon="cloud-off" actionLabel="Tentar novamente" onAction={() => query.refetch()} /></View>;
@@ -61,10 +70,10 @@ export function BookDetails({ route, navigation }: Props) {
   return (
     <ScrollView style={styles.page} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
       {book.owner ? (
-        <View style={styles.owner}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Abrir perfil de ${book.owner.name}`} onPress={() => navigation.navigate('PublicProfile', { userId: book.owner!.id })} style={styles.owner}>
           <Avatar retryToken={imageRetryToken} subjectId={book.owner.id} binding={mediaBinding} name={book.owner.name} url={book.owner.avatarUrl} version={book.owner.avatarVersion} onImageError={refreshAvatar} />
-          <View style={styles.ownerInfo}><Text style={styles.ownerCaption}>Na estante de</Text><Text style={styles.ownerName}>{book.owner.name}</Text><Text style={styles.ownerCity}>{book.owner.city || 'Localização não informada'}</Text></View>
-        </View>
+          <View style={styles.ownerInfo}><Text style={styles.ownerCaption}>Na estante de</Text><Text style={styles.ownerName}>{book.owner.name}</Text><Text style={styles.ownerCity}>{book.owner.city || 'Localização não informada'}</Text>{typeof ownerProfile.data?.reputation?.stars === 'number' ? <ReputationStars stars={ownerProfile.data.reputation.stars} /> : null}</View>
+        </Pressable>
       ) : null}
       <BookGallery retryToken={imageRetryToken} key={book.id} bookId={book.id} binding={mediaBinding} onImageError={refreshAvatar} title={book.title} photos={photos} refreshing={query.isFetching} onRefresh={() => { setImageRetryToken(value => value + 1); void query.refetch(); }} />
       <View style={styles.heading}>

@@ -1,4 +1,5 @@
 import { prisma } from '../../shared/database/prisma.js';
+import { visibleUserFilter } from '../moderation/moderation.visibility.js';
 
 function actorWithoutActiveMatch(userId) {
   return {
@@ -18,7 +19,7 @@ export const likesRepository = {
     const comparison = sort === 'asc' ? 'gt' : 'lt';
     const where = {
       action: 'LIKE',
-      actor: actorWithoutActiveMatch(userId),
+      actor: { ...actorWithoutActiveMatch(userId), ...visibleUserFilter(userId) },
       targetBook: {
         ownerId: userId
       },
@@ -82,7 +83,8 @@ export const likesRepository = {
     return prisma.interaction.findMany({
       where: {
         actorId: userId,
-        action: 'LIKE'
+        action: 'LIKE',
+        targetBook: { owner: visibleUserFilter(userId) }
       },
       take: limit + 1,
       ...(cursor && { cursor: { id: cursor }, skip: 1 }),
@@ -116,6 +118,11 @@ export const likesRepository = {
       WHERE i.action = 'LIKE'
         AND b.user_id = ${userId}
         AND NOT EXISTS (
+          SELECT 1 FROM "UserBlock" ub
+          WHERE (ub."blockerId" = ${userId} AND ub."blockedId" = i."actorId")
+             OR (ub."blockedId" = ${userId} AND ub."blockerId" = i."actorId")
+        )
+        AND NOT EXISTS (
           SELECT 1 FROM "Match" m
           WHERE m.status = 'ACTIVE'
             AND ((m."userAId" = ${userId} AND m."userBId" = i."actorId")
@@ -138,7 +145,7 @@ export const likesRepository = {
         interactions: {
           some: {
             action: 'LIKE',
-            actor: actorWithoutActiveMatch(userId)
+            actor: { ...actorWithoutActiveMatch(userId), ...visibleUserFilter(userId) }
           }
         }
       },

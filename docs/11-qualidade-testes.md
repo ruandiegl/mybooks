@@ -1,5 +1,9 @@
 # 11. Qualidade e testes
 
+## Moderação básica — plano 014
+
+Os testes da API cobrem cálculo com piso, bloqueio de interação e remoção destrutiva indevida. A integração usa somente `TEST_DATABASE_URL` local `*_test` e `TEST_DATABASE_DISPOSABLE=true`: aplica todas as migrações em schema temporário, verifica denúncia única/privacidade, bloqueios concorrentes, ocultação de livros/curtidas/matches/chat, recusa de mensagem e restauração do histórico. O app valida tipagem, rotas e build PWA. Testar em duas contas e aparelhos físicos ainda é aceite externo.
+
 ## Boot e ícones — plano 013
 
 `features/boot/__tests__`, `bootApp` e `bootRoutes` cobrem recursos, deadlines, primeiro frame, imagem falha, ponte nativa, sessão lenta e foco. `node --test web/tests/brand-assets.test.mjs` valida os pixels/dimensões reais; smoke PWA executa o HTML/worker exportados. QA opcional `pwa-boot-browser-smoke.cjs` testa bundle atrasado/reload, temas, falhas e larguras somente em loopback. Preview/release físico e Safari/PWA instalada são aceites separados; [registro 013](../plans/plan-013-identidade-web-splashscreen-execucao.md).

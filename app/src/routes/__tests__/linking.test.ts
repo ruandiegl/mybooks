@@ -26,6 +26,10 @@ describe('web app deep links', () => {
     const state = getStateFromPath('/books/book-42', linking.config);
     expect(state?.routes.at(-1)).toMatchObject({ name: 'BookDetails', params: { bookId: 'book-42' } });
   });
+  it('maps a public reader profile without private data in the URL', () => {
+    const state = getStateFromPath('/users/reader-42', linking.config);
+    expect(state?.routes.at(-1)).toMatchObject({ name: 'PublicProfile', params: { userId: 'reader-42' } });
+  });
 
   it('maps direct exchange-book URLs with both context IDs', () => {
     const state = getStateFromPath('/conversations/conversation-7/books/book-42', linking.config);

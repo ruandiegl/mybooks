@@ -24,6 +24,7 @@ vi.mock('../../../styles/useThemedStyles', () => ({ useThemedStyles: () => ({ pa
 vi.mock('../../../components/StateView', () => ({ StateView: ({ title }: { title: string }) => <div>{title}</div> }));
 vi.mock('../../../components/AppButton', () => ({ AppButton: () => null }));
 vi.mock('../../../components/Avatar', () => ({ Avatar: () => null }));
+vi.mock('../../../components/ReputationStars', () => ({ ReputationStars: () => null }));
 vi.mock('../../../components/BookGallery', () => ({ BookGallery: () => null }));
 vi.mock('../../../components/Badge', () => ({ Badge: () => null }));
 vi.mock('../../../components/IsbnBadge', () => ({ IsbnBadge: () => null }));

@@ -63,7 +63,7 @@ describe('booksRepository.listDiscovery', () => {
     const result = await booksRepository.listDiscovery(ownerId, { limit: 20 });
 
     expect(result).toEqual([book]);
-    expect(mocks.findMany.mock.calls[1][0].where).toEqual({
+    expect(mocks.findMany.mock.calls[1][0].where).toMatchObject({
       ownerId: { not: ownerId },
       availability: 'AVAILABLE',
       interactions: { some: { actorId: ownerId, action: 'PASS' } }

@@ -1,5 +1,6 @@
 import { prisma } from '../../shared/database/prisma.js';
 import { AppError } from '../../shared/errors/AppError.js';
+import { isBlockedPair, visibleMatchFilter } from '../moderation/moderation.visibility.js';
 
 const matchInclude = {
   userA: {
@@ -45,13 +46,16 @@ export const matchesRepository = {
       }
       const where = { actorId_targetBookId: { actorId, targetBookId } };
       if (receipt) {
+        const receiptBook = await tx.book.findUnique({ where: { id: targetBookId }, select: { ownerId: true } });
+        if (receiptBook?.ownerId && await isBlockedPair(tx, actorId, receiptBook.ownerId)) {
+          throw new AppError('Livro indisponível para descoberta.', { statusCode: 404, code: 'DISCOVERY_BOOK_NOT_FOUND' });
+        }
         // A receipt is authoritative for retries even when the book later changes availability.
         const interaction = await tx.interaction.findUnique({ where });
         let match = null;
         if (action === 'LIKE' && interaction?.action === 'LIKE') {
-          const targetBook = await tx.book.findUnique({ where: { id: targetBookId }, select: { ownerId: true } });
-          if (targetBook?.ownerId && targetBook.ownerId !== actorId) {
-            const [userAId, userBId] = [actorId, targetBook.ownerId].sort();
+          if (receiptBook?.ownerId && receiptBook.ownerId !== actorId) {
+            const [userAId, userBId] = [actorId, receiptBook.ownerId].sort();
             const existingMatch = await tx.match.findUnique({
               where: { userAId_userBId: { userAId, userBId } },
               include: matchInclude
@@ -67,6 +71,9 @@ export const matchesRepository = {
       }
       if (targetBook.ownerId === actorId) {
         throw new AppError('Você não pode interagir com o próprio livro.', { statusCode: 422, code: 'SELF_INTERACTION' });
+      }
+      if (await isBlockedPair(tx, actorId, targetBook.ownerId)) {
+        throw new AppError('Livro indisponível para descoberta.', { statusCode: 404, code: 'DISCOVERY_BOOK_NOT_FOUND' });
       }
       if (action === 'LIKE' && consumeLike) await consumeLike(tx);
       await tx.interactionActionReceipt.create({ data: { actorId, targetBookId, action, clientActionId } });
@@ -104,6 +111,7 @@ export const matchesRepository = {
     return serializable(async (tx) => {
       const match = await tx.match.findUnique({ where: { id: matchId }, include: { conversation: { select: { id: true } } } });
       if (!match || ![match.userAId, match.userBId].includes(actorId)) throw matchNotFound();
+      if (await isBlockedPair(tx, match.userAId, match.userBId)) throw matchNotFound();
       await tx.interaction.updateMany({
         where: { action: 'LIKE', OR: [
           { actorId: match.userAId, targetBook: { ownerId: match.userBId } },
@@ -118,7 +126,7 @@ export const matchesRepository = {
 
   listForUser(userId) {
     return prisma.match.findMany({
-      where: { status: 'ACTIVE', OR: [{ userAId: userId }, { userBId: userId }] },
+      where: { status: 'ACTIVE', OR: [{ userAId: userId }, { userBId: userId }], ...visibleMatchFilter(userId) },
       include: matchInclude, orderBy: { updatedAt: 'desc' }
     });
   }

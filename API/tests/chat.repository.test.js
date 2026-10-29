@@ -5,12 +5,12 @@ const { chatRepository } = await import('../src/modules/chat/chat.repository.js'
 let tx;
 const input = { conversationId: 'conversation', senderId: 'sender', clientMessageId: 'message', body: 'Hello' };
 beforeEach(() => {
-  tx = { conversationMember: { findUnique: vi.fn().mockResolvedValue({}) }, message: { findUnique: vi.fn().mockResolvedValue(null), create: vi.fn().mockResolvedValue(input) }, conversation: { update: vi.fn() } };
+  tx = { conversationMember: { findFirst: vi.fn().mockResolvedValue({}) }, message: { findUnique: vi.fn().mockResolvedValue(null), create: vi.fn().mockResolvedValue(input) }, conversation: { update: vi.fn() } };
   prisma.$transaction.mockReset().mockImplementation(async (callback) => callback(tx));
 });
 describe('message persistence during match removal', () => {
   it('authorizes again inside the serializable write transaction', async () => {
-    tx.conversationMember.findUnique.mockResolvedValue(null);
+    tx.conversationMember.findFirst.mockResolvedValue(null);
     await expect(chatRepository.createMessage(input)).rejects.toMatchObject({ statusCode: 404, code: 'CONVERSATION_NOT_FOUND' });
     expect(tx.message.create).not.toHaveBeenCalled();
   });
@@ -20,7 +20,7 @@ describe('message persistence during match removal', () => {
   });
   it('retries serialization and rechecks membership instead of writing after removal', async () => {
     prisma.$transaction.mockRejectedValueOnce({ code: 'P2034' });
-    tx.conversationMember.findUnique.mockResolvedValue(null);
+    tx.conversationMember.findFirst.mockResolvedValue(null);
     await expect(chatRepository.createMessage(input)).rejects.toMatchObject({ code: 'CONVERSATION_NOT_FOUND' });
     expect(prisma.$transaction).toHaveBeenCalledTimes(2);
   });

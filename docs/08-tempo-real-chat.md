@@ -44,3 +44,6 @@ As primitives nativas `MessageScroller`, `Message`, `Bubble`, `TypingIndicator`,
 Resumos de otherUser e sender agora são allowlists com avatarUrl/expiração/versão, inclusive mensagens emitidas por Socket.IO. Eventos e membership são preservados. O cliente invalida mensagens pela chave real [messages,conversationId], além de conversations/matches.
 
 Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).
+# Bloqueio reversível — plano 014 (implementação local)
+
+Bloquear uma pessoa mantém `Match`, `Conversation`, membros e `Message` no banco, mas remove o par das listagens de match/conversa. A autorização de entrada na sala, leitura, envio, presença e marcação de leitura passa pelo filtro de bloqueio. O envio revalida dentro da transação serializável; URLs e salas antigas não concedem acesso. Após commit, `relationship:changed` pede invalidação dos caches dos dois participantes e o servidor retira sockets da sala da conversa. Desbloquear restaura o histórico. Remover match continua sendo a operação destrutiva separada.

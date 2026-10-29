@@ -148,7 +148,7 @@ export function Chat({ route, navigation }: Props) {
     navigation.setOptions({
       title: 'Conversa',
       headerTitle: conversation
-        ? () => <ChatHeader subjectId={conversation.otherUser.id} name={conversation.otherUser.name} avatarUrl={conversation.otherUser.avatarUrl} avatarVersion={conversation.otherUser.avatarVersion} onImageError={refreshConversationMedia} />
+        ? () => <ChatHeader subjectId={conversation.otherUser.id} name={conversation.otherUser.name} avatarUrl={conversation.otherUser.avatarUrl} avatarVersion={conversation.otherUser.avatarVersion} onImageError={refreshConversationMedia} onPress={() => navigation.navigate('PublicProfile', { userId: conversation.otherUser.id })} />
         : 'Conversa',
       headerRight: () => <ChatHeaderActions
         disabled={!conversation}

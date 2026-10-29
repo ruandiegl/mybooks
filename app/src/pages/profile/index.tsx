@@ -27,6 +27,9 @@ import { ProfileEditForm } from '../../components/ProfileEditForm';
 import { AppearanceSettingsPanel } from '../../components/AppearanceSettingsPanel';
 import { NotificationSettingsPanel } from '../../components/NotificationSettingsPanel';
 import { AccountSettingsPanel } from '../../components/AccountSettingsPanel';
+import { BlockedUsersPanel } from '../../components/BlockedUsersPanel';
+import { ReputationStars } from '../../components/ReputationStars';
+import { getPublicProfile } from '../../features/moderation/api';
 import { PasswordChangeForm } from '../../components/PasswordChangeForm';
 import { ProfileHelpPanel } from '../../components/ProfileHelpPanel';
 import { AboutAppPanel } from '../../components/AboutAppPanel';
@@ -71,6 +74,11 @@ export function Profile({ navigation }: Props) {
   const profileQuery = useQuery({
     queryKey: ['me'],
     queryFn: async () => (await api.get<ApiEnvelope<User>>('/api/v1/me')).data.data
+  });
+  const reputationQuery = useQuery({
+    queryKey: ['public-profile', session.user?.id],
+    queryFn: ({ signal }) => getPublicProfile(session.user!.id, signal),
+    enabled: Boolean(session.user?.id)
   });
   const avatarEditor = useAvatarEditor(session.user?.id, (avatar) => {
     if (session.user) session.updateAvatar(avatar, session.user.id);
@@ -217,6 +225,7 @@ export function Profile({ navigation }: Props) {
               <MaterialIcons name="place" size={16} color={theme.colors.secondary} />
               <Text style={styles.locationText}>{profile.city}</Text>
             </View> : null}
+            {typeof reputationQuery.data?.reputation?.stars === 'number' ? <ReputationStars stars={reputationQuery.data.reputation.stars} /> : null}
           </View>
         </View>
         {profile?.bio ? <Text numberOfLines={3} style={styles.bio}>{profile.bio}</Text> : null}
@@ -295,12 +304,13 @@ export function Profile({ navigation }: Props) {
           <View style={styles.aboutRow}><MaterialIcons name="menu-book" size={20} color={theme.colors.secondary} /><View style={styles.aboutCopy}><Text style={styles.aboutLabel}>Bio</Text><Text style={styles.aboutValue}>{profile.bio || 'Você ainda não escreveu uma bio.'}</Text></View></View>
         </View>
       </ScrollView>}
-      <ProfileSettingsModal visible={settings.visible} route={settings.route} busy={busy} cropping={Boolean(avatarEditor.source)} onBack={settings.back} onClose={settings.requestClose} onRoute={openRoute} available={['editProfile', 'account', 'appearance', 'notifications', 'help', 'about', 'confirmSignOut', ...(Platform.OS === 'web' ? ['install' as const] : []), ...(accountPreferences.data?.capabilities.changePassword ? ['password' as const] : [])]} appearanceLabel={preference === 'system' ? 'Dispositivo' : preference === 'dark' ? 'Escuro' : 'Claro'}>
+      <ProfileSettingsModal visible={settings.visible} route={settings.route} busy={busy} cropping={Boolean(avatarEditor.source)} onBack={settings.back} onClose={settings.requestClose} onRoute={openRoute} available={['editProfile', 'account', 'appearance', 'blockedUsers', 'notifications', 'help', 'about', 'confirmSignOut', ...(Platform.OS === 'web' ? ['install' as const] : []), ...(accountPreferences.data?.capabilities.changePassword ? ['password' as const] : [])]} appearanceLabel={preference === 'system' ? 'Dispositivo' : preference === 'dark' ? 'Escuro' : 'Claro'}>
         {avatarEditor.source ? <AvatarEditor key={avatarEditor.source.uri} source={avatarEditor.source} busy={avatarEditor.busy} error={avatarEditor.error} statusLabel={avatarEditor.statusLabel} previewUri={avatarEditor.previewUri} onSave={avatarEditor.save} onCancel={avatarEditor.cancel} onChooseAnother={avatarEditor.choose} />
           : settings.route === 'editProfile' ? <ProfileEditForm editor={editor} avatarEditor={avatarEditor} profile={profile} binding={mediaBinding} retryToken={imageRetryToken} onImageError={session.refreshAvatar} />
           : settings.route === 'appearance' ? <AppearanceSettingsPanel />
           : settings.route === 'notifications' ? <NotificationSettingsPanel preferences={accountPreferences} />
           : settings.route === 'account' ? <AccountSettingsPanel />
+          : settings.route === 'blockedUsers' ? <BlockedUsersPanel />
           : settings.route === 'help' ? <ProfileHelpPanel />
           : settings.route === 'about' ? <AboutAppPanel />
           : settings.route === 'install' ? <PwaInstallSettingsPanel />

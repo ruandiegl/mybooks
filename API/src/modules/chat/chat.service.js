@@ -90,7 +90,7 @@ export const chatService = {
   async listMessages(userId, conversationId, query) {
     await assertMember(conversationId, userId);
     const pagination = messagePaginationSchema.parse(query);
-    const rows = await chatRepository.listMessages(conversationId, pagination);
+    const rows = await chatRepository.listMessages(conversationId, userId, pagination);
     const hasNextPage = rows.length > pagination.limit;
     const selected = hasNextPage ? rows.slice(0, pagination.limit) : rows;
 

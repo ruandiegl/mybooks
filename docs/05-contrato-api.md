@@ -134,6 +134,19 @@ Detalhes, contratos, evidências e procedimento de liberação: [execução do p
 
 O cliente novo envia `X-Avatar-Owner` nos comandos de avatar, apenas para conferir a conta capturada no início da ação. Divergência da sessão retorna `409 AVATAR_SESSION_CHANGED` antes da mutação; o header nunca autoriza outro usuário nem é repassado ao PUT R2. Clientes legados sem header permanecem compatíveis.
 
+## Denúncia, bloqueio e reputação — plano 014 (implementação local)
+
+Rotas autenticadas, sob `/api/v1`:
+
+| Método | Caminho | Resultado |
+| --- | --- | --- |
+| GET | `/users/:userId/public` | identidade pública, avatar, bio/cidade, `{ reputation: { stars } }` e flags próprias `blockedByMe`/`reportedByMe` |
+| POST | `/users/:userId/reports` | `{ reason }` dentre `HARASSMENT`, `FRAUD`, `INAPPROPRIATE_CONTENT`, `SPAM`, `OTHER`; descrição opcional de 10–500 caracteres; `201` ou `409 ALREADY_REPORTED` |
+| PUT / DELETE | `/users/:userId/block` | bloqueia/desbloqueia de modo idempotente; `{ data: { blocked } }` |
+| GET | `/me/blocks` | pessoas bloqueadas pelo usuário para gestão do desbloqueio |
+
+IDs inválidos retornam `422`; ação sobre si retorna `422 SELF_MODERATION`. Perfil que bloqueou o visitante retorna `404 USER_NOT_FOUND`. Denúncias e contagens não são públicas. Bloqueio oculta livros, curtidas, matches e conversas dos dois lados, inclusive nas rotas antigas; mensagens e interações são revalidadas na transação. O histórico da conversa não é apagado e reaparece ao desbloquear. `DELETE /matches/:matchId` continua sendo a ação distinta que apaga o histórico.
+
 ## Gamificação
 
 Ambas as rotas são privadas e usam `req.currentUser.id`; o check-in não aceita usuário nem data no corpo.
