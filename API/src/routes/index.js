@@ -4,6 +4,7 @@ import { authenticate, attachCurrentUser } from '../modules/auth/auth.middleware
 import { booksRouter } from '../modules/books/books.routes.js';
 import { discoverBooks } from '../modules/books/books.controller.js';
 import { chatRouter } from '../modules/chat/chat.routes.js';
+import { gamificationRouter } from '../modules/gamification/gamification.routes.js';
 import { isbnRouter } from '../modules/isbn/isbn.routes.js';
 import { matchesRouter } from '../modules/matches/matches.routes.js';
 import { likesRouter } from '../modules/likes/likes.routes.js';
@@ -20,6 +21,7 @@ apiRouter.use(authenticate, asyncHandler(attachCurrentUser));
 apiRouter.use(settingsRouter);
 apiRouter.use('/premium', premiumRouter);
 apiRouter.use('/likes', likesRouter);
+apiRouter.use('/gamification', gamificationRouter);
 apiRouter.get('/discover', asyncHandler(discoverBooks));
 apiRouter.use(usersRouter);
 apiRouter.use('/books/:bookId/images', mediaRouter);

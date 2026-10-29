@@ -22,6 +22,20 @@ function setup({ used = 0, existing = false, premiumActive = false, now = today,
 }
 
 describe('likesQuotaService', () => {
+  it('uses the supplied match transaction and locks before reading the quota date', async () => {
+    const { service, repository, tx, clock } = setup({ used: 14 });
+    repository.lockUser = vi.fn(async () => { clock.now.mockReturnValue(new Date('2026-09-25T03:00:00.000Z')); });
+    const persist = vi.fn();
+
+    await service.consumeDailyLike(userId, bookId, persist, tx);
+
+    expect(repository.withUserTransaction).not.toHaveBeenCalled();
+    expect(repository.lockUser).toHaveBeenCalledExactlyOnceWith(tx, userId);
+    expect(repository.createUsage).toHaveBeenCalledWith(tx, {
+      userId, targetBookId: bookId, quotaDate: new Date('2026-09-25T00:00:00.000Z')
+    });
+    expect(persist).toHaveBeenCalledWith(tx);
+  });
   it('uses the Sao Paulo civil date across UTC midnight', () => {
     expect(getSaoPauloQuotaDate(new Date('2026-09-25T02:59:59.000Z')).toISOString())
       .toBe('2026-09-24T00:00:00.000Z');

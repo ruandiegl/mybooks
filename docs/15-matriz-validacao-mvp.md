@@ -92,13 +92,28 @@ Premium de 30 dias e cota de 15 curtidas estão implementados na main e são pre
 
 Na branch PWA original, abrir sem rede/API preservava o cookie HttpOnly, mas a restauração inicial só era tentada novamente ao recarregar ou entrar. A recuperação depois de falha transitória e o logout conciliado precisam de validação na versão integrada; não declarar login offline ou sincronização offline implementados.
 
+## Evidências da conversa, livros da troca e remoção (20/10/2026)
+
+| Área | Verificação | Resultado |
+| --- | --- | --- |
+| API | Suíte unitária/rota após os contratos de conversas | 29 arquivos passaram, 1 ignorado; 232 testes passaram, 1 ignorado. Lint passou. |
+| PostgreSQL local descartável | Migração, recibos, cascatas, autorização, replay e concorrência | PostgreSQL 16 em loopback, `trocalivros_test`, sem volume persistente; 2 arquivos e 12 testes passaram. Nenhum banco Railway/produção foi usado. |
+| Prisma | Validação do schema e geração do client | `npx prisma validate` e `npx prisma generate` passaram. |
+| App | Suíte, typecheck e ajustes pós-revisão | 17 arquivos e 83 testes passaram; `npm run typecheck` passou. |
+| PWA | Export web e smoke de manifesto, service worker e deep link | Export e smoke passaram após o ajuste pós-revisão; service worker gerado com 32 recursos fingerprintados. |
+| Dispositivo | Inspeção de chat em Android/iOS | Sem dispositivo local; a validação remota foi pulada a pedido do usuário. Nenhum dispositivo remoto foi alocado. |
+
+Os testes de rota cobrem o vínculo contextual e o `404` sanitizado com fronteira do Prisma simulada; não foi executado teste PostgreSQL específico para o endpoint de detalhes contextuais. Os 12 testes de integração PostgreSQL cobrem migração/backfill/FKs e o ciclo transacional de match, replay, cascatas e concorrência. A suíte completa foi executada após as correções de replay e recuperação transitória da sessão realtime.
+
 Os exports Android e web confirmam empacotamento, não comportamento em dispositivo ou disponibilidade pública. O aceite externo precisa ser repetido em Android e iOS físicos e cobrir permissão negada/bloqueada, baixa luz, código danificado, offline, `404`, `503` e `429`, sempre verificando o fallback manual. Não há aceite do scanner na Web nem leitura física direta de ISBN-10.
 
-## Validação da versão integrada — pendente
+## Validação da integração atual (26/10/2026) — pendente
 
 | Área | Verificação necessária | Estado nesta conciliação |
 | --- | --- | --- |
-| API/App | lint, suítes completas, typecheck, Prisma e exports Android/Web após resolver código | não executados |
+| API/App | lint, suítes completas, typecheck, Prisma e exports Android/Web após resolver código | não executados nesta integração atual |
+| Chat e match | migração/backfill/recibos, autorização contextual, remoção/cascatas, socket pós-commit e reconciliação em app | evidências da branch de 20/10; revalidar com Premium/Curtidas da main |
+| Gamificação | migração aditiva, check-in idempotente/concorrente, ranking e deep link | unitários da branch de 26/10; integração PostgreSQL e aceite físico ainda pendentes |
 | Sessão | `X-Session-Transport: cookie` e `/auth/browser/*`: HTTPS real, Origin/CSRF, cookie seguro sem refresh no JSON, revogação/replay e erro transitório | testes de regressão e navegador real pendentes |
 | Logout | falha de revogação preserva cookie/estado; retry confirmado encerra sessão; corrida com refresh entre abas | pendente nos dois contratos; aprovação antiga de logout offline não se aplica |
 | Proxy | smoke HTTP/WebSocket/cache e `proxy-https-smoke.mjs`, incluindo HTTPS, HTTP e cabeçalho de protocolo ausente | não executados nesta conciliação; cadeia publicada pendente |
@@ -120,11 +135,16 @@ Os exports Android e web confirmam empacotamento, não comportamento em disposit
 7. ler um EAN-13 `978`/`979` válido, revisar os dados preenchidos e concluir o cadastro manualmente;
 8. confirmar que QR, URL, texto, EAN de produto e checksum inválido não chamam a API;
 9. repetir com dois usuários para match, conversa e sessão Socket.IO;
-10. em bucket de teste, enviar três fotos, trocar a capa, fechar/reabrir o app, reordenar/excluir e validar URL GET expirada em Android/iOS/Web;
-11. na Web, testar HEIC decodificável e não decodificável, JPEG grande, cancelamento e retry preservando ordem e fotos confirmadas;
-12. abrir deep links de livro/chat, recarregar e usar voltar; conferir guards e as cinco tabs, incluindo Curtidas;
-13. testar os dois contratos de cookie sob HTTPS, origem ausente/indevida, HTTP, refresh entre abas, sessão revogada e logout com rede/API indisponível;
-14. instalar a PWA no iPhone, conferir manifesto/ícones, standalone, atualização e página offline sem dados privados; confirmar que a ausência de rede não é apresentada como login/chat offline funcional.
+10. conferir avatar/nome no header e abrir os livros da troca; testar capa ausente, livro removido, disponibilidade e fechamento do sheet;
+11. abrir os detalhes contextuais dos dois livros e recarregar diretamente `/conversations/:conversationId/books/:bookId` na PWA; validar `RESERVED`/`EXCHANGED` e `404` quando livro, conversa ou participação não correspondem;
+12. cancelar a remoção e confirmar ausência de chamada; depois remover e conferir exclusão de match, conversa e histórico para as duas pessoas;
+13. repetir com outro usuário conectado e verificar aviso único, saída da conversa ativa e rejeição de nova mensagem; com socket offline, validar confirmação HTTP e reconciliação;
+14. após a remoção, enviar novas curtidas com novos identificadores e confirmar que IDs antigos não restauram interação nem match;
+15. em bucket de teste, enviar três fotos, trocar a capa, fechar/reabrir o app, reordenar/excluir e validar URL GET expirada em Android/iOS/Web;
+16. na Web, testar HEIC decodificável e não decodificável, JPEG grande, cancelamento e retry preservando ordem e fotos confirmadas;
+17. abrir deep links de livro/chat, recarregar e usar voltar; conferir guards e as cinco tabs, incluindo Curtidas;
+18. testar os dois contratos de cookie sob HTTPS, origem ausente/indevida, HTTP, refresh entre abas, sessão revogada e logout com rede/API indisponível;
+19. instalar a PWA no iPhone, conferir manifesto/ícones, standalone, atualização e página offline sem dados privados; confirmar que a ausência de rede não é apresentada como login/chat offline funcional.
 
 ## Cenários Premium cobertos e aceite externo
 
@@ -157,7 +177,7 @@ As coberturas abaixo são evidências históricas da main; reexecutar as regress
 
 | Item | Necessário |
 | --- | --- |
-| PostgreSQL limpo e banco alvo | aplicar todas as migrações, seed, preflight de fotos, validar integridade/restore; banco descartável do Premium e migrações antigas da PWA não validam o banco alvo integrado |
+| PostgreSQL limpo e banco alvo | aplicar todas as migrações, inclusive vínculos/recibos de match e sequência diária; executar seed e preflight de fotos, validar integridade/restore; banco descartável do Premium e migrações antigas da PWA não validam o banco alvo integrado |
 | Resend | chave, domínio remetente e caixa postal real |
 | Cloudflare R2 | bucket privado, CORS, domínio e credenciais mínimas |
 | Railway Web | publicar/conferir a versão integrada, preservar allowlist existente e validar login, headers/cookies, Socket.IO/WebSocket e instalação Safari/iPhone; GETs históricos da branch PWA não aprovam estes fluxos |
@@ -183,3 +203,15 @@ Detalhes, contratos, evidências e procedimento de liberação: [execução do p
 | Aparelho/publicação | Instalar/abrir, QR público, notch/home indicator e SHA servido | Aceite posterior, não declarado nesta execução local |
 
 Resultados: [registro 012](../plans/plan-012-acesso-mobile-tablet-instalacao-pwa-execucao.md).
+
+## Gamificação de sequência diária — 26/10/2026
+
+| Superfície | Validação | Resultado |
+| --- | --- | --- |
+| API | Regras puras, rotas autenticadas, privacidade, regressão de concorrência na virada do dia, lint e suíte completa | 32 arquivos passaram, 1 ignorado; 248 testes passaram, 1 ignorado; lint passou. |
+| Prisma | `npx prisma validate` e `npx prisma generate` com campos opcionais da sequência | Aprovados; a migração ainda não foi aplicada a nenhum banco. |
+| PostgreSQL local descartável | Migração, check-in concorrente/idempotente e corte do ranking | Pendente: serviço Docker local não iniciado; teste existe e a configuração só aceita loopback com nome `*_test` e `TEST_DATABASE_DISPOSABLE=true`. Nenhum banco Railway/produção foi usado. |
+| App | Scheduler, regras de apresentação, deep link e suíte completa | 19 arquivos e 95 testes passaram; typecheck passou. |
+| PWA | `npm run build:web` e `npm run test:pwa` | Export de 835 módulos; 32 recursos fingerprintados no service worker; smoke aprovado. |
+| Android | `npx expo export --platform android` | Export Hermes aprovado; bundle de 2,6 MB. É validação de export, não geração de APK nem aceite em aparelho. |
+| Android/iOS físico | Aparência, leitor de tela, texto ampliado e uso real | Pendente; build/typecheck não substituem validação em dispositivo. |

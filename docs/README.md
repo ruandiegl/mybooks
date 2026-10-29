@@ -14,6 +14,8 @@ A base PWA acrescenta manifesto/ícones, metadados iOS, deep links, variantes we
 
 Builds, testes e GETs básicos de publicação anteriores estão registrados como históricos na [matriz de validação](./15-matriz-validacao-mvp.md), sem aprovar o merge em curso. A migração de fotos no banco alvo, R2 real, cadeia HTTPS/proxy, login/cookies, Socket.IO/WebSocket e aceites Android/iPhone/Safari/PWA instalada continuam pendentes para a versão integrada. Esta revisão documental não executou testes ou deploy.
 
+A branch de conversa acrescenta livros vinculados ao match, leitura contextual autorizada e remoção do match com exclusão da conversa e do histórico para ambas as pessoas. A gamificação registra presença diária em `America/Sao_Paulo`, mostra a sequência atual e um ranking no Perfil, sem histórico diário ou recompensas. Essas mudanças têm evidências locais na branch; migrações, testes da versão integrada, deploy e aceites externos ainda precisam ser concluídos.
+
 ## Índice
 
 | Documento | Assunto |
@@ -53,7 +55,7 @@ Builds, testes e GETs básicos de publicação anteriores estão registrados com
 
 Comece por [Visão geral](./01-visao-geral.md) e [Arquitetura](./02-arquitetura.md). Para colocar o projeto em execução, siga [Docker e ambientes](./10-docker-ambientes.md) e [Execução do MVP](./14-execucao-do-mvp.md).
 
-_Última revisão documental: 05/10/2026; validação da integração pendente._
+_Última revisão documental: 26/10/2026; validação da integração atual pendente._
 
 ## Foto de perfil — plano 009 (implementação não publicada)
 

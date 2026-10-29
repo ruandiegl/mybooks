@@ -1,10 +1,48 @@
+import { AppError } from '../../shared/errors/AppError.js';
 import { prisma } from '../../shared/database/prisma.js';
+
+const bookSummarySelect = {
+  id: true,
+  title: true,
+  authors: true,
+  availability: true,
+  coverExternalUrl: true,
+  images: {
+    select: { id: true, url: true, storageKey: true, isCover: true, sortOrder: true, createdAt: true },
+    orderBy: { sortOrder: 'asc' },
+    take: 1
+  }
+};
+
+const bookDetailsSelect = {
+  ...bookSummarySelect,
+  subtitle: true,
+  publisher: true,
+  synopsis: true,
+  year: true,
+  pageCount: true,
+  subjects: true,
+  isbn: true,
+  isbnStatus: true,
+  isbnProvider: true,
+  images: {
+    select: { id: true, url: true, storageKey: true, isCover: true, sortOrder: true, createdAt: true },
+    orderBy: { sortOrder: 'asc' }
+  },
+  owner: { select: { id: true, name: true, avatarStorageKey: true, avatarVersion: true, avatarUrl: true, city: true } },
+  createdAt: true,
+  updatedAt: true
+};
 
 const conversationInclude = {
   match: {
-    include: {
+    select: {
+      userAId: true,
+      userBId: true,
       userA: { select: { id: true, name: true, avatarStorageKey: true, avatarVersion: true, avatarUrl: true, city: true } },
-      userB: { select: { id: true, name: true, avatarStorageKey: true, avatarVersion: true, avatarUrl: true, city: true } }
+      userB: { select: { id: true, name: true, avatarStorageKey: true, avatarVersion: true, avatarUrl: true, city: true } },
+      bookA: { select: bookSummarySelect },
+      bookB: { select: bookSummarySelect }
     }
   },
   messages: {
@@ -13,6 +51,10 @@ const conversationInclude = {
     include: { sender: { select: { id: true, name: true, avatarStorageKey: true, avatarVersion: true, avatarUrl: true } } }
   }
 };
+
+function conversationNotFound() {
+  return new AppError('Conversa não encontrada ou sem permissão.', { statusCode: 404, code: 'CONVERSATION_NOT_FOUND' });
+}
 
 export const chatRepository = {
   findMembership(conversationId, userId) {
@@ -29,6 +71,26 @@ export const chatRepository = {
     });
   },
 
+  findExchangeBookContext(conversationId, userId, bookId) {
+    return prisma.conversation.findFirst({
+      where: {
+        id: conversationId,
+        members: { some: { userId } },
+        match: { OR: [{ bookAId: bookId }, { bookBId: bookId }] }
+      },
+      select: {
+        match: {
+          select: {
+            bookAId: true,
+            bookBId: true,
+            bookA: { select: bookDetailsSelect },
+            bookB: { select: bookDetailsSelect }
+          }
+        }
+      }
+    });
+  },
+
   listMessages(conversationId, { cursor, limit }) {
     return prisma.message.findMany({
       where: { conversationId },
@@ -42,29 +104,40 @@ export const chatRepository = {
   },
 
   async createMessage({ conversationId, senderId, clientMessageId, body }) {
-    try {
-      return await prisma.$transaction(async (tx) => {
-        const message = await tx.message.create({
-          data: { conversationId, senderId, clientMessageId, body },
-          include: { sender: { select: { id: true, name: true, avatarStorageKey: true, avatarVersion: true, avatarUrl: true } } }
-        });
-        await tx.conversation.update({
-          where: { id: conversationId },
-          data: { updatedAt: new Date() }
-        });
-        return message;
-      });
-    } catch (error) {
-      if (error?.code === 'P2002') {
-        return prisma.message.findUnique({
-          where: { senderId_clientMessageId: { senderId, clientMessageId } },
-          include: { sender: { select: { id: true, name: true, avatarStorageKey: true, avatarVersion: true, avatarUrl: true } } }
-        });
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await prisma.$transaction(async (tx) => {
+          const membership = await tx.conversationMember.findUnique({
+            where: { conversationId_userId: { conversationId, userId: senderId } }
+          });
+          if (!membership) throw conversationNotFound();
+          const existing = await tx.message.findUnique({
+            where: { senderId_clientMessageId: { senderId, clientMessageId } },
+            include: { sender: { select: { id: true, name: true, avatarStorageKey: true, avatarVersion: true, avatarUrl: true } } }
+          });
+          if (existing) {
+            if (existing.conversationId !== conversationId) {
+              throw new AppError('Identificador de mensagem já utilizado.', { statusCode: 409, code: 'MESSAGE_ID_CONFLICT' });
+            }
+            return existing;
+          }
+          const message = await tx.message.create({
+            data: { conversationId, senderId, clientMessageId, body },
+            include: { sender: { select: { id: true, name: true, avatarStorageKey: true, avatarVersion: true, avatarUrl: true } } }
+          });
+          await tx.conversation.update({ where: { id: conversationId }, data: { updatedAt: new Date() } });
+          return message;
+        }, { isolationLevel: 'Serializable' });
+      } catch (error) {
+        if (error?.code === 'P2003' || error?.code === 'P2025') throw conversationNotFound();
+        if (error?.code === 'P2034' || error?.code === 'P2002') {
+          if (attempt < 2) continue;
+          throw new AppError('A conversa mudou durante o envio. Tente novamente.', { statusCode: 409, code: 'MESSAGE_RETRY_REQUIRED' });
+        }
+        throw error;
       }
-      throw error;
     }
   },
-
   markRead(conversationId, userId) {
     return prisma.conversationMember.update({
       where: { conversationId_userId: { conversationId, userId } },

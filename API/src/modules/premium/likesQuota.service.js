@@ -21,12 +21,12 @@ export function createLikesQuotaService({
   limit = FREE_DAILY_LIKE_LIMIT
 } = {}) {
   return {
-    async consumeDailyLike(userId, targetBookId, persistInteraction) {
+    async consumeDailyLike(userId, targetBookId, persistInteraction, transactionClient = null) {
       if (typeof persistInteraction !== 'function') {
         throw new TypeError('persistInteraction callback is required to keep quota and interaction atomic.');
       }
 
-      return repository.withUserTransaction(userId, async (tx) => {
+      const consume = async (tx) => {
         const now = clock.now();
         const quotaDate = getSaoPauloQuotaDate(now);
         const premiumActive = await premium.hasActiveTrial(userId, now, tx);
@@ -45,7 +45,12 @@ export function createLikesQuotaService({
         }
 
         return persistInteraction(tx);
-      });
+      };
+      if (transactionClient) {
+        await repository.lockUser(transactionClient, userId);
+        return consume(transactionClient);
+      }
+      return repository.withUserTransaction(userId, consume);
     }
   };
 }

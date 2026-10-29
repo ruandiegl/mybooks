@@ -18,7 +18,8 @@ storageCleanupService.processDue().catch((error) => {
   console.error(JSON.stringify({ level: 'error', code: error?.code ?? 'STORAGE_CLEANUP_FAILED' }));
 });
 
-registerChatSocket(server);
+const io = registerChatSocket(server);
+app.set('io', io);
 
 server.listen(env.PORT, '0.0.0.0', () => {
   console.info(JSON.stringify({

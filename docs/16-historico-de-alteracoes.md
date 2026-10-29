@@ -1,5 +1,21 @@
 # 16. Histórico de alterações
 
+## 26/10/2026 — Gamificação de sequência diária
+
+- A API ganhou campos opcionais para a última data ativa e a sequência atual, endpoints privados de check-in diário e ranking, data oficial em `America/Sao_Paulo`, serialização de check-ins concorrentes e respostas públicas sem dados de contato.
+- O app registra presença após restaurar/estabelecer sessão e retornar ao primeiro plano; o Perfil apresenta a sequência e abre a rota empilhada `/ranking/sequencia`. Não foi criada uma aba adicional nem histórico diário.
+- Verificações locais: API 32 arquivos/248 testes (1 ignorado) e lint; app 19 arquivos/95 testes e typecheck; Prisma validate/generate; PWA export de 835 módulos e smoke com 32 assets fingerprintados; export Android Hermes aprovado com bundle de 2,6 MB (sem gerar APK). Teste unitário cobre a leitura da data depois do lock do check-in.
+- Pendências: integração concorrente/migração em PostgreSQL local descartável e validação visual em aparelho físico. A migração não foi aplicada à Railway nem a qualquer banco de produção.
+
+## 20/10/2026 — Livros da troca e remoção segura de match
+
+- Matches novos guardam as duas referências de livros em ordem canônica; os antigos não recebem relações inferidas. `InteractionActionReceipt` preserva os identificadores de curtida (com backfill dos existentes) para impedir que replay reative uma ação depois da remoção.
+- `GET /conversations` passou a retornar resumos de livros orientados para cada participante. `GET /conversations/:conversationId/exchange-books/:bookId` autoriza detalhes pelo membership e vínculo do livro ao match; dados ausentes ou sem acesso usam `404` sanitizado.
+- `DELETE /matches/:matchId` exige participante e remove o match, conversa, membros e mensagens para ambos, mudando as curtidas atuais do par para `PASS`. O endpoint responde sem corpo `204` após o commit e emite `match:removed` aos dois usuários.
+- O chat mostra avatar e nome no header, abre um bottom sheet para os livros e adiciona rota contextual com deep link compatível com reload na PWA. Remoção confirmada limpa os caches relacionados, mostra aviso dispensável ao outro participante e encerra a conversa ativa; resultados inconclusivos oferecem verificação/repetição.
+- Evidências finais: API com 29 arquivos/232 testes aprovados e um ignorado, lint aprovado, Prisma validate/generate aprovados; PostgreSQL 16 descartável com 2 arquivos/12 testes; app com 17 arquivos/83 testes e typecheck aprovados; export web e smoke PWA aprovados após os ajustes finais, com 32 recursos no service worker. O replay consulta o recibo antes de validar disponibilidade do livro e devolve somente match já ativo; falha transitória de refresh preserva a sessão para nova tentativa realtime.
+- Permanece pendente a inspeção em dispositivo físico/remoto: não havia dispositivo local e o usuário optou por pular o teste remoto nesta validação; nenhum aparelho remoto foi alocado. O teste PostgreSQL específico do endpoint contextual também não foi executado.
+
 ## 16/10/2026 — Ícones web e abertura identificada (local)
 
 Plano 013 implementado em `codex/web-icons-splash`: favicon, ícones PWA/Apple/maskable, PNGs de splash nativa e apresentação HTML/React com o livro escolhido. Boot tem handoff, recuperação e temas sem duração mínima ou alteração de sessão/cache privado. Evidências, revisão e aceites externos em [execução 013](../plans/plan-013-identidade-web-splashscreen-execucao.md). Sem merge/push/deploy neste registro.

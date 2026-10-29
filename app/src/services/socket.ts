@@ -11,7 +11,12 @@ export async function createChatSocket(session: SocketSession): Promise<Socket> 
     autoConnect: false,
     transports: ['websocket'],
     auth: (callback) => {
-      void session.getToken().then((token) => { session.onToken?.(token); callback({ token }); }).catch(() => callback({ token: null }));
+      const provideNoToken = () => callback({ token: null });
+      try {
+        void session.getToken().then((token) => { session.onToken?.(token); callback({ token }); }, provideNoToken);
+      } catch {
+        provideNoToken();
+      }
     }
   });
 }

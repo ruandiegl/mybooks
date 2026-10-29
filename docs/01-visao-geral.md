@@ -13,6 +13,7 @@ O TrocaLivros conecta leitores interessados em colocar livros em circulação. C
 - cadastro obrigatório com e-mail, senha, CPF e celular;
 - onboarding opcional e retomável de perfil e livros;
 - perfil, biblioteca, descoberta, Curtidas, matches e chat em tempo real;
+- gamificação básica com check-in diário, sequência atual e ranking acessível pelo Perfil;
 - até três fotos ordenadas por livro, com capa na posição 0 e URLs privadas renováveis do Cloudflare R2; avatares mantêm o fluxo próprio;
 - ISBN pela BrasilAPI e e-mails pelo Resend;
 - API e PostgreSQL preparados para Docker.
@@ -22,6 +23,8 @@ Pagamento real, gateway e cobrança recorrente ficam fora do MVP. O acesso Premi
 O Premium libera identidades de curtidas recebidas e likes ilimitados. Sem Premium, permanecem a contagem agregada de curtidas pendentes e a lista de curtidas enviadas, com limite de 15 livros distintos curtidos por dia em `America/Sao_Paulo`. Conta, trial e cota são compartilhados entre APK e PWA e controlados pela API.
 
 A base PWA inclui manifesto, ícones, metadados iOS, deep links e proxy Caddy no mesmo domínio. O service worker guarda somente assets com hash e uma página offline sem dados privados; uso autenticado offline, push e sincronização offline não estão implementados. Aceites de login/cookie no domínio HTTPS, instalação, câmera, mídia e chat em Safari/iPhone continuam pendentes para a versão integrada.
+
+A gamificação armazena somente a última data ativa e a sequência atual; não mantém histórico de acessos ou recompensas. A migração e os aceites da versão integrada ainda estão pendentes.
 
 ## Stack
 

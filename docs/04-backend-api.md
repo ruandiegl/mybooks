@@ -75,6 +75,10 @@ O módulo `premium` centraliza a regra de trial de 30 × 24 horas, elegibilidade
 
 ISBN inexistente, entrada inválida, limite excedido e indisponibilidade externa ou payload externo inválido retornam respectivamente `404`, `422`, `429` e `503` no envelope sanitizado padrão. URLs de log da consulta substituem o valor por `/api/v1/isbn/:isbn`. Nenhuma dessas falhas cria ou altera um livro, permitindo que o app preserve o preenchimento manual.
 
+## Gamificação
+
+`gamificationRouter` é montado depois da autenticação e da hidratação de usuário, junto às demais rotas privadas. Check-in deriva o ator exclusivamente de `req.currentUser.id`; a repository bloqueia a linha do usuário e só então determina o dia de `America/Sao_Paulo` e calcula/persiste a sequência, impedindo incrementos duplicados e regressão por requisição que atravesse a meia-noite. O ranking considera sequência positiva com atividade hoje ou ontem, calcula posição competitiva e seleciona apenas nome/avatar para a lista pública; a posição pessoal é retornada separadamente.
+
 ## Comandos
 
 ```bash

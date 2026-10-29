@@ -102,6 +102,20 @@ Cada `POST /interactions` com `action: "LIKE"` conta um livro distinto por usuá
 
 São aceitos 0–3 arquivos JPEG/PNG/WebP de até 8 MiB por livro. `sortOrder = 0` é sempre a capa; o backend deriva owner e chave R2 da sessão e do livro. Uploads novos usam `pending/books/...`, depois são copiados para `books/...`. Fotos privadas recebem `url` GET assinada e `expiresAt` nas respostas; links externos legados têm `expiresAt: null`. `IMAGE_LIMIT_REACHED` é `409`, `IMAGE_ORDER_INVALID` é `422`, e erros de validação de arquivo mantêm códigos `IMAGE_TYPE_INVALID`, `IMAGE_SIZE_INVALID` e `IMAGE_UPLOAD_MISMATCH`.
 
+## Curtidas, conversas e livros da troca
+
+`POST /interactions` recebe `targetBookId`, `action` (`LIKE` ou `PASS`) e `clientActionId`, todos validados pela API. O identificador é globalmente único e vinculado ao ator, livro e ação: repetir a mesma ação retorna a interação atual sem reaplicar a ação nem recriar um match, mesmo se a disponibilidade do livro mudou depois da primeira chamada; reutilizar o identificador com outro escopo retorna `409 ACTION_ID_CONFLICT`. Conflitos transitórios esgotados na transação de interação retornam `409 INTERACTION_RETRY_REQUIRED`; a remoção de match pode retornar `409 MATCH_RETRY_REQUIRED`.
+
+| Método | Caminho | Resultado |
+| --- | --- | --- |
+| GET | `/conversations` | conversas do usuário, incluindo `matchId`, `otherUser`, `exchangeBooks`, última mensagem e `updatedAt` |
+| GET | `/conversations/:conversationId/exchange-books/:bookId` | `{ data: Book }` com detalhes autorizados pelo vínculo livro-match-conversa |
+| DELETE | `/matches/:matchId` | remove o match para os dois participantes; resposta vazia `204` após commit |
+
+`exchangeBooks` é `null` para matches legados sem livro identificado ou contém `{ mine, theirs }`, orientado para quem fez a consulta. Cada resumo inclui somente `id`, `title`, `authors`, `coverUrl` e `availability`; cada lado pode ser `null` quando seu livro foi removido. O endpoint contextual exige participação na conversa e associação exata ao livro do match. Livros `RESERVED` e `EXCHANGED` continuam acessíveis nesse contexto. Conversa inexistente, pessoa não participante, livro ausente ou sem vínculo retornam o mesmo `404 EXCHANGE_BOOK_NOT_FOUND`, sem revelar a existência de dados de terceiros.
+
+`DELETE /matches/:matchId` aceita somente UUID e participante. Match inexistente e chamada por pessoa externa recebem o mesmo `404 MATCH_NOT_FOUND`. A transação serializável muda para `PASS` as curtidas atuais entre o par e apaga o match; a cascata elimina conversa, membros e mensagens. Os recibos de interação não são apagados pela remoção. A API publica `match:removed` aos dois usuários apenas depois do commit; o socket é removido da sala da conversa. O app reconcilia resultados sem confirmação HTTP conclusiva pela lista de conversas.
+
 ## ISBN e livros
 
 | Método | Caminho | Função |
@@ -119,3 +133,14 @@ Avatar v2: presign recebe {mimeType:"image/png",size,width:512,height:512,protoc
 Detalhes, contratos, evidências e procedimento de liberação: [execução do plano 009](../plans/plan-009-foto-perfil-usuario-r2-execucao.md).
 
 O cliente novo envia `X-Avatar-Owner` nos comandos de avatar, apenas para conferir a conta capturada no início da ação. Divergência da sessão retorna `409 AVATAR_SESSION_CHANGED` antes da mutação; o header nunca autoriza outro usuário nem é repassado ao PUT R2. Clientes legados sem header permanecem compatíveis.
+
+## Gamificação
+
+Ambas as rotas são privadas e usam `req.currentUser.id`; o check-in não aceita usuário nem data no corpo.
+
+| Método | Caminho | Resultado |
+| --- | --- | --- |
+| POST | `/gamification/check-in` | `{ data: { dayKey, currentStreak, checkedInToday } }`; idempotente para o dia do servidor |
+| GET | `/gamification/leaderboard` | `{ data: { currentUser: { currentStreak, rank }, entries: [{ name, avatarUrl, currentStreak, rank }] } }` |
+
+O servidor usa o dia civil em `America/Sao_Paulo`. Primeiro check-in começa em 1; check-in repetido no mesmo dia mantém a sequência; dia consecutivo incrementa; após um dia inteiro sem presença, o próximo check-in reinicia em 1. No ranking, sequências da última presença de hoje ou ontem permanecem ativas; sequências mais antigas são excluídas antes mesmo de um novo acesso. Só sequências positivas entram. Empates usam posições competitivas (`1, 1, 3`); retornam-se as 20 primeiras posições e todos os participantes empatados no corte, além da posição pessoal mesmo fora da lista. A projeção do ranking não contém ID, e-mail, telefone ou datas de atividade.

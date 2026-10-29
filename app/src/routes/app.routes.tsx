@@ -1,29 +1,60 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { NavigationContainerRefWithCurrent } from '@react-navigation/native';
+import type { NavigationState } from '@react-navigation/native';
+import { useEffect, useRef, useState } from 'react';
 import { BookCreate } from '../pages/BookCreate';
 import { BookDetails } from '../pages/BookDetails';
 import { BookEdit } from '../pages/BookEdit';
 import { Chat } from '../pages/Chat';
 import { Matches } from '../pages/Matches';
+import { StreakLeaderboard } from '../pages/StreakLeaderboard';
 import { OnboardingBooks } from '../pages/OnboardingBooks';
 import { OnboardingProfile } from '../pages/OnboardingProfile';
 import { deriveOnboardingState } from '../features/onboarding/onboarding';
+import { shouldNavigateForRemovedMatch } from '../features/chat/navigation';
+import { useChatRealtime } from '../providers/ChatRealtimeProvider';
 import { useSession } from '../providers/SessionProvider';
 import type { RootStackParamList } from '../types/navigation';
 import { MainTabs } from './main-tabs';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+type Props = { navigationRef?: NavigationContainerRefWithCurrent<RootStackParamList> };
 
-export function AppRoutes() {
+function MatchRemovalNavigationBridge({ navigationRef }: { navigationRef: NavigationContainerRefWithCurrent<RootStackParamList> }) {
+  const { pendingMatchRemovals } = useChatRealtime();
+  const [state, setState] = useState<NavigationState | undefined>(() => navigationRef.getRootState());
+  const handledMatchIds = useRef(new Set<string>());
+
+  useEffect(() => {
+    const updateState = () => setState(navigationRef.getRootState());
+    const subscription = navigationRef.addListener('state', updateState);
+    updateState();
+    return subscription;
+  }, [navigationRef]);
+
+  useEffect(() => {
+    if (!state || !navigationRef.isReady()) return;
+    for (const event of pendingMatchRemovals) {
+      if (!shouldNavigateForRemovedMatch(state, event, handledMatchIds.current)) continue;
+      handledMatchIds.current.add(event.matchId);
+      navigationRef.resetRoot({ index: 0, routes: [{ name: 'Main', params: { screen: 'Messages' } }] });
+      break;
+    }
+  }, [navigationRef, pendingMatchRemovals, state]);
+
+  return null;
+}
+
+export function AppRoutes({ navigationRef }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useSession();
   const { nextStep } = deriveOnboardingState(user);
 
-  return (
+  return <>
+    {navigationRef ? <MatchRemovalNavigationBridge navigationRef={navigationRef} /> : null}
     <Stack.Navigator key={nextStep} screenOptions={({ route }) => {
-      // Tabs/onboarding own their sides. Other screens rely on the Stack header
-      // for the top, but their bodies also need landscape cutout clearance.
       const ownsSides = ['Main', 'OnboardingProfile', 'OnboardingBooks'].includes(route.name);
       return Platform.OS === 'web' && !ownsSides
         ? { contentStyle: { paddingLeft: insets.left, paddingRight: insets.right } }
@@ -43,6 +74,11 @@ export function AppRoutes() {
         options={{ title: 'Detalhes do livro' }}
       />
       <Stack.Screen
+        name="ExchangeBookDetails"
+        component={BookDetails}
+        options={{ title: 'Detalhes do livro da troca' }}
+      />
+      <Stack.Screen
         name="BookEdit"
         component={BookEdit}
         options={{ title: 'Editar livro', presentation: 'modal' }}
@@ -53,10 +89,15 @@ export function AppRoutes() {
         options={{ title: 'Seus matches' }}
       />
       <Stack.Screen
+        name="StreakLeaderboard"
+        component={StreakLeaderboard}
+        options={{ title: 'Ranking da sequência' }}
+      />
+      <Stack.Screen
         name="Chat"
         component={Chat}
-        options={({ route }) => ({ title: route.params.title || 'Conversa' })}
+        options={{ title: 'Conversa' }}
       />
     </Stack.Navigator>
-  );
+  </>;
 }

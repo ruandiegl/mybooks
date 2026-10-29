@@ -23,6 +23,8 @@ Express ──► Resend (verificação, recuperação e boas-vindas)
 
 A API é a única autoridade de identidade. O cliente nunca escolhe `userId`/owner; rotas privadas usam `req.currentUser.id`. O access token contém `sub` e `sid`, e só é aceito se a sessão correspondente estiver ativa, não revogada, não expirada e vinculada a um usuário verificado.
 
+A presença diária também tem a API como autoridade: o app envia check-in após restaurar/estabelecer uma sessão e ao retornar ao primeiro plano; o servidor determina o dia no fuso `America/Sao_Paulo`, serializa atualizações concorrentes por usuário e não confia em data ou identidade vindas do cliente. O app deduplica chamadas como otimização e invalida a query do ranking após sucesso.
+
 Cada módulo da API separa rotas, controllers, services, repositories e schemas Zod. No app, `SessionProvider` usa um transporte nativo ou web: Android/iOS persiste tokens no SecureStore; a PWA mantém o access token em memória e recupera a sessão por cookie HttpOnly. `services/api.ts` injeta bearer e coordena um único refresh para respostas 401 concorrentes.
 
 A integração preserva os dois contratos web: `/api/v1/auth/*` com `X-Session-Transport: cookie`, da main, e `/api/v1/auth/browser/*`, com cookie `__Host-trocalivros_refresh`, da PWA. Ambos usam os mesmos services e sessões rotativas, sem refresh token no JSON web. O contrato da main mantém `SameSite=Strict`; o cookie `__Host-` tem `HttpOnly`, `Secure`, `Path=/` e nenhum `Domain`. Ambos devem exigir requisição e `Origin` HTTPS autorizado, com bloqueio de origem indevida e proteção CSRF. O aceite da implementação conciliada dessas garantias ainda está pendente.

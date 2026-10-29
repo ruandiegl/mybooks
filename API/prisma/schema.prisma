@@ -36,8 +36,11 @@ model User {
   avatarUploads              AvatarUpload[]
   bio                        String?
   city                       String?
+  lastActiveDay              DateTime?            @db.Date
+  currentActiveStreak        Int?
   books                      Book[]
   interactions               Interaction[]        @relation("InteractionActor")
+  interactionActionReceipts  InteractionActionReceipt[]
   matchesAsUserA             Match[]              @relation("MatchUserA")
   matchesAsUserB             Match[]              @relation("MatchUserB")
   conversationMembers        ConversationMember[]
@@ -49,6 +52,7 @@ model User {
   updatedAt                  DateTime             @updatedAt
 
   @@index([pendingRegistrationExpiresAt])
+  @@index([lastActiveDay, currentActiveStreak])
 }
 
 model UserPreferences {
@@ -115,6 +119,9 @@ model Book {
   owner            User?            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   images           BookImage[]
   interactions     Interaction[]
+  interactionActionReceipts InteractionActionReceipt[]
+  matchesAsBookA   Match[]          @relation("MatchBookA")
+  matchesAsBookB   Match[]          @relation("MatchBookB")
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
@@ -207,12 +214,29 @@ model Interaction {
   @@index([targetBookId, action])
 }
 
+model InteractionActionReceipt {
+  clientActionId String            @id
+  actorId        String
+  actor          User              @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  targetBookId   String
+  targetBook     Book              @relation(fields: [targetBookId], references: [id], onDelete: Cascade)
+  action         InteractionAction
+  createdAt      DateTime          @default(now())
+
+  @@index([actorId])
+  @@index([targetBookId])
+}
+
 model Match {
   id           String        @id @default(uuid())
   userAId      String
   userA        User          @relation("MatchUserA", fields: [userAId], references: [id], onDelete: Cascade)
   userBId      String
   userB        User          @relation("MatchUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  bookAId      String?
+  bookA        Book?         @relation("MatchBookA", fields: [bookAId], references: [id], onDelete: SetNull)
+  bookBId      String?
+  bookB        Book?         @relation("MatchBookB", fields: [bookBId], references: [id], onDelete: SetNull)
   status       MatchStatus   @default(ACTIVE)
   conversation Conversation?
   createdAt    DateTime      @default(now())
@@ -221,6 +245,8 @@ model Match {
   @@unique([userAId, userBId])
   @@index([userAId, status])
   @@index([userBId, status])
+  @@index([bookAId])
+  @@index([bookBId])
 }
 
 model Conversation {

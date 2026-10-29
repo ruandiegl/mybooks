@@ -5,6 +5,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppButton } from '../../components/AppButton';
@@ -19,26 +20,40 @@ import type { ApiEnvelope, Book, User } from '../../types/api';
 import type { RootStackParamList } from '../../types/navigation';
 import { createStyles } from './styles';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'BookDetails'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'BookDetails' | 'ExchangeBookDetails'>;
 const availabilityLabels = { AVAILABLE: 'Disponível para troca', RESERVED: 'Reservado', EXCHANGED: 'Já trocado' };
 
 export function BookDetails({ route, navigation }: Props) {
   const mediaBinding = useMediaBinding();
   const [imageRetryToken, setImageRetryToken] = useState(0);
   const styles = useThemedStyles(createStyles);
-
   const insets = useSafeAreaInsets();
+  const conversationId = 'conversationId' in route.params ? route.params.conversationId : null;
+  const isExchangeBook = conversationId !== null;
+  const bookId = route.params.bookId;
   const query = useQuery({
-    queryKey: ['book', route.params.bookId],
-    queryFn: async () => (await api.get<ApiEnvelope<Book>>('/api/v1/books/' + route.params.bookId)).data.data
+    queryKey: isExchangeBook ? ['exchange-book', conversationId, bookId] : ['book', bookId],
+    queryFn: async ({ signal }) => {
+      if (isExchangeBook && conversationId) {
+        return (await api.get<ApiEnvelope<Book>>(`/api/v1/conversations/${conversationId}/exchange-books/${bookId}`, { signal })).data.data;
+      }
+      return (await api.get<ApiEnvelope<Book>>('/api/v1/books/' + bookId, { signal })).data.data;
+    }
   });
   const me = useQuery({ queryKey: ['me'], queryFn: async () => (await api.get<ApiEnvelope<User>>('/api/v1/me')).data.data });
   const refreshAvatar = useAvatarRefresh(query.data, query.refetch, useIsFocused());
 
   if (query.isLoading) return <View style={styles.page}><StateView loading title="Abrindo o livro" /></View>;
-  if (query.isError && !query.data) return <View style={styles.page}><StateView title="Não foi possível abrir o livro" description="Confira sua conexão e tente novamente." icon="cloud-off" actionLabel="Tentar novamente" onAction={() => query.refetch()} /></View>;
-  if (!query.data) return <View style={styles.page}><StateView title="Livro não encontrado" icon="menu-book" actionLabel="Tentar novamente" onAction={() => query.refetch()} /></View>;
-
+  if (!query.data) {
+    if (isExchangeBook && axios.isAxiosError(query.error) && query.error.response?.status === 404) {
+      return <View style={styles.page}><StateView title="Detalhes da troca indisponíveis" description="O match foi removido ou este livro já não faz parte da troca." icon="menu-book" actionLabel="Ir para mensagens" onAction={() => navigation.navigate('Main', { screen: 'Messages' })} /></View>;
+    }
+    if (isExchangeBook && query.isError) {
+      return <View style={styles.page}><StateView title="Não foi possível carregar os detalhes" description="Confira sua conexão e tente novamente." icon="cloud-off" actionLabel="Tentar novamente" onAction={() => query.refetch()} /></View>;
+    }
+    if (query.isError) return <View style={styles.page}><StateView title="Não foi possível abrir o livro" description="Confira sua conexão e tente novamente." icon="cloud-off" actionLabel="Tentar novamente" onAction={() => query.refetch()} /></View>;
+    return <View style={styles.page}><StateView title="Livro não encontrado" icon="menu-book" actionLabel="Tentar novamente" onAction={() => query.refetch()} /></View>;
+  }
   const book = query.data;
   const photos = getBookGalleryPhotos(book);
 

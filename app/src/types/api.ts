@@ -125,10 +125,26 @@ export type Message = {
   localStatus?: 'sending' | 'sent' | 'failed';
 };
 
+export type BookAvailability = 'AVAILABLE' | 'RESERVED' | 'EXCHANGED';
+
+export type ExchangeBookSummary = {
+  id: string;
+  title: string;
+  authors: string[];
+  coverUrl?: string | null;
+  availability: BookAvailability;
+};
+
+export type ExchangeBooks = {
+  mine: ExchangeBookSummary | null;
+  theirs: ExchangeBookSummary | null;
+};
+
 export type Conversation = {
   id: string;
   matchId: string;
   otherUser: Pick<User, 'id' | 'name' | 'avatarUrl' | 'avatarUrlExpiresAt' | 'avatarVersion' | 'city'>;
+  exchangeBooks: ExchangeBooks | null;
   lastMessage?: Message | null;
   updatedAt: string;
 };
@@ -160,3 +176,24 @@ export type AccountPreferencesDTO = {
   capabilities: { changePassword: boolean; logoutAll: boolean; push: false };
 };
 export type ChangePasswordInput = { currentPassword: string; newPassword: string };
+
+export type GamificationCheckIn = {
+  dayKey: string;
+  currentStreak: number;
+  checkedInToday: true;
+};
+
+export type GamificationLeaderboardEntry = {
+  name: string;
+  avatarUrl: string | null;
+  currentStreak: number;
+  rank: number;
+};
+
+export type GamificationLeaderboard = {
+  currentUser: {
+    currentStreak: number;
+    rank: number | null;
+  };
+  entries: GamificationLeaderboardEntry[];
+};

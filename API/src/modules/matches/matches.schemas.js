@@ -5,3 +5,5 @@ export const interactionSchema = z.object({
   action: z.enum(['LIKE', 'PASS']),
   clientActionId: z.string().uuid()
 });
+
+export const matchIdSchema = z.string().uuid();

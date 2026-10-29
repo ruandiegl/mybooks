@@ -2,10 +2,18 @@ import { serializeAvatarUser } from '../media/avatar.serializer.js';
 import { AppError } from '../../shared/errors/AppError.js';
 import {
   conversationIdSchema,
+  exchangeBookParamsSchema,
   messagePaginationSchema,
   messageSchema
 } from './chat.schemas.js';
 import { chatRepository } from './chat.repository.js';
+import { serializeBook } from '../books/books.serializer.js';
+
+async function serializeBookSummary(book) {
+  if (!book) return null;
+  const { id, title, authors, coverUrl, availability } = await serializeBook(book);
+  return { id, title, authors, coverUrl, availability };
+}
 
 async function serializeMessage(message, avatarCache = new Map()) {
   return {
@@ -42,16 +50,41 @@ export const chatService = {
       const otherUser = conversation.match.userAId === userId
         ? conversation.match.userB
         : conversation.match.userA;
+      const [bookA, bookB] = await Promise.all([
+        serializeBookSummary(conversation.match.bookA),
+        serializeBookSummary(conversation.match.bookB)
+      ]);
       return {
         id: conversation.id,
         matchId: conversation.matchId,
         otherUser: await serializeAvatarUser(otherUser, cache),
+        exchangeBooks: bookA || bookB
+          ? (conversation.match.userAId === userId
+            ? { mine: bookA, theirs: bookB }
+            : { mine: bookB, theirs: bookA })
+          : null,
         lastMessage: conversation.messages[0]
           ? await serializeMessage(conversation.messages[0], cache)
           : null,
         updatedAt: conversation.updatedAt
       };
     }));
+  },
+
+  async getExchangeBook(userId, conversationId, bookId) {
+    const params = exchangeBookParamsSchema.parse({ conversationId, bookId });
+    const context = await chatRepository.findExchangeBookContext(params.conversationId, userId, params.bookId);
+    const match = context?.match;
+    const book = match?.bookAId === bookId
+      ? match.bookA
+      : match?.bookBId === bookId ? match.bookB : null;
+    if (!book) {
+      throw new AppError('Livro da troca não encontrado.', {
+        statusCode: 404,
+        code: 'EXCHANGE_BOOK_NOT_FOUND'
+      });
+    }
+    return serializeBook(book);
   },
 
   async listMessages(userId, conversationId, query) {

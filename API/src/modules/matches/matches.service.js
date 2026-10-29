@@ -1,9 +1,7 @@
 import { serializeAvatarUser } from '../media/avatar.serializer.js';
-import { AppError } from '../../shared/errors/AppError.js';
 import { likesQuotaService } from '../premium/likesQuota.service.js';
-import { booksRepository } from '../books/books.repository.js';
 import { matchesRepository } from './matches.repository.js';
-import { interactionSchema } from './matches.schemas.js';
+import { interactionSchema, matchIdSchema } from './matches.schemas.js';
 
 async function serializeMatch(match, currentUserId, avatarCache = new Map()) {
   if (!match) return null;
@@ -18,46 +16,16 @@ async function serializeMatch(match, currentUserId, avatarCache = new Map()) {
   };
 }
 
-export function createMatchesService({
-  books = booksRepository,
-  matches = matchesRepository,
-  quota = likesQuotaService
-} = {}) {
+export function createMatchesService({ matches = matchesRepository, quota = likesQuotaService } = {}) {
   return {
     async interact(actorId, input) {
       const data = interactionSchema.parse(input);
-      const targetBook = await books.findById(data.targetBookId);
-
-      if (!targetBook || !targetBook.ownerId || targetBook.availability !== 'AVAILABLE') {
-        throw new AppError('Livro indisponível para descoberta.', {
-          statusCode: 404,
-          code: 'DISCOVERY_BOOK_NOT_FOUND'
-        });
-      }
-
-      if (targetBook.ownerId === actorId) {
-        throw new AppError('Você não pode interagir com o próprio livro.', {
-          statusCode: 422,
-          code: 'SELF_INTERACTION'
-        });
-      }
-
-      const interactionData = { actorId, ...data };
-      const interaction = data.action === 'LIKE'
-        ? await quota.consumeDailyLike(
-            actorId,
-            data.targetBookId,
-            (transactionClient) => matches.upsertInteraction(interactionData, transactionClient)
-          )
-        : await matches.upsertInteraction(interactionData);
-
-      let match = null;
-      if (data.action === 'LIKE') {
-        const reverseLike = await matches.findReverseLike(actorId, targetBook.ownerId);
-        if (reverseLike) {
-          match = await matches.createMatch(actorId, targetBook.ownerId);
-        }
-      }
+      const { interaction, match } = await matches.applyInteraction(
+        { actorId, ...data },
+        data.action === 'LIKE'
+          ? (tx) => quota.consumeDailyLike(actorId, data.targetBookId, () => undefined, tx)
+          : null
+      );
 
       return {
         interaction: {
@@ -68,6 +36,11 @@ export function createMatchesService({
         },
         match: await serializeMatch(match, actorId)
       };
+    },
+
+    async remove(actorId, matchId) {
+      matchIdSchema.parse(matchId);
+      return matches.remove(actorId, matchId);
     },
 
     async list(userId) {

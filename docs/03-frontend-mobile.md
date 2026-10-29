@@ -49,13 +49,13 @@ Após confirmação, os guards derivam `auth → profile → books → app`. Per
 
 O app autenticado exibe 5 abas na barra inferior: **Descobrir**, **Biblioteca**, **Curtidas**, **Mensagens** e **Perfil**, com Curtidas na posição central. No Android/Web, a tab bar usa `@react-navigation/bottom-tabs` com ícones MaterialIcons. No iOS, usa `@bottom-tabs/react-navigation` com SF Symbols nativos (`sparkles`, `books.vertical`, `heart.fill`, `bubble.left.and.bubble.right`, `person.crop.circle`) e efeito de translucidez.
 
-Telas acessíveis via push/modal a partir das tabs: `BookCreate` (modal), `BookDetails`, `BookEdit` (modal), `Matches` e `Chat`.
+Telas acessíveis via push/modal a partir das tabs: `BookCreate` (modal), `BookDetails`, `BookEdit` (modal), `Matches`, `Chat`, `ExchangeBookDetails` e `StreakLeaderboard`.
 
 ## Variantes web, deep links e instalação
 
 `env.web.ts` usa `window.location.origin` para API e Socket.IO; `authTransport.web.ts` concentra sessão em memória e refresh por cookie, `notice.web.ts` preserva callbacks de confirmação e `preparePickedImage.web.ts` prepara mídia no navegador. As variantes nativas continuam usando SecureStore, avisos nativos e validação de imagem sem conversão HEIC.
 
-O linking usa a origem da página na Web e o esquema `mybooks://` no nativo. Mapeia `/auth`, `/onboarding/profile`, `/onboarding/books`, `/discover`, `/library`, `/likes`, `/messages`, `/profile`, `/books/new`, `/books/:bookId`, `/books/:bookId/edit`, `/matches` e `/chat/:conversationId`. Abrir uma URL mantém os guards de autenticação/onboarding e a autorização da API. Curtidas permanece no centro das cinco tabs.
+O linking usa a origem da página na Web e o esquema `mybooks://` no nativo. Mapeia `/auth`, `/onboarding/profile`, `/onboarding/books`, `/discover`, `/library`, `/likes`, `/messages`, `/profile`, `/books/new`, `/books/:bookId`, `/books/:bookId/edit`, `/matches`, `/chat/:conversationId`, `/conversations/:conversationId/books/:bookId` e `/ranking/sequencia`. Abrir uma URL mantém os guards de autenticação/onboarding e a autorização da API. Curtidas permanece no centro das cinco tabs.
 
 O manifesto, os ícones e metadados iOS permitem preparar a instalação PWA. O proxy serve o fallback SPA para navegações profundas e mantém erros da API como JSON. O service worker oferece página offline sem dados privados e cache restrito a assets com hash; não fornece login, chat ou sincronização offline. Instalação, deep links em Safari/PWA instalada e atualização do service worker ainda precisam de aceite no iPhone físico.
 
@@ -80,6 +80,14 @@ O acesso gratuito de 30 dias libera a lista e a identidade das curtidas recebida
 A aba exibe um badge com a contagem de curtidas pendentes (recebidas e ainda não respondidas), atualizado por polling a cada 30 segundos. Filtros de ordenação (mais recentes/mais antigos) e por livro específico estão disponíveis nas curtidas recebidas.
 
 Toda tela deve tratar loading, erro, vazio e retry, respeitar safe area/teclado, usar rótulos visíveis e `accessibilityLabel`/`accessibilityRole` em ações por ícone.
+
+## Conversas, livros da troca e remoção de match
+
+O header do chat identifica a outra pessoa com nome e avatar do contrato de conversas e oferece ações para abrir os livros da troca e remover o match. Os livros abrem em um bottom sheet com os lados “Seu livro” e “Livro da outra pessoa”, capa/fallback, autores e disponibilidade. Um vínculo legado sem livro ou um livro removido aparece como indisponível; não se infere a associação por curtidas.
+
+Selecionar um livro abre a rota contextual `ExchangeBookDetails` com `conversationId` e `bookId`. O deep link `/conversations/:conversationId/books/:bookId` funciona também por abertura direta e reload na PWA. Essa tela consulta o endpoint contextual da conversa; um `404` oferece retorno a Mensagens. A rota genérica de detalhes `/books/:bookId` continua usando o contrato genérico de livros.
+
+Remover o match exige confirmação explícita que informa a exclusão permanente do histórico para as duas pessoas. Cancelar não envia requisição. A confirmação usa `DELETE /api/v1/matches/:matchId`; somente `204` confirma diretamente. Respostas inconclusivas são reconciliadas com a lista de conversas, com opções para verificar novamente ou tentar remover quando o match ainda consta ativo. Depois da confirmação, uma conversa removida do caminho de navegação atual leva a pessoa a Mensagens; o outro participante recebe um aviso dispensável. A sessão Socket.IO compartilhada e os detalhes de autorização estão em [tempo real e chat](08-tempo-real-chat.md).
 
 ## Imagens
 
@@ -126,3 +134,9 @@ Esta extensão e a correção de safe area `3d5160d` foram integradas à `main` 
 `PwaInstallProvider` público fica acima da espera por fontes. `WebExperience`/`WebViewportGate` web ficam antes da primeira montagem de QueryClientProvider/SessionProvider: até 1024 CSS px acessa o app; acima disso aparece orientação com QR e link. Não há detecção de computador por user agent. Depois de montado, o runtime não é recriado ao redimensionar; um diálogo em top layer cobre também os portais RN Web e o foco anterior é restaurado. Essa apresentação não é barreira de segurança nem suspensão de toda a rede em background.
 
 Bootstrap no HTML captura o prompt antes do React. Auth landing oferece instalar/guia e o menu do Perfil hospeda o painel na rota `install`, sem modal aninhado. Variantes nativas são passthrough/no-op; o Expo não recebe esse gate. QR só usa a raiz pública da origem; instalação não transfere sessão ou habilita modo offline autenticado. Estado local e aceites físicos/publicação: [execução do plano 012](../plans/plan-012-acesso-mobile-tablet-instalacao-pwa-execucao.md).
+
+## Gamificação de sequência diária
+
+`DailyCheckInCoordinator` observa a sessão já restaurada ou estabelecida e o retorno do app ao estado `active`. O scheduler faz no máximo uma chamada bem-sucedida por dia de `America/Sao_Paulo` por usuário em memória, deduplica eventos concorrentes, permite tentar novamente após falha e invalida `['gamification', 'leaderboard']`. O endpoint é idempotente e o servidor é a autoridade final.
+
+O Perfil mostra um cartão de sequência e posição; tocar abre a rota empilhada `StreakLeaderboard`, sem alterar as cinco abas. O deep link da PWA é `/ranking/sequencia`. A tela mostra primeiro a posição pessoal e depois as 20 primeiras posições, incluindo empates no corte; usa apenas nome público e avatar na lista. Loading, erro com retry e ausência de sequências ativas têm estados explícitos.

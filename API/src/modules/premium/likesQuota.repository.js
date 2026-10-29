@@ -2,12 +2,15 @@ import { AppError } from '../../shared/errors/AppError.js';
 import { prisma } from '../../shared/database/prisma.js';
 
 export const likesQuotaRepository = {
+  async lockUser(tx, userId) {
+    const lockedUsers = await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
+    if (!lockedUsers.length) {
+      throw new AppError('Conta não encontrada.', { statusCode: 404, code: 'USER_NOT_FOUND' });
+    }
+  },
   withUserTransaction(userId, operation) {
     return prisma.$transaction(async (tx) => {
-      const lockedUsers = await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
-      if (!lockedUsers.length) {
-        throw new AppError('Conta não encontrada.', { statusCode: 404, code: 'USER_NOT_FOUND' });
-      }
+      await this.lockUser(tx, userId);
       return operation(tx);
     }, { maxWait: 10000, timeout: 10000 });
   },

@@ -32,6 +32,12 @@ A família oficial é Be Vietnam Pro. Títulos usam peso 700/800; corpo usa 400;
 
 `BookPhotoPicker` é compartilhado entre `BookCreate` e `BookEdit`. Usa superfície `#FFF8F7`, ação principal `#B90041`, violeta `#7145BA` apenas como apoio e Be Vietnam Pro. As miniaturas numeradas representam uma ordem real; a primeira recebe o selo “Capa”. Mover, remover e adicionar são ações com rótulos acessíveis e alvos de toque de pelo menos 44 pt. No detalhe, a galeria mantém a capa em primeiro lugar e deixa as próprias fotos dominarem a composição.
 
+## Componentes de conversa e livros da troca
+
+O header do chat combina `Avatar`, nome e ações por ícone com rótulos de acessibilidade. O bottom sheet de livros da troca entra de baixo para cima, usa safe area, mantém no mínimo 48 dp/pt nos controles de toque e pode fechar pelo botão, backdrop, voltar do Android ou gesto para baixo no handle. Cada cartão mostra lado da troca, capa ou fallback, título, autores e disponibilidade; dados legados/removidos têm estado indisponível explícito.
+
+A confirmação de remoção informa que o histórico será apagado para ambos, oferece Cancelar sem efeito remoto e mantém estados distintos para match removido, ainda ativo ou resultado incerto. No resultado incerto, a ação verifica a lista de conversas; se o match seguir ativo, a pessoa pode tentar novamente. Avisos em Mensagens usam região viva acessível e podem ser dispensados individualmente.
+
 ## Regras shadcn no mobile
 
 O projeto segue princípios de composição, variantes e tokens do shadcn, implementados com primitives React Native. Não há DOM, Tailwind web ou Radix nas telas nativas. Estados de hover não substituem pressed, focus, disabled, loading, erro e acessibilidade mobile.
@@ -41,6 +47,8 @@ O projeto segue princípios de composição, variantes e tokens do shadcn, imple
 O perfil tem uma única área de identidade em fluxo vertical, sem banner, cartões sobrepostos ou margens negativas. Na branch do plano010, o topo reúne “Meu perfil” e o hambúrguer de configurações; Editar fica no menu. Foto e nome aparecem lado a lado, com empilhamento em telas menores que 360 pt ou com fonte ampliada. Cidade e bio são opcionais. A linha de livros, matches e conversas usa apenas estatísticas retornadas pela API, sem um cartão próprio.
 
 As abas “Minha estante” e “Sobre você” ficam antes do conteúdo. A estante mantém duas colunas de largura igual, inclusive com quantidade ímpar de livros, e uma ação magenta de adicionar. No estado vazio, a ação aparece junto da orientação para cadastrar o primeiro livro. Sobre você mantém informações em linhas; configurações de conta e saída ficam no menu do plano010. O avatar usa iniciais quando a imagem está ausente ou falha.
+
+O Perfil também inclui um cartão de sequência diária dentro da identidade, com dias atuais, posição e affordance para abrir o ranking. O ranking é uma tela empilhada, não uma aba: primeiro apresenta a sequência/posição da própria pessoa e depois linhas públicas com posição, avatar, nome e dias. Use os tokens existentes, ícone vetorial `local-fire-department` e alvos acessíveis; a cor não é o único modo de comunicar posição ou sequência. Estados de carregamento, erro/retry e lista vazia ficam explícitos.
 
 Referências de organização: [perfil do Spotify](https://support.spotify.com/us/article/spotify-profile/) (identidade e coleção) e [perfil do Strava](https://support.strava.com/en-us/articles/15402175-your-strava-profile-page) (resumo de atividade). A composição adapta Avatar, Tabs, Empty e Button do [shadcn/ui](https://ui.shadcn.com/docs/components) aos componentes React Native existentes. Paleta e família Be Vietnam Pro permanecem as oficiais.
 
