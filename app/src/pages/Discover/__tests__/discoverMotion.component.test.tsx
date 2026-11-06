@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const device = vi.hoisted(() => ({ reduced: false, focused: true, owner: 'reader', epoch: 0, height: 812, listener: undefined as ((value: boolean) => void) | undefined, resolvePreference: undefined as ((value: boolean) => void) | undefined, delayPreference: false, width: 375 }));
 const network = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), alert: vi.fn() }));
+const navigation = vi.hoisted(() => ({ navigate: vi.fn() }));
 vi.mock('react-native', async () => {
   const native = await vi.importActual<typeof import('react-native')>('react-native-web');
   const implementation = await vi.importActual<{ default: typeof native.Animated }>('react-native-web/dist/cjs/vendor/react-native/Animated/AnimatedImplementation');
@@ -17,7 +18,7 @@ vi.mock('react-native', async () => {
 vi.mock('react-native-safe-area-context', async () => ({ SafeAreaView: (await import('react-native-web')).View, useSafeAreaInsets: () => ({ top: 59, bottom: 34, left: 0, right: 0 }) }));
 vi.mock('@expo/vector-icons/MaterialIcons', () => ({ default: () => null }));
 vi.mock('expo-crypto', () => ({ randomUUID: () => '40000000-0000-4000-8000-000000000004' }));
-vi.mock('@react-navigation/native', () => ({ useIsFocused: () => device.focused, useNavigation: () => ({ navigate: vi.fn() }) }));
+vi.mock('@react-navigation/native', () => ({ useIsFocused: () => device.focused, useNavigation: () => navigation }));
 vi.mock('../../../providers/SessionProvider', () => ({ useSession: () => ({ user: { id: device.owner }, getSessionScope: () => ({ userId: device.owner, epoch: device.epoch }) }) }));
 vi.mock('../../../services/api', () => ({ api: { get: network.get, post: network.post }, apiErrorMessage: () => 'Falha de conexão' }));
 vi.mock('../../../services/notice', () => ({ Alert: { alert: network.alert } }));
@@ -47,6 +48,7 @@ beforeEach(() => {
   accept = () => { throw new Error('No pending request'); }; reject = () => { throw new Error('No pending request'); };
   device.reduced = false; device.focused = true; device.owner = 'reader'; device.epoch = 0; device.height = 812; device.delayPreference = false; device.resolvePreference = undefined; device.width = 375;
   network.get.mockReset(); network.post.mockReset(); network.alert.mockReset();
+  navigation.navigate.mockReset();
   network.get.mockResolvedValue({ data: { data: { items: [second, third], pageInfo } } });
   network.post.mockImplementation((url: string, input: { targetBookId: string; action: string }) => {
     expect(url).toBe('/api/v1/interactions'); expect(input.targetBookId).toBe(first.id);
@@ -59,6 +61,31 @@ beforeEach(() => {
 afterEach(() => { cleanup(); clients.splice(0).forEach(client => client.clear()); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe('animação dos cards Descobrir', () => {
+  it('retoma o livro aberto nos detalhes quando a fila volta com um livro antigo na frente', async () => {
+    const { client, mounted } = await host();
+    fireEvent.click(screen.getByRole('button', { name: 'Passar livro' }));
+    await act(async () => {});
+    await act(async () => accept()); await frames(320);
+    fireEvent.click(screen.getByRole('button', { name: 'Ver Segundo livro, de Autora. Livro de Ana' }));
+    expect(navigation.navigate).toHaveBeenCalledWith('BookDetails', { bookId: second.id });
+
+    mounted.unmount();
+    act(() => client.setQueryData(['books', 'discover'], { pages: [{ items: [first, second, third], pageInfo }], pageParams: [''] }));
+    render(tree(client));
+    await act(async () => {});
+
+    expect(screen.getByRole('button', { name: 'Ver Segundo livro, de Autora. Livro de Ana' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Ver Primeiro livro, de Autora. Livro de Ana' })).toBeNull();
+
+    network.post.mockImplementationOnce((_url: string, input: { targetBookId: string }) => {
+      expect(input.targetBookId).toBe(second.id);
+      return new Promise(resolve => { accept = () => resolve({ data: { data: { interaction: { id: 'second-interaction' }, match: null } } }); });
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Passar livro' }));
+    await act(async () => {});
+    await act(async () => accept()); await frames(320);
+    expect(screen.getByRole('button', { name: 'Ver Terceiro livro, de Autora. Livro de Ana' })).toBeTruthy();
+  });
   it('resets the outgoing snapshot when the same viewer establishes a new epoch', async () => {
     const { client, mounted } = await host();
     fireEvent.click(screen.getByRole('button', { name: 'Passar livro' }));

@@ -57,7 +57,7 @@ A rota de Curtidas mantém o contrato já registrado em docs/05-contrato-api.md:
 
 ## Fila Descobrir e remoção de curtidas
 
-`GET /discover` prioriza livros disponíveis de outros usuários sem interação prévia. Quando essa fila termina, reapresenta os livros disponíveis com interação `PASS`, tanto em desenvolvimento quanto em produção. Remover uma curtida converte `LIKE` em `PASS` pelo upsert existente, tornando o livro elegível para essa fila de repetição. Livros ainda curtidos, próprios, reservados ou trocados não entram na repetição. A consulta mantém a ordenação por criação/ID e a paginação por cursor; não apaga interações nem restaura a cota diária de likes.
+`GET /discover` prioriza livros disponíveis de outros usuários sem interação prévia. Quando essa fila termina, reapresenta os livros disponíveis com interação `PASS`, tanto em desenvolvimento quanto em produção. Remover uma curtida converte `LIKE` em `PASS` pelo upsert existente, tornando o livro elegível para essa fila de repetição. Livros ainda curtidos, próprios, reservados ou trocados não entram na repetição. A ordem é embaralhada de forma estável por leitor e intercala os donos em rodadas: outros livros da mesma pessoa aparecem depois dos de outras pessoas, quando disponíveis. O cursor usa essa ordem estável mesmo depois de uma interação, sem apagar interações nem restaurar a cota diária de likes.
 
 As telas Curtidas e Descobrir invalidam as listas afetadas após uma interação confirmada pela API: remoção atualiza Descobrir, e uma nova curtida atualiza Minhas curtidas. Uma requisição que falha não modifica a fila em cache.
 

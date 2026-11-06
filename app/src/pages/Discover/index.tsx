@@ -56,6 +56,7 @@ export function Discover() {
   const motion = useDiscoverCardMotion(focused, width, height);
   const { pan } = motion;
   const queryKey = ['books', 'discover'] as const;
+  const positionKey = ['discover', 'current-book', user?.id, getSessionScope().epoch] as const;
   const query = useInfiniteQuery({
     queryKey,
     initialPageParam: '',
@@ -65,9 +66,13 @@ export function Discover() {
   const refreshAvatar = useAvatarRefresh(query.data, query.refetch, focused);
 
   const books = query.data?.pages.flatMap((page) => page.items) || [];
-  const book = outgoingBook || books[0];
+  const currentBookId = queryClient.getQueryData<string>(positionKey);
+  const book = outgoingBook || books.find(item => item.id === currentBookId) || books[0];
   const photos = book ? getBookGalleryPhotos(book) : [];
-  const prefetchBooks = outgoingBook && books[0]?.id !== outgoingBook.id ? [outgoingBook, ...books.filter(item => item.id !== outgoingBook.id)] : books;
+  const currentIndex = books.findIndex(item => item.id === book?.id);
+  const prefetchBooks = outgoingBook
+    ? [outgoingBook, ...books.filter(item => item.id !== outgoingBook.id)]
+    : currentIndex > 0 ? [...books.slice(currentIndex), ...books.slice(0, currentIndex)] : books;
   useDiscoverMediaPrefetch({ books: prefetchBooks, focused, scope: mediaBinding.scope, getScope: mediaBinding.getScope });
 
   useEffect(() => {
@@ -94,6 +99,14 @@ export function Discover() {
       if (!sameScope(input)) return;
       if (!owns(input)) { invalidateConfirmed(); return; }
       motion.prepareNext(); entrancePending.current = true;
+      const currentRows = queryClient.getQueryData<InfiniteData<Paginated<Book>, string>>(queryKey)?.pages.flatMap(page => page.items) ?? [];
+      const remaining = currentRows.filter(item => item.id !== input.targetBookId);
+      const actedIndex = currentRows.findIndex(item => item.id === input.targetBookId);
+      const wasPinned = queryClient.getQueryData<string>(positionKey) === input.targetBookId;
+      const next = wasPinned && actedIndex >= 0
+        ? [...currentRows.slice(actedIndex + 1), ...currentRows.slice(0, actedIndex)].find(item => item.id !== input.targetBookId)
+        : remaining[0];
+      queryClient.setQueryData(positionKey, next?.id ?? null);
       queryClient.setQueryData<InfiniteData<Paginated<Book>, string>>(queryKey, (old) => old ? { ...old, pages: old.pages.map((page) => ({ ...page, items: page.items.filter((item) => item.id !== input.targetBookId) })) } : old);
       run.current = null; setOutgoingBook(null);
       if (data.match?.status === 'ACTIVE') {
@@ -162,7 +175,7 @@ export function Discover() {
                 accessibilityHint="Abre todas as fotos e informações do livro, sem curtir nem dispensar."
                 accessibilityState={{ disabled: busy }}
                 disabled={busy}
-                onPress={() => navigation.navigate('BookDetails', { bookId: book.id })}
+                onPress={() => { queryClient.setQueryData(positionKey, book.id); navigation.navigate('BookDetails', { bookId: book.id }); }}
                 style={({ pressed }) => [styles.cardPressable, pressed && styles.cardPressed]}
               >
                 <Card style={styles.card}>
