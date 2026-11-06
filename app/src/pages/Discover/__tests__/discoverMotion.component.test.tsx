@@ -32,8 +32,8 @@ const pageInfo = { hasNextPage: false, nextCursor: null };
 const clients: QueryClient[] = [];
 let accept: () => void, reject: (error: Error) => void;
 function tree(client: QueryClient) { return <QueryClientProvider client={client}><Discover /></QueryClientProvider>; }
-async function host(items = [first, second, third]) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity }, mutations: { retry: false } } });
+async function host(items = [first, second, third], gcTime?: number) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity, gcTime }, mutations: { retry: false } } });
   clients.push(client);
   client.setQueryData(['books', 'discover'], { pages: [{ items, pageInfo }], pageParams: [''] });
   const mounted = render(tree(client));
@@ -45,6 +45,7 @@ function x(element = card()) { return Number(element.style.transform.match(/tran
 function alpha(element = card()) { const value = getComputedStyle(element).opacity; return value === '' ? 1 : Number(value); }
 async function frames(ms: number) { await act(async () => { await vi.advanceTimersByTimeAsync(ms); }); }
 beforeEach(() => {
+  window.sessionStorage.clear();
   accept = () => { throw new Error('No pending request'); }; reject = () => { throw new Error('No pending request'); };
   device.reduced = false; device.focused = true; device.owner = 'reader'; device.epoch = 0; device.height = 812; device.delayPreference = false; device.resolvePreference = undefined; device.width = 375;
   network.get.mockReset(); network.post.mockReset(); network.alert.mockReset();
@@ -61,6 +62,45 @@ beforeEach(() => {
 afterEach(() => { cleanup(); clients.splice(0).forEach(client => client.clear()); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe('animação dos cards Descobrir', () => {
+  it('recupera o livro aberto após a PWA recriar a página', async () => {
+    const { client, mounted } = await host([second, third, first]);
+    fireEvent.click(screen.getByRole('button', { name: 'Ver Segundo livro, de Autora. Livro de Ana' }));
+    mounted.unmount();
+    client.clear();
+    const fresh = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    clients.push(fresh);
+    network.get.mockImplementation((url: string) => Promise.resolve({ data: { data: url === '/api/v1/discover'
+      ? { items: [first], pageInfo }
+      : second } }));
+
+    render(tree(fresh));
+    await frames(1);
+    await act(async () => {});
+
+    expect(screen.getByRole('button', { name: 'Ver Segundo livro, de Autora. Livro de Ana' })).toBeTruthy();
+    expect(network.get).toHaveBeenCalledWith('/api/v1/books/second', expect.anything());
+  });
+  it('preserva o card aberto quando o cache da fila expira durante os detalhes', async () => {
+    const { client, mounted } = await host([second, third, first], 0);
+    fireEvent.click(screen.getByRole('button', { name: 'Ver Segundo livro, de Autora. Livro de Ana' }));
+    mounted.unmount();
+    await frames(1);
+    network.get.mockResolvedValue({ data: { data: { items: [first], pageInfo } } });
+
+    render(tree(client));
+    await frames(1);
+    await act(async () => {});
+
+    expect(screen.getByRole('button', { name: 'Ver Segundo livro, de Autora. Livro de Ana' })).toBeTruthy();
+    network.post.mockImplementationOnce((_url: string, input: { targetBookId: string }) => {
+      expect(input.targetBookId).toBe(second.id);
+      return new Promise(resolve => { accept = () => resolve({ data: { data: { interaction: { id: 'second-interaction' }, match: null } } }); });
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Passar livro' }));
+    await act(async () => {});
+    await act(async () => accept()); await frames(320);
+    expect(screen.getByRole('button', { name: 'Ver Terceiro livro, de Autora. Livro de Ana' })).toBeTruthy();
+  });
   it('retoma o livro aberto nos detalhes quando a fila volta com um livro antigo na frente', async () => {
     const { client, mounted } = await host();
     fireEvent.click(screen.getByRole('button', { name: 'Passar livro' }));

@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { saveDiscoverBookId } from '../features/books/discoverPositionStorage';
 import React, {
   createContext,
   useCallback,
@@ -75,6 +76,7 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
     const previous = userRef.current ? { userId: userRef.current.id, epoch: epoch.current } : null;
     const ticket = ++epoch.current;
     if (previous) void disposeMediaScope(previous);
+    if (previous) saveDiscoverBookId(previous.userId, null);
     endedActor.current = null;
     userRef.current = null; replaceSession(null); setUser(null); queryClient.clear();
     const next = await sessionTransport.accept(response);
@@ -86,6 +88,7 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
 
   const clearSession = useCallback(async () => {
     const previous = userRef.current;
+    saveDiscoverBookId(previous?.id, null);
     endedActor.current = previous ? { userId: previous.id, epoch: epoch.current, afterEpoch: epoch.current + 1 } : null;
     const previousScope = previous ? { userId: previous.id, epoch: epoch.current } : null;
     epoch.current++;

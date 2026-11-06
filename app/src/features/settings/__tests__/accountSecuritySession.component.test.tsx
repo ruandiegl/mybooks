@@ -9,6 +9,7 @@ vi.mock('../../auth/authApi', () => ({ authApi: { me: async () => null } }));
 vi.mock('../../auth/authTransport', () => ({ sessionTransport: { restore: async () => null, accept: async (response: any) => ({ ...response, expiresAt: Date.parse(response.expiresAt) }), getToken: async (value: any) => value?.accessToken ?? null, clear: io.clear, signOut: io.revoke, refresh: io.refresh } }));
 vi.mock('../../../services/api', () => ({ configureApiSession: () => {} }));
 import { SessionProvider, useSession } from '../../../providers/SessionProvider';
+import { readDiscoverBookId, saveDiscoverBookId } from '../../books/discoverPositionStorage';
 const sid = '10000000-0000-4000-8000-000000000001';
 const response = (id: string) => ({ accessToken: `e30.${btoa(JSON.stringify({ sub: id, sid }))}.test`, refreshToken: 'refresh-' + id, expiresAt: '2030-01-01T00:00:00Z', user: { id, name: id, interests: [], isActive: true, avatarVersion: 0, avatarUrl: null } });
 function host() {
@@ -16,9 +17,19 @@ function host() {
   const wrapper = ({ children }: React.PropsWithChildren) => <QueryClientProvider client={client}><SessionProvider>{children}</SessionProvider></QueryClientProvider>;
   return { ...renderHook(useSession, { wrapper }), client };
 }
-beforeEach(() => { vi.clearAllMocks(); io.clear.mockResolvedValue(undefined); });
+beforeEach(() => { vi.clearAllMocks(); io.clear.mockResolvedValue(undefined); window.sessionStorage.clear(); });
 afterEach(cleanup);
 describe('terminal account operation ownership', () => {
+  it('remove a posição do Descobrir ao encerrar a sessão', async () => {
+    const hook = host(); await waitFor(() => expect(hook.result.current.isLoaded).toBe(true));
+    await act(async () => { await hook.result.current.establishSession(response('ana')); });
+    saveDiscoverBookId('ana', 'book-2');
+
+    await act(async () => { await hook.result.current.signOut(hook.result.current.captureActor()!); });
+
+    expect(readDiscoverBookId('ana')).toBeNull();
+    hook.client.clear();
+  });
   it.each(['other', 'ana'])('never clears a later login (%s) after an old logout returns', async id => {
     let finish!: () => void; io.revoke.mockReturnValue(new Promise<void>(r => { finish = r; }));
     const hook = host(); await waitFor(() => expect(hook.result.current.isLoaded).toBe(true));

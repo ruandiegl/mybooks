@@ -63,7 +63,7 @@ O manifesto, os ícones e metadados iOS permitem preparar a instalação PWA. O 
 
 O card do Descobrir ocupa o espaço disponível, com avatar/nome/cidade do dono no topo, capa inteira (`contain`), título e autores. Tocar no card abre `BookDetails`, sem gerar curtida ou dispensa. Os gestos horizontais e os botões de curtir/dispensar permanecem; rolagem vertical permite acessar o conteúdo em telas pequenas, paisagem ou com fontes ampliadas.
 
-Ao voltar de `BookDetails`, Descobrir mantém o livro que estava aberto mesmo se a lista for atualizada ou a tela remontada. Depois de curtir ou dispensar, avança ao próximo da ordem recebida; a posição é isolada por conta e sessão.
+Ao voltar de `BookDetails`, Descobrir mantém o livro que estava aberto mesmo se a lista for atualizada, o cache da fila expirar ou a tela remontar. Guarda em memória o card e os próximos livros carregados. Na PWA, só o ID do card fica na sessão da aba para recuperar seus dados pela API após uma recarga; fotos e conteúdo não são persistidos. Depois de curtir ou dispensar, avança na ordem carregada. A posição é isolada por conta e descartada ao encerrar a sessão.
 
 Na branch `codex/discover-card-motion`, PASS sai pela esquerda e LIKE pela direita em240ms. X/coração branco decorativo aparece com opacidade máxima0.46, desloca48px e desaparece; o próximo card tem fade160ms. Apenas transform/opacity são animados, com driver nativo fora da Web, sem biblioteca adicional ou alteração de paleta/layout. “Reduzir movimento” e preferência desconhecida não deslocam o card.
 

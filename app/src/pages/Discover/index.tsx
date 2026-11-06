@@ -6,7 +6,7 @@ import { useAvatarRefresh } from '../../features/avatar/useAvatarRefresh';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useInfiniteQuery, useMutation, useQueryClient, type InfiniteData } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import * as Crypto from 'expo-crypto';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, PanResponder, Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
@@ -20,6 +20,7 @@ import { TopBar } from '../../components/TopBar';
 import { MatchModal } from '../../components/MatchModal';
 import { createBookMedia } from '../../features/media/mediaIdentity';
 import { getBookGalleryPhotos } from '../../features/books/bookPresentation';
+import { readDiscoverBookId, saveDiscoverBookId } from '../../features/books/discoverPositionStorage';
 import { removeMatchedReceivedLikes } from '../../features/likes/removeMatchedReceivedLikes';
 import { api, apiErrorMessage } from '../../services/api';
 import { Alert } from '../../services/notice';
@@ -33,6 +34,7 @@ import { useDiscoverCardMotion, type DiscoverAction } from './useDiscoverCardMot
 type InteractionResult = { interaction: { id: string }; match?: Match | null };
 type InteractionInput = { targetBookId: string; action: DiscoverAction; runId: number; scope: SessionScope };
 type InteractionRun = { id: number; ownerId: string | undefined; book: Book; exit: Promise<void> };
+type DiscoverPosition = { book: Book; tail: Book[] };
 
 export function Discover() {
   const mediaBinding = useMediaBinding();
@@ -57,6 +59,12 @@ export function Discover() {
   const { pan } = motion;
   const queryKey = ['books', 'discover'] as const;
   const positionKey = ['discover', 'current-book', user?.id, getSessionScope().epoch] as const;
+  const { data: position } = useQuery<DiscoverPosition | null>({
+    queryKey: positionKey,
+    queryFn: () => null,
+    enabled: false,
+    gcTime: Infinity
+  });
   const query = useInfiniteQuery({
     queryKey,
     initialPageParam: '',
@@ -66,14 +74,31 @@ export function Discover() {
   const refreshAvatar = useAvatarRefresh(query.data, query.refetch, focused);
 
   const books = query.data?.pages.flatMap((page) => page.items) || [];
-  const currentBookId = queryClient.getQueryData<string>(positionKey);
-  const book = outgoingBook || books.find(item => item.id === currentBookId) || books[0];
+  const storedBookId = readDiscoverBookId(user?.id);
+  const pinnedId = position?.book.id ?? storedBookId;
+  const cachedPinnedBook = books.find(item => item.id === pinnedId);
+  const recoveredBook = useQuery({
+    queryKey: ['discover', 'recovered-book', user?.id, pinnedId],
+    queryFn: async ({ signal }) => (await api.get<ApiEnvelope<Book>>(`/api/v1/books/${pinnedId}`, { signal })).data.data,
+    enabled: Boolean(user?.id && pinnedId && !position?.book && !cachedPinnedBook),
+    retry: false
+  });
+  const pinnedBook = cachedPinnedBook || position?.book || (recoveredBook.data?.availability === 'AVAILABLE' ? recoveredBook.data : undefined);
+  const recovering = Boolean(pinnedId && !pinnedBook && recoveredBook.isPending);
+  const book = outgoingBook || pinnedBook || (recovering ? undefined : books[0]);
   const photos = book ? getBookGalleryPhotos(book) : [];
   const currentIndex = books.findIndex(item => item.id === book?.id);
   const prefetchBooks = outgoingBook
     ? [outgoingBook, ...books.filter(item => item.id !== outgoingBook.id)]
-    : currentIndex > 0 ? [...books.slice(currentIndex), ...books.slice(0, currentIndex)] : books;
+    : currentIndex > 0 ? [...books.slice(currentIndex), ...books.slice(0, currentIndex)]
+      : currentIndex < 0 && book ? [book, ...books] : books;
   useDiscoverMediaPrefetch({ books: prefetchBooks, focused, scope: mediaBinding.scope, getScope: mediaBinding.getScope });
+
+  useEffect(() => {
+    if (storedBookId && (recoveredBook.isError || (recoveredBook.data && recoveredBook.data.availability !== 'AVAILABLE'))) {
+      saveDiscoverBookId(user?.id, null);
+    }
+  }, [storedBookId, recoveredBook.isError, recoveredBook.data, user?.id]);
 
   useEffect(() => {
     alive.current = true;
@@ -102,11 +127,15 @@ export function Discover() {
       const currentRows = queryClient.getQueryData<InfiniteData<Paginated<Book>, string>>(queryKey)?.pages.flatMap(page => page.items) ?? [];
       const remaining = currentRows.filter(item => item.id !== input.targetBookId);
       const actedIndex = currentRows.findIndex(item => item.id === input.targetBookId);
-      const wasPinned = queryClient.getQueryData<string>(positionKey) === input.targetBookId;
-      const next = wasPinned && actedIndex >= 0
-        ? [...currentRows.slice(actedIndex + 1), ...currentRows.slice(0, actedIndex)].find(item => item.id !== input.targetBookId)
+      const saved = queryClient.getQueryData<DiscoverPosition>(positionKey);
+      const wasPinned = saved?.book.id === input.targetBookId;
+      const next = wasPinned
+        ? saved.tail[0] || (actedIndex >= 0 ? currentRows.slice(actedIndex + 1)[0] : undefined) || remaining[0]
         : remaining[0];
-      queryClient.setQueryData(positionKey, next?.id ?? null);
+      saveDiscoverBookId(input.scope.userId, next?.id ?? null);
+      queryClient.setQueryData(positionKey, next
+        ? { book: next, tail: wasPinned && saved.tail.length ? saved.tail.slice(1) : remaining.slice(remaining.findIndex(item => item.id === next.id) + 1) }
+        : null);
       queryClient.setQueryData<InfiniteData<Paginated<Book>, string>>(queryKey, (old) => old ? { ...old, pages: old.pages.map((page) => ({ ...page, items: page.items.filter((item) => item.id !== input.targetBookId) })) } : old);
       run.current = null; setOutgoingBook(null);
       if (data.match?.status === 'ACTIVE') {
@@ -165,7 +194,7 @@ export function Discover() {
       <MatchModal visible={Boolean(confirmedMatch) && focused} reduceMotion={mediaBinding.transitionMs === 0} otherUserName={confirmedMatch?.otherUser.name} onClose={() => setConfirmedMatch(null)} onMessages={() => { setConfirmedMatch(null); navigation.navigate('Main', { screen: 'Messages' }); }} />
       <TopBar eyebrow="Trocas possíveis" title="Descobrir" />
       <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} showsVerticalScrollIndicator={false}>
-        {query.isLoading && !outgoingBook ? <StateView loading title="Buscando novas histórias" /> : query.isError && !outgoingBook ? <StateView title="A descoberta falhou" icon="cloud-off" actionLabel="Tentar novamente" onAction={retryImages} /> : !book ? <StateView title="Você chegou ao fim por agora" description="Novos livros aparecem aqui quando outros leitores publicam." icon="done-all" actionLabel="Atualizar" onAction={retryImages} /> : <>
+        {(query.isLoading || recovering) && !book ? <StateView loading title="Buscando novas histórias" /> : query.isError && !book ? <StateView title="A descoberta falhou" icon="cloud-off" actionLabel="Tentar novamente" onAction={retryImages} /> : !book ? <StateView title="Você chegou ao fim por agora" description="Novos livros aparecem aqui quando outros leitores publicam." icon="done-all" actionLabel="Atualizar" onAction={retryImages} /> : <>
           <View style={styles.deck}>
             {outgoingBook && motion.exited ? <View style={styles.saving}><ActivityIndicator color={theme.colors.primary} /><Text style={styles.savingText} accessibilityLiveRegion="polite">Salvando sua escolha…</Text></View> : null}
             <Animated.View style={[styles.gesture, landscape && styles.gestureLandscape, cardStyle]} {...panResponder.panHandlers}>
@@ -175,7 +204,11 @@ export function Discover() {
                 accessibilityHint="Abre todas as fotos e informações do livro, sem curtir nem dispensar."
                 accessibilityState={{ disabled: busy }}
                 disabled={busy}
-                onPress={() => { queryClient.setQueryData(positionKey, book.id); navigation.navigate('BookDetails', { bookId: book.id }); }}
+                onPress={() => {
+                  saveDiscoverBookId(user?.id, book.id);
+                  queryClient.setQueryData<DiscoverPosition>(positionKey, { book, tail: currentIndex >= 0 ? books.slice(currentIndex + 1) : position?.tail ?? [] });
+                  navigation.navigate('BookDetails', { bookId: book.id });
+                }}
                 style={({ pressed }) => [styles.cardPressable, pressed && styles.cardPressed]}
               >
                 <Card style={styles.card}>
