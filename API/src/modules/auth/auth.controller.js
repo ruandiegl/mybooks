@@ -3,6 +3,7 @@ import { authService } from './auth.service.js';
 import {
   forgotPasswordSchema,
   changePasswordSchema,
+  deleteAccountSchema,
   loginSchema,
   refreshSchema,
   registerSchema,
@@ -63,6 +64,19 @@ function clearBrowserRefreshCookie(res) {
 
 function preventBrowserSessionCaching(res) {
   res.set('Cache-Control', 'no-store');
+}
+
+function notifyRemovedMatches(req, matches) {
+  const io = req.app.get('io');
+  if (!io) return;
+  for (const match of matches || []) {
+    try {
+      io.to('user:' + match.otherUserId).emit('match:removed', { matchId: match.matchId, conversationId: match.conversationId });
+      if (match.conversationId) io.in('conversation:' + match.conversationId).socketsLeave('conversation:' + match.conversationId);
+    } catch (error) {
+      console.warn(JSON.stringify({ level: 'warn', code: 'ACCOUNT_DELETION_MATCH_NOTIFICATION_FAILED', matchId: match.matchId, causeType: error?.name || 'Error' }));
+    }
+  }
 }
 
 function terminalCorrelation(req, browser = false) {
@@ -211,6 +225,20 @@ export function createAuthController({ service = authService, getMe = usersServi
     browserChangePassword: async (req, res) => {
       preventBrowserSessionCaching(res);
       const data = await service.changePassword(req.currentUser.id, req.identity.sessionId, changePasswordSchema.parse(req.body), terminalCorrelation(req, true));
+      clearBrowserRefreshCookie(res);
+      return res.status(200).json({ data });
+    },
+    deleteAccount: async (req, res) => {
+      preventBrowserSessionCaching(res);
+      const { removedMatches, ...data } = await service.deleteAccount(req.currentUser.id, req.identity.sessionId, deleteAccountSchema.parse(req.body), terminalCorrelation(req));
+      notifyRemovedMatches(req, removedMatches);
+      if (isCookieSessionRequest(req)) clearRefreshCookie(res);
+      return res.status(200).json({ data });
+    },
+    browserDeleteAccount: async (req, res) => {
+      preventBrowserSessionCaching(res);
+      const { removedMatches, ...data } = await service.deleteAccount(req.currentUser.id, req.identity.sessionId, deleteAccountSchema.parse(req.body), terminalCorrelation(req, true));
+      notifyRemovedMatches(req, removedMatches);
       clearBrowserRefreshCookie(res);
       return res.status(200).json({ data });
     },

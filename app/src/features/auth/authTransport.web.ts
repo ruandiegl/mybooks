@@ -2,7 +2,7 @@ import { authApi } from './authApi';
 import type { SessionResponse, SessionSnapshot, SessionTransport } from './authTransport';
 import { accessSessionId, type SessionActor } from './sessionActor';
 import { withBrowserSessionLock, safeBrowserLocks, type BrowserLockManager } from './browserSessionLock.web';
-import type { ChangePasswordInput } from '../../types/api';
+import type { ChangePasswordInput, DeleteAccountInput } from '../../types/api';
 
 const SIGNED_OUT_KEY = 'trocalivros.auth.signed-out.v1';
 
@@ -13,6 +13,7 @@ type BrowserAuthApi = {
   logout(actor?: SessionActor): Promise<{ ok: boolean }>;
   logoutAll?(token: string, actor: SessionActor): Promise<{ ok: boolean }>;
   changePassword?(token: string, input: ChangePasswordInput, actor: SessionActor): Promise<{ ok: boolean }>;
+  deleteAccount?(token: string, input: DeleteAccountInput, actor: SessionActor): Promise<{ ok: boolean }>;
 };
 
 function safeLocalStorage(): SessionMarkerStorage | null {
@@ -157,6 +158,9 @@ export function createWebSessionTransport(dependencies: {
     },
     async changePassword(current, input: ChangePasswordInput, actor, isCurrent) {
       await terminal(current, actor, isCurrent, token => { if (!api.changePassword) throw Error('Esta ação ainda não está disponível.'); return api.changePassword(token, input, actor); });
+    },
+    async deleteAccount(current, input: DeleteAccountInput, actor, isCurrent) {
+      await terminal(current, actor, isCurrent, token => { if (!api.deleteAccount) throw Error('Esta ação ainda não está disponível.'); return api.deleteAccount(token, input, actor); });
     }
   };
 }

@@ -2,15 +2,18 @@
 import React from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
-const io = vi.hoisted(() => ({ change: vi.fn(), epoch: 1 }));
+const io = vi.hoisted(() => ({ change: vi.fn(), deletion: vi.fn(), epoch: 1 }));
 vi.mock('react-native', async () => ({ ...(await import('react-native-web')) }));
 vi.mock('@expo/vector-icons/MaterialIcons', () => ({ default: () => null }));
-vi.mock('../../../providers/SessionProvider', () => ({ useSession: () => ({ user: { id: 'ana', email: 'ana@example.test', emailVerifiedAt: '2026-10-08', phone: '+5511999999999' }, captureActor: () => ({ userId: 'ana', epoch: io.epoch, sessionId: '10000000-0000-4000-8000-000000000001' }), isActorCurrent: (actor: any) => actor.epoch === io.epoch, changePassword: io.change, signOutAll: async () => {}, signOut: async () => {} }) }));
+vi.mock('../../../providers/SessionProvider', () => ({ useSession: () => ({ user: { id: 'ana', email: 'ana@example.test', emailVerifiedAt: '2026-10-08', phone: '+5511999999999' }, captureActor: () => ({ userId: 'ana', epoch: io.epoch, sessionId: '10000000-0000-4000-8000-000000000001' }), isActorCurrent: (actor: any) => actor.epoch === io.epoch, changePassword: io.change, deleteAccount: io.deletion, signOutAll: async () => {}, signOut: async () => {} }) }));
 vi.mock('../../../services/api', () => ({ apiErrorMessage: (_error: unknown, fallback: string) => fallback }));
 import { PasswordChangeForm } from '../../../components/PasswordChangeForm';
 import { useAccountSecurity } from '../../auth/useAccountSecurity';
 import { AccountSettingsPanel } from '../../../components/AccountSettingsPanel';
+import { DeleteAccountForm } from '../../../components/DeleteAccountForm';
+import { useDeleteAccount } from '../../auth/useDeleteAccount';
 function Form() { return <PasswordChangeForm security={useAccountSecurity()} enabled />; }
+function Deletion() { return <DeleteAccountForm deletion={useDeleteAccount()} onCancel={() => {}} />; }
 afterEach(() => { cleanup(); vi.resetAllMocks(); io.epoch = 1; });
 function fill(confirmation = 'NovaSenha@123') {
   fireEvent.change(screen.getByLabelText('Senha atual'), { target: { value: 'Senha@123' } });
@@ -42,4 +45,16 @@ it('only shows permitted account fields, never CPF or credentials', () => {
   render(<AccountSettingsPanel />);
   expect(screen.getByText('ana@example.test')).toBeTruthy(); expect(screen.getByText('E-mail confirmado')).toBeTruthy();
   expect(screen.queryByText(/CPF|token|hash|R2/)).toBeNull();
+});
+it('requires password and exact confirmation before deleting the account', async () => {
+  io.deletion.mockResolvedValue(undefined);
+  render(<Deletion />);
+  const button = screen.getByRole('button', { name: 'Excluir minha conta permanentemente' });
+  expect(button.hasAttribute('disabled')).toBe(true);
+  fireEvent.change(screen.getByLabelText('Senha atual'), { target: { value: 'Senha@123' } });
+  fireEvent.change(screen.getByLabelText('Digite EXCLUIR para confirmar'), { target: { value: 'excluir' } });
+  expect(button.hasAttribute('disabled')).toBe(true);
+  fireEvent.change(screen.getByLabelText('Digite EXCLUIR para confirmar'), { target: { value: 'EXCLUIR' } });
+  fireEvent.click(button);
+  expect(io.deletion).toHaveBeenCalledWith({ currentPassword: 'Senha@123', confirmation: 'EXCLUIR' }, expect.objectContaining({ userId: 'ana' }));
 });

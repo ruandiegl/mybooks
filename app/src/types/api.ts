@@ -177,6 +177,7 @@ export type AccountPreferencesDTO = {
   capabilities: { changePassword: boolean; logoutAll: boolean; push: false };
 };
 export type ChangePasswordInput = { currentPassword: string; newPassword: string };
+export type DeleteAccountInput = { currentPassword: string; confirmation: 'EXCLUIR' };
 
 export type GamificationCheckIn = {
   dayKey: string;

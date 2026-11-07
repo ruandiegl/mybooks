@@ -17,7 +17,7 @@ import { mergeAvatarVersion } from '../features/avatar/avatarRefresh';
 import { avatarDescriptorOf } from '../features/avatar/avatarTypes';
 import { disposeMediaScope } from '../features/media/mediaPrefetch';
 import { useAvatarRefresh } from '../features/avatar/useAvatarRefresh';
-import type { AvatarDescriptor, ChangePasswordInput, User } from '../types/api';
+import type { AvatarDescriptor, ChangePasswordInput, DeleteAccountInput, User } from '../types/api';
 import { accessSessionId, type SessionActor } from '../features/auth/sessionActor';
 
 export type SessionScope = { userId: string | undefined; epoch: number };
@@ -39,6 +39,7 @@ type SessionContextValue = {
   signOut: (actor?: SessionActor) => Promise<void>;
   signOutAll: (actor: SessionActor) => Promise<void>;
   changePassword: (input: ChangePasswordInput, actor: SessionActor) => Promise<void>;
+  deleteAccount: (input: DeleteAccountInput, actor: SessionActor) => Promise<void>;
   sessionNotice?: string;
   endRevokedSession: (actor: SessionActor) => Promise<void>;
 };
@@ -160,7 +161,7 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
   }, [isActorCurrent, queryClient, replaceSession]);
   const refreshAvatar = useAvatarRefresh(user, refreshUser, isLoaded && Boolean(session));
 
-  const runTerminal = useCallback((operation: 'logout' | 'logoutAll' | 'password', actor: SessionActor, input?: ChangePasswordInput): Promise<void> => {
+  const runTerminal = useCallback((operation: 'logout' | 'logoutAll' | 'password' | 'delete', actor: SessionActor, input?: ChangePasswordInput | DeleteAccountInput): Promise<void> => {
     if (!isActorCurrent(actor)) return Promise.reject(Error('A sessão mudou. Abra as configurações novamente.'));
     if (terminal.current?.epoch === actor.epoch) return terminal.current.operation === operation ? terminal.current.promise : Promise.reject(Error('Aguarde a operação atual.'));
     const promise = (async () => {
@@ -169,7 +170,8 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
         if (!currentActor() || !sessionRef.current) throw Error('A sessão mudou.');
         if (operation === 'logout') await sessionTransport.signOut(sessionRef.current, actor, currentActor);
         else if (operation === 'logoutAll') await sessionTransport.signOutAll(sessionRef.current, actor, currentActor);
-        else await sessionTransport.changePassword(sessionRef.current, input!, actor, currentActor);
+        else if (operation === 'password') await sessionTransport.changePassword(sessionRef.current, input as ChangePasswordInput, actor, currentActor);
+        else await sessionTransport.deleteAccount(sessionRef.current, input as DeleteAccountInput, actor, currentActor);
       };
       try { await send(); }
       catch (error) {
@@ -178,7 +180,7 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
         if (status !== 401 || !currentActor() || !await refreshSession()) throw error;
         await send();
       }
-      const notice = operation === 'password' ? 'Senha atualizada. Entre novamente para continuar.' : 'Sua sessão foi encerrada.';
+      const notice = operation === 'delete' ? 'Sua conta foi excluída permanentemente.' : operation === 'password' ? 'Senha atualizada. Entre novamente para continuar.' : 'Sua sessão foi encerrada.';
       if (!currentActor()) {
         if (endedActor.current?.userId === actor.userId && endedActor.current.epoch === actor.epoch && endedActor.current.afterEpoch === epoch.current && !sessionRef.current) {
           setSessionNotice(old => old?.includes('armazenamento') ? `${notice} ${old}` : notice);
@@ -201,6 +203,7 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
   }, [captureActor, runTerminal]);
   const signOutAll = useCallback((actor: SessionActor) => runTerminal('logoutAll', actor), [runTerminal]);
   const changePassword = useCallback((input: ChangePasswordInput, actor: SessionActor) => runTerminal('password', actor, input), [runTerminal]);
+  const deleteAccount = useCallback((input: DeleteAccountInput, actor: SessionActor) => runTerminal('delete', actor, input), [runTerminal]);
   const endRevokedSession = useCallback(async (actor: SessionActor) => {
     if (!isActorCurrent(actor)) return;
     const afterEpoch = actor.epoch + 1;
@@ -273,8 +276,8 @@ export function SessionProvider({ children }: React.PropsWithChildren) {
     refreshAvatar,
     updateAvatar,
     captureActor, isActorCurrent, updateUser,
-    signOut, signOutAll, changePassword, sessionNotice, endRevokedSession
-  }), [establishSession, getToken, getSessionScope, isLoaded, refreshSession, rebindSession, refreshUser, refreshAvatar, updateAvatar, captureActor, isActorCurrent, updateUser, session, signOut, signOutAll, changePassword, sessionNotice, endRevokedSession, user]);
+    signOut, signOutAll, changePassword, deleteAccount, sessionNotice, endRevokedSession
+  }), [establishSession, getToken, getSessionScope, isLoaded, refreshSession, rebindSession, refreshUser, refreshAvatar, updateAvatar, captureActor, isActorCurrent, updateUser, session, signOut, signOutAll, changePassword, deleteAccount, sessionNotice, endRevokedSession, user]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

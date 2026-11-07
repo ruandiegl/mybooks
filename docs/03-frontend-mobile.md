@@ -22,6 +22,8 @@ Descobrir antecipa só capa/avatar dos próximos2 livros:4 recursos,2 preparaç�
 
 Hambúrguer substitui Editar; ProfileSettingsModal compõe editor, conta, aparência, senha, notificações, ajuda, Sobre e confirmações. Dirty/crop/busy são coordenados sem outro dialog; foco volta ao acionador no Web e fonte grande pode rolar. ThemeProvider/useAppTheme/useThemedStyles tornam cores reativas, sem key de remontagem. Preferência pública sobrevive ao logout.
 
+Em Perfil → Configurações → Minha conta, “Excluir minha conta” abre uma confirmação separada no mesmo modal. O texto informa que livros, curtidas, matches e conversas serão apagados também da visão de outras pessoas. O envio exige senha atual e a palavra exata `EXCLUIR`; cancelar não envia requisição. O aplicativo só limpa a sessão após `200` da API. Em falhas, mantém a conta e mostra o erro para nova tentativa.
+
 Ações terminais usam actor/epoch e confirmação remota (HTTP ou revogação de socket), preservam sessão em erro transitório e não limpam um novo login. SecureStore serializa operações; Web Locks `trocalivros.auth.refresh.v1` cobre cookies, inclusive login/verify. Requests termináveis usam adapter público sem refresh recursivo;401 pode renovar fora do lock uma vez. Preferências usam query `['account-preferences',userId]`;404 mantém legado e impede controles novos sem contrato.
 
 Telas ficam em `app/src/pages/<Nome>/index.tsx` com `styles.ts`; componentes reutilizáveis seguem a mesma dupla. Parâmetros de navegação vivem em `src/types/navigation.ts`.

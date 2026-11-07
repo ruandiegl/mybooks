@@ -43,3 +43,4 @@ export const refreshSchema = z.object({ refreshToken: z.string().trim().min(32).
 export const forgotPasswordSchema = z.object({ email: emailSchema });
 export const resetPasswordSchema = z.object({ email: emailSchema, code: codeSchema, password: passwordSchema });
 export const changePasswordSchema = z.object({ currentPassword: loginPasswordSchema, newPassword: passwordSchema }).strict();
+export const deleteAccountSchema = z.object({ currentPassword: loginPasswordSchema, confirmation: z.literal('EXCLUIR') }).strict();

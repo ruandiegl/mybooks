@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const requests = vi.hoisted(() => ({ refresh: vi.fn(), logout: vi.fn(), rebind: vi.fn() }));
+const requests = vi.hoisted(() => ({ refresh: vi.fn(), logout: vi.fn(), rebind: vi.fn(), deleteAccount: vi.fn() }));
 vi.mock('../authApi', () => ({ authApi: requests }));
 vi.mock('../authApi.web', () => ({ authApi: requests }));
 
@@ -55,9 +55,22 @@ describe('browser session transport', () => {
   });
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(authApi.refresh).mockReset(); vi.mocked(authApi.logout).mockReset(); vi.mocked(authApi.rebind).mockReset();
+    vi.mocked(authApi.refresh).mockReset(); vi.mocked(authApi.logout).mockReset(); vi.mocked(authApi.rebind).mockReset(); vi.mocked(authApi.deleteAccount).mockReset();
     vi.stubGlobal('window', { sessionStorage: makeSessionStorage(), localStorage: makeSessionStorage() });
     vi.stubGlobal('navigator', { locks: makeLockManager() });
+  });
+
+  it('preserves the session on failed deletion and clears it after server confirmation', async () => {
+    const { sessionTransport: transport } = await loadFreshTransport();
+    const current = await transport.accept(session);
+    const actor = { userId: 'user-1', sessionId: '10000000-0000-4000-8000-000000000001', epoch: 1 };
+    const input = { currentPassword: 'Senha@123', confirmation: 'EXCLUIR' as const };
+    vi.mocked(authApi.deleteAccount).mockRejectedValueOnce(Error('offline')).mockResolvedValueOnce({ ok: true });
+    await expect(transport.deleteAccount(current, input, actor, () => true)).rejects.toThrow('offline');
+    expect(await transport.getToken(current)).toBe(session.accessToken);
+    await transport.deleteAccount(current, input, actor, () => true);
+    expect(await transport.getToken(null)).toBeNull();
+    expect(window.localStorage.values.get('trocalivros.auth.signed-out.v1')).toBe('1');
   });
 
   it('restores through the HttpOnly cookie after a page reload without persisting tokens in browser storage', async () => {

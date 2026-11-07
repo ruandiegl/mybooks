@@ -376,6 +376,20 @@ export function createAuthRepository(database = prisma) { return {
     });
   },
 
+  deleteAccountAndSessions({ userId, sessionId, expectedPasswordHash, now = new Date(), correlation }) {
+    return database.$transaction(async (tx) => {
+      const user = await lockAccount(tx, userId);
+      const current = user ? await liveFamilySession(tx, userId, sessionId, now) : null;
+      if (!user?.isActive || !user.emailVerifiedAt || !current || user.passwordHash !== expectedPasswordHash) return { status: 'CHANGED_SESSION' };
+      await bindCorrelation(tx, current, correlation);
+      const sessions = await tx.authSession.findMany({ where: { userId, revokedAt: null }, select: { id: true } });
+      const matches = await tx.match.findMany({ where: { OR: [{ userAId: userId }, { userBId: userId }] }, select: { id: true, userAId: true, userBId: true, conversation: { select: { id: true } } } });
+      await enqueueBookImageCleanup(tx, [userId]);
+      await tx.user.delete({ where: { id: userId } });
+      return { status: 'DELETED', userId, sessionIds: sessions.map((session) => session.id), removedMatches: matches.map((match) => ({ matchId: match.id, conversationId: match.conversation?.id ?? null, otherUserId: match.userAId === userId ? match.userBId : match.userAId })) };
+    }, { timeout: 30_000 });
+  },
+
   resetPasswordWithCode({ email, codeHash, passwordHash, now, maxAttempts }) {
     return database.$transaction(async (client) => {
       let user = await client.user.findUnique({ where: { email }, select: authUserSelect });

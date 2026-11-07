@@ -27,6 +27,7 @@ import { ProfileEditForm } from '../../components/ProfileEditForm';
 import { AppearanceSettingsPanel } from '../../components/AppearanceSettingsPanel';
 import { NotificationSettingsPanel } from '../../components/NotificationSettingsPanel';
 import { AccountSettingsPanel } from '../../components/AccountSettingsPanel';
+import { DeleteAccountForm } from '../../components/DeleteAccountForm';
 import { BlockedUsersPanel } from '../../components/BlockedUsersPanel';
 import { ReputationStars } from '../../components/ReputationStars';
 import { getPublicProfile } from '../../features/moderation/api';
@@ -34,6 +35,7 @@ import { PasswordChangeForm } from '../../components/PasswordChangeForm';
 import { ProfileHelpPanel } from '../../components/ProfileHelpPanel';
 import { AboutAppPanel } from '../../components/AboutAppPanel';
 import { useAccountSecurity } from '../../features/auth/useAccountSecurity';
+import { useDeleteAccount } from '../../features/auth/useDeleteAccount';
 import { useAccountPreferences } from '../../features/settings/useAccountPreferences';
 import { useProfileSettings } from '../../features/settings/useProfileSettings';
 import { useProfileEditor } from '../../features/profile/useProfileEditor';
@@ -89,12 +91,13 @@ export function Profile({ navigation }: Props) {
   const actor = session.captureActor();
   const accountPreferences = useAccountPreferences();
   const security = useAccountSecurity();
-  const busy = avatarEditor.busy || editor.pending || security.busy || accountPreferences.saving;
+  const deletion = useDeleteAccount();
+  const busy = avatarEditor.busy || editor.pending || security.busy || deletion.busy || accountPreferences.saving;
   const settings = useProfileSettings({ actor, isBusy: busy,
-    hasUnsavedChanges: editor.dirty || security.dirty,
-    isDirtyForRoute: route => route === 'editProfile' ? editor.dirty : (route === 'password' || route === 'confirmSignOutAll') && security.dirty,
+    hasUnsavedChanges: editor.dirty || security.dirty || deletion.dirty,
+    isDirtyForRoute: route => route === 'editProfile' ? editor.dirty : route === 'confirmDeleteAccount' ? deletion.dirty : (route === 'password' || route === 'confirmSignOutAll') && security.dirty,
     cropActive: Boolean(avatarEditor.source), onCancelCrop: avatarEditor.cancel,
-    onDiscard: () => { editor.reset(); security.reset(); } });
+    onDiscard: () => { editor.reset(); security.reset(); deletion.reset(); } });
   const wasSettingsOpen = useRef(false);
   useEffect(() => {
     if (busy || !completedEdit.current) return;
@@ -104,12 +107,13 @@ export function Profile({ navigation }: Props) {
   useEffect(() => {
     if (settings.visible && !wasSettingsOpen.current) settingsOwner.current = actor;
     if (!settings.visible && wasSettingsOpen.current) {
-      security.reset(); editor.reset(); avatarEditor.cancel();
+      security.reset(); deletion.reset(); editor.reset(); avatarEditor.cancel();
       if (Platform.OS === 'web' && settingsOwner.current && session.isActorCurrent(settingsOwner.current)) menuButton.current?.focus();
       settingsOwner.current = null;
     }
     wasSettingsOpen.current = settings.visible;
     if (settings.visible && !['password', 'confirmSignOutAll', 'confirmDiscard'].includes(settings.route)) security.reset();
+    if (settings.visible && !['confirmDeleteAccount', 'confirmDiscard'].includes(settings.route)) deletion.reset();
   }, [settings.visible, settings.route]);
   useLayoutEffect(() => {
     premiumOffer.setPresentationBlocked('profile-overlay', settings.visible || viewingPhoto);
@@ -309,7 +313,8 @@ export function Profile({ navigation }: Props) {
           : settings.route === 'editProfile' ? <ProfileEditForm editor={editor} avatarEditor={avatarEditor} profile={profile} binding={mediaBinding} retryToken={imageRetryToken} onImageError={session.refreshAvatar} />
           : settings.route === 'appearance' ? <AppearanceSettingsPanel />
           : settings.route === 'notifications' ? <NotificationSettingsPanel preferences={accountPreferences} />
-          : settings.route === 'account' ? <AccountSettingsPanel />
+          : settings.route === 'account' ? <AccountSettingsPanel onDelete={() => settings.openRoute('confirmDeleteAccount')} />
+          : settings.route === 'confirmDeleteAccount' ? <DeleteAccountForm deletion={deletion} onCancel={settings.back} />
           : settings.route === 'blockedUsers' ? <BlockedUsersPanel />
           : settings.route === 'help' ? <ProfileHelpPanel />
           : settings.route === 'about' ? <AboutAppPanel />

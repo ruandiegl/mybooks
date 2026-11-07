@@ -3,7 +3,7 @@ import { AppError } from '../../shared/errors/AppError.js';
 import { emailService as applicationEmailService } from '../email/email.service.js';
 import { authRepository as applicationRepository } from './auth.repository.js';
 import { hashOpaqueToken, hashPassword, needsPasswordRehash, validateCpf, verifyPassword } from './auth.crypto.js';
-import { changePasswordSchema, loginSchema, registerSchema, resetPasswordSchema, verifyEmailSchema } from './auth.schemas.js';
+import { changePasswordSchema, deleteAccountSchema, loginSchema, registerSchema, resetPasswordSchema, verifyEmailSchema } from './auth.schemas.js';
 import { publishSessionRevocation } from './auth.revocation.js';
 import { settingsSessionChanged } from './auth.actor.js';
 import { PENDING_REGISTRATION_TTL_MS } from './auth.constants.js';
@@ -252,6 +252,18 @@ export const createAuthService = ({
       if (result.status !== 'CHANGED') throw settingsSessionChanged();
       notifyRevoked({ userId, sessionIds: result.sessionIds });
       return { ok: true };
+    },
+
+    async deleteAccount(userId, sessionId, input, correlation) {
+      const payload = deleteAccountSchema.parse(input);
+      const user = await repository.findUserByIdForAuth(userId);
+      if (!user?.passwordHash || !await verifyPassword(payload.currentPassword, user.passwordHash)) {
+        throw new AppError('A senha atual está incorreta.', { statusCode: 403, code: 'CURRENT_PASSWORD_INVALID', fields: { currentPassword: 'Confira sua senha atual.' } });
+      }
+      const result = await repository.deleteAccountAndSessions({ userId, sessionId, expectedPasswordHash: user.passwordHash, now: clock.now(), correlation });
+      if (result.status !== 'DELETED') throw settingsSessionChanged();
+      notifyRevoked({ userId, sessionIds: result.sessionIds });
+      return { ok: true, removedMatches: result.removedMatches };
     },
 
     async requestPasswordReset({ email }) {

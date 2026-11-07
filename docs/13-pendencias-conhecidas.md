@@ -6,7 +6,9 @@ Implementação em `codex/web-icons-splash`, sem publicação. Requer binário p
 
 ## Plano010
 
-Código de menu/tema/conta está na branch local, não em produção. Publicação depende de aprovação, migração UserPreferences no alvo confirmado e API antes do cliente. Aceites físicos/VoiceOver/TalkBack/chrome/splash permanecem necessários; ExpoSystemUI/config pode exigir novo development build. Push, exclusão, e-mail/CPF/MFA e links legais/suporte ainda não possuem fluxo aprovado. Revogação distribuída e alertas preexistentes de dependências requerem trabalho específico; não usar upgrades forçados.
+O plano010 registrou pendências de publicação e aceite físico que devem ser reavaliadas conforme o estado atual da produção. Push, alteração de e-mail/CPF, MFA e links legais/suporte ainda não possuem fluxo aprovado. Revogação distribuída e alertas preexistentes de dependências requerem trabalho específico; não usar upgrades forçados.
+
+Exclusão permanente de conta foi implementada para revisão na branch `codex/account-deletion`: confirmar senha e `EXCLUIR`, limpar relações em cascata e agendar remoção de mídia. A política operacional para cópias de segurança, logs e prazo de retenção ainda precisa ser definida antes de afirmar atendimento integral a pedidos legais de eliminação de dados.
 
 ## Produção
 

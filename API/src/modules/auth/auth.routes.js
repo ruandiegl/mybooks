@@ -79,6 +79,8 @@ export function createAuthRouter({ service, authenticateMiddleware = authenticat
   router.post('/browser/logout-all', requireSameOriginBrowserRequest, authenticateMiddleware, asyncHandler(controller.browserLogoutAll));
   router.post('/change-password', cookieSessionGuard, authenticateMiddleware, accountPasswordLimit, ipPasswordLimit, asyncHandler(controller.changePassword));
   router.post('/browser/change-password', requireSameOriginBrowserRequest, authenticateMiddleware, accountPasswordLimit, ipPasswordLimit, asyncHandler(controller.browserChangePassword));
+  router.post('/delete-account', cookieSessionGuard, authenticateMiddleware, accountPasswordLimit, ipPasswordLimit, asyncHandler(controller.deleteAccount));
+  router.post('/browser/delete-account', requireSameOriginBrowserRequest, authenticateMiddleware, accountPasswordLimit, ipPasswordLimit, asyncHandler(controller.browserDeleteAccount));
   router.get('/me', authenticateMiddleware, asyncHandler(controller.me));
 
   return router;

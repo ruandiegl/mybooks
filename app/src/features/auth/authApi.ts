@@ -4,7 +4,7 @@ import { appEnv } from '../../config/env';
 import { canUseWebAuthTransport, shouldUseCookieSession, withCookieRefreshLock } from './sessionTransport';
 import { api } from '../../services/api';
 import { settingsActorHeaders, type SessionActor } from './sessionActor';
-import type { ChangePasswordInput } from '../../types/api';
+import type { ChangePasswordInput, DeleteAccountInput } from '../../types/api';
 import type {
   ApiEnvelope,
   AuthSessionResponse,
@@ -98,6 +98,9 @@ export const authApi = {
   },
   async changePassword(accessToken: string, input: ChangePasswordInput, actor: SessionActor) {
     return data<{ ok: true }>(await publicApi.post('/api/v1/auth/change-password', input, { ...sessionRequestConfig, headers: { ...sessionRequestConfig.headers, ...settingsActorHeaders(actor), Authorization: 'Bearer ' + accessToken } }));
+  },
+  async deleteAccount(accessToken: string, input: DeleteAccountInput, actor: SessionActor) {
+    return data<{ ok: true }>(await publicApi.post('/api/v1/auth/delete-account', input, { ...sessionRequestConfig, timeout: 45_000, headers: { ...sessionRequestConfig.headers, ...settingsActorHeaders(actor), Authorization: 'Bearer ' + accessToken } }));
   },
   async forgotPassword(email: string) {
     assertAuthTransportAvailable();

@@ -3,10 +3,10 @@ import React from 'react';
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-const io = vi.hoisted(() => ({ revoke: vi.fn(), clear: vi.fn(), refresh: vi.fn() }));
+const io = vi.hoisted(() => ({ revoke: vi.fn(), deleteAccount: vi.fn(), clear: vi.fn(), refresh: vi.fn() }));
 vi.mock('react-native', async () => await import('react-native-web'));
 vi.mock('../../auth/authApi', () => ({ authApi: { me: async () => null } }));
-vi.mock('../../auth/authTransport', () => ({ sessionTransport: { restore: async () => null, accept: async (response: any) => ({ ...response, expiresAt: Date.parse(response.expiresAt) }), getToken: async (value: any) => value?.accessToken ?? null, clear: io.clear, signOut: io.revoke, refresh: io.refresh } }));
+vi.mock('../../auth/authTransport', () => ({ sessionTransport: { restore: async () => null, accept: async (response: any) => ({ ...response, expiresAt: Date.parse(response.expiresAt) }), getToken: async (value: any) => value?.accessToken ?? null, clear: io.clear, signOut: io.revoke, deleteAccount: io.deleteAccount, refresh: io.refresh } }));
 vi.mock('../../../services/api', () => ({ configureApiSession: () => {} }));
 import { SessionProvider, useSession } from '../../../providers/SessionProvider';
 import { readDiscoverBookId, saveDiscoverBookId } from '../../books/discoverPositionStorage';
@@ -20,6 +20,20 @@ function host() {
 beforeEach(() => { vi.clearAllMocks(); io.clear.mockResolvedValue(undefined); window.sessionStorage.clear(); });
 afterEach(cleanup);
 describe('terminal account operation ownership', () => {
+  it('clears private state only after confirmed account deletion', async () => {
+    let finish!: () => void;
+    io.deleteAccount.mockReturnValue(new Promise<void>(resolve => { finish = resolve; }));
+    const hook = host(); await waitFor(() => expect(hook.result.current.isLoaded).toBe(true));
+    await act(async () => { await hook.result.current.establishSession(response('ana')); });
+    hook.client.setQueryData(['private'], 'secret');
+    const pending = hook.result.current.deleteAccount({ currentPassword: 'Senha@123', confirmation: 'EXCLUIR' }, hook.result.current.captureActor()!);
+    expect(hook.result.current.isSignedIn).toBe(true);
+    await act(async () => { finish(); await pending; });
+    expect(hook.result.current.isSignedIn).toBe(false);
+    expect(hook.client.getQueryData(['private'])).toBeUndefined();
+    expect(hook.result.current.sessionNotice).toMatch(/conta.*excluída/i);
+    hook.client.clear();
+  });
   it('remove a posição do Descobrir ao encerrar a sessão', async () => {
     const hook = host(); await waitFor(() => expect(hook.result.current.isLoaded).toBe(true));
     await act(async () => { await hook.result.current.establishSession(response('ana')); });

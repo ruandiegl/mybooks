@@ -1,6 +1,6 @@
 import { authApi } from './authApi';
 import { clearTokens, loadTokens, saveTokens } from './authStorage';
-import type { AuthSessionResponse, BrowserAuthSessionResponse, ChangePasswordInput, User } from '../../types/api';
+import type { AuthSessionResponse, BrowserAuthSessionResponse, ChangePasswordInput, DeleteAccountInput, User } from '../../types/api';
 import type { SessionActor } from './sessionActor';
 
 export type SessionResponse = AuthSessionResponse | BrowserAuthSessionResponse;
@@ -23,6 +23,7 @@ export type SessionTransport = {
   signOut: (current: SessionSnapshot | null, actor?: SessionActor, isCurrent?: () => boolean) => Promise<void>;
   signOutAll: (current: SessionSnapshot, actor: SessionActor, isCurrent: () => boolean) => Promise<void>;
   changePassword: (current: SessionSnapshot, input: ChangePasswordInput, actor: SessionActor, isCurrent: () => boolean) => Promise<void>;
+  deleteAccount: (current: SessionSnapshot, input: DeleteAccountInput, actor: SessionActor, isCurrent: () => boolean) => Promise<void>;
 };
 
 function snapshot(response: SessionResponse): SessionSnapshot {
@@ -103,5 +104,9 @@ export const sessionTransport: SessionTransport = {
   async changePassword(current, input, actor, isCurrent) {
     if (!isCurrent()) throw Error('A sessão mudou.');
     await authApi.changePassword(current.accessToken, input, actor);
+  },
+  async deleteAccount(current, input, actor, isCurrent) {
+    if (!isCurrent()) throw Error('A sessão mudou.');
+    await authApi.deleteAccount(current.accessToken, input, actor);
   }
 };

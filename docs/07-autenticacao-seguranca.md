@@ -4,6 +4,8 @@
 
 Troca autenticada compara senha atual por bcrypt, gera hash fora da transação e revalida hash/sessão sob lock User antes de revogar todas as sessões e invalidar resets.403 de senha atual não é401 e não dispara refresh. Limites5/conta e20/IP por60s são independentes. Emissão de login com prova antiga e cadastro pendente após verificação são recusados; logout resolve o sucessor da família encerrada.
 
+A exclusão de conta usa a mesma prova de senha, lock e correlação de sessão. Na mesma transação, registra a limpeza assíncrona de imagens e apaga o usuário; as relações em cascata removem livros, interações, matches, conversas, mensagens, denúncias, bloqueios, preferências e sessões. O outro participante recebe `match:removed` quando conectado. O formulário exige a palavra `EXCLUIR`; a API também a valida. Não executar exclusão contra contas reais em testes.
+
 Owner/sid são correlação, não autorização. Cookies devem corresponder à família do bearer/âncora; mismatch409 não altera cookie nem conta. Frontend guarda senhas só no formulário em memória, usa epoch para ignorar respostas antigas e não mantém UI privada se a limpeza local falhar após revogação confirmada. Preferência de tema e marcador de logout não contêm tokens. Operações cookie requerem Web Locks e não adquirem o mesmo lock via interceptor.
 
 A API é a autoridade. Senhas usam bcrypt assíncrono com custo configurável, rehash progressivo e rejeição acima de 72 bytes UTF-8. A política mínima é 6 caracteres, maiúscula, minúscula, número e especial, validada no app e na API.

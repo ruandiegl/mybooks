@@ -14,6 +14,7 @@ if (url && (!['localhost', '127.0.0.1', '[::1]'].includes(new URL(url).hostname)
 const integration = url ? describe : describe.skip;
 const client = url ? new PrismaClient({ datasources: { db: { url } } }) : null;
 const ids = [];
+const cleanupKeys = [];
 async function fixture() {
   const user = await client.user.create({ data: { name: 'Settings fixture', email: `security-${randomUUID()}@example.test`, passwordHash: 'old-hash', isActive: true, emailVerifiedAt: new Date() } }); ids.push(user.id);
   const refreshToken = createOpaqueToken(48), otherRefreshToken = createOpaqueToken(48);
@@ -27,7 +28,29 @@ function httpApp(repository) {
   app.use(errorHandler); return app;
 }
 integration('account locks, families and revocation with PostgreSQL', () => {
-  afterAll(async () => { await client.user.deleteMany({ where: { id: { in: ids } } }); await client.$disconnect(); });
+  afterAll(async () => { await client.user.deleteMany({ where: { id: { in: ids } } }); await client.storageCleanupJob.deleteMany({ where: { storageKey: { in: cleanupKeys } } }); await client.$disconnect(); });
+  it('deletes owned data and shared match history while queuing media cleanup', async () => {
+    const { user, session } = await fixture(), repository = createAuthRepository(client);
+    const other = await client.user.create({ data: { name: 'Other reader', email: `other-${randomUUID()}@example.test`, passwordHash: 'hash', isActive: true, emailVerifiedAt: new Date() } }); ids.push(other.id);
+    const avatarKey = `avatars/${user.id}/account-delete-test.webp`, imageKey = `books/${user.id}/account-delete-test.webp`;
+    cleanupKeys.push(avatarKey, imageKey);
+    await client.user.update({ where: { id: user.id }, data: { avatarStorageKey: avatarKey } });
+    const book = await client.book.create({ data: { title: 'Owned book', ownerId: user.id, images: { create: { sortOrder: 0, storageKey: imageKey } } } });
+    const match = await client.match.create({ data: { userAId: user.id, userBId: other.id, bookAId: book.id } });
+    const conversation = await client.conversation.create({ data: { matchId: match.id, members: { create: [{ userId: user.id }, { userId: other.id }] } } });
+    await client.message.create({ data: { conversationId: conversation.id, senderId: other.id, clientMessageId: randomUUID(), body: 'Olá' } });
+    const result = await repository.deleteAccountAndSessions({ userId: user.id, sessionId: session.id, expectedPasswordHash: 'old-hash' });
+    expect(result.status).toBe('DELETED');
+    expect(result.removedMatches).toEqual([{ matchId: match.id, conversationId: conversation.id, otherUserId: other.id }]);
+    expect(await client.user.findUnique({ where: { id: user.id } })).toBeNull();
+    expect(await client.user.findUnique({ where: { id: other.id } })).not.toBeNull();
+    expect(await client.book.findUnique({ where: { id: book.id } })).toBeNull();
+    expect(await client.match.findUnique({ where: { id: match.id } })).toBeNull();
+    expect(await client.conversation.findUnique({ where: { id: conversation.id } })).toBeNull();
+    expect(await client.message.count({ where: { conversationId: conversation.id } })).toBe(0);
+    expect(await client.authSession.count({ where: { userId: user.id } })).toBe(0);
+    expect(await client.storageCleanupJob.count({ where: { storageKey: { in: [avatarKey, imageKey] } } })).toBe(2);
+  });
   it('rejects an old password proof after a competing password change', async () => {
     const { user, session } = await fixture(), repository = createAuthRepository(client);
     const input = { userId: user.id, sessionId: session.id, expectedPasswordHash: 'old-hash', newPasswordHash: 'new-hash', now: new Date() };

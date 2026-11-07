@@ -3,7 +3,7 @@ import { appEnv } from '../../config/env';
 import { api } from '../../services/api';
 import { withBrowserSessionLock } from './browserSessionLock.web';
 import { settingsActorHeaders, type SessionActor } from './sessionActor';
-import type { ChangePasswordInput } from '../../types/api';
+import type { ChangePasswordInput, DeleteAccountInput } from '../../types/api';
 import type {
   ApiEnvelope,
   BrowserAuthSessionResponse,
@@ -51,6 +51,9 @@ export const authApi = {
   },
   async changePassword(accessToken: string, input: ChangePasswordInput, actor: SessionActor) {
     return data<{ ok: true }>(await publicApi.post('/api/v1/auth/browser/change-password', input, { headers: { ...settingsActorHeaders(actor), Authorization: 'Bearer ' + accessToken } }));
+  },
+  async deleteAccount(accessToken: string, input: DeleteAccountInput, actor: SessionActor) {
+    return data<{ ok: true }>(await publicApi.post('/api/v1/auth/browser/delete-account', input, { timeout: 45_000, headers: { ...settingsActorHeaders(actor), Authorization: 'Bearer ' + accessToken } }));
   },
   async forgotPassword(email: string) {
     return data<{ accepted: true }>(await publicApi.post('/api/v1/auth/forgot-password', { email }));
